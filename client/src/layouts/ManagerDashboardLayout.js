@@ -126,7 +126,6 @@ const ManagerDashboardLayout = ({ children }) => {
       items: [
         { to: '/manager/hanger-space', icon: 'fa-warehouse', label: 'Hanger Space' },
         { to: '/manager/stock', icon: 'fa-boxes', label: 'Stock Management' },
-        { to: '/manager/barrel-allocation', icon: 'fa-boxes', label: 'Barrel Allocation' },
         { to: '/manager/returned-barrels', icon: 'fa-undo', label: 'Returned Barrels' },
       ]
     },

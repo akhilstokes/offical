@@ -1,67 +1,42 @@
 const express = require('express');
 const router = express.Router();
-const { protect, admin, adminOrManager, adminManagerAccountant } = require('../middleware/authMiddleware');
 const salaryController = require('../controllers/salaryController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
-// Salary Template Routes
-router.post('/template/:staffId', protect, admin, salaryController.createSalaryTemplate);
-router.get('/template/:staffId', protect, salaryController.getSalaryTemplate);
-router.put('/template/:staffId', protect, admin, salaryController.updateSalaryTemplate);
+// Calculate wages (preview before generating)
+router.post('/calculate', protect, authorize('admin', 'accountant'), salaryController.calculateWages);
 
-// Monthly Salary Routes
-// Allow accountant to generate, manager/admin to approve/pay
-router.post('/generate/:staffId', protect, adminManagerAccountant, salaryController.generateMonthlySalary);
-router.get('/monthly/:staffId', protect, salaryController.getMonthlySalary);
-router.put('/monthly/:salaryId', protect, adminOrManager, salaryController.updateMonthlySalary);
-router.put('/approve/:salaryId', protect, adminOrManager, salaryController.approveSalary);
-router.put('/pay/:salaryId', protect, adminOrManager, salaryController.paySalary);
-// Payslip HTML
-router.get('/payslip/:salaryId', protect, salaryController.getPayslip);
+// Generate salary record
+router.post('/generate', protect, authorize('admin', 'accountant'), salaryController.generateSalaryRecord);
 
-// Salary History and Reports
-router.get('/history/:staffId', protect, salaryController.getSalaryHistory);
-router.get('/all', protect, adminOrManager, salaryController.getAllSalaries);
-router.get('/summary', protect, adminOrManager, salaryController.getSalarySummary);
+// Get all salary records (for all staff)
+router.get('/all', protect, authorize('admin', 'accountant', 'manager'), salaryController.getAllSalaryRecords);
+
+// Get salary history for a specific staff member
+router.get('/history/:staffId', protect, authorize('admin', 'accountant', 'manager'), salaryController.getSalaryHistory);
+
+// Get all salary records
+router.get('/', protect, authorize('admin', 'accountant', 'manager'), salaryController.getAllSalaryRecords);
+
+// Get salary statistics
+router.get('/statistics', protect, authorize('admin', 'accountant'), salaryController.getSalaryStatistics);
+
+// Get my salary (for staff)
+router.get('/my-salary', protect, salaryController.getMySalary);
+
+// Get salary record by ID
+router.get('/:id', protect, salaryController.getSalaryRecordById);
+
+// Update salary record
+router.put('/:id', protect, authorize('admin', 'accountant'), salaryController.updateSalaryRecord);
+
+// Approve salary record
+router.patch('/:id/approve', protect, authorize('admin', 'manager'), salaryController.approveSalaryRecord);
+
+// Mark as paid
+router.patch('/:id/pay', protect, authorize('admin', 'accountant'), salaryController.markAsPaid);
+
+// Delete salary record
+router.delete('/:id', protect, authorize('admin'), salaryController.deleteSalaryRecord);
 
 module.exports = router;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

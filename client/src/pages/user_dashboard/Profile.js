@@ -13,8 +13,8 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState('edit'); // edit | password | history
-  const [form, setForm] = useState({ name: '', email: '', phoneNumber: '', location: '' });
-  const [originalForm, setOriginalForm] = useState({ name: '', email: '', phoneNumber: '', location: '' });
+  const [form, setForm] = useState({ name: '', email: '', phoneNumber: '', location: '', address: '' });
+  const [originalForm, setOriginalForm] = useState({ name: '', email: '', phoneNumber: '', location: '', address: '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const Profile = () => {
         const userStr = localStorage.getItem('user');
         if (userStr) {
           const u = JSON.parse(userStr);
-          const prefill = { name: u.name || '', email: u.email || '', phoneNumber: u.phoneNumber || '', location: u.location || '' };
+          const prefill = { name: u.name || '', email: u.email || '', phoneNumber: u.phoneNumber || '', location: u.location || '', address: u.address || '' };
           setForm(prev => ({ ...prev, ...prefill }));
           setOriginalForm(prefill);
         }
@@ -33,7 +33,7 @@ const Profile = () => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await axios.get(`${API}/api/users/profile`, { headers });
         const u = res.data;
-        const fetched = { name: u.name || '', email: u.email || '', phoneNumber: u.phoneNumber || '', location: u.location || '' };
+        const fetched = { name: u.name || '', email: u.email || '', phoneNumber: u.phoneNumber || '', location: u.location || '', address: u.address || '' };
         setForm(fetched);
         setOriginalForm(fetched);
       } catch (e) {
@@ -74,7 +74,7 @@ const Profile = () => {
       // Normalize phone: strip non-digits, drop leading +, 91 or 0
       const clean = form.phoneNumber.replace(/\D/g, '');
       const finalPhone = clean.startsWith('91') && clean.length === 12 ? clean.slice(2) : (clean.startsWith('0') ? clean.slice(1) : clean);
-      const payload = { name: form.name.trim(), phoneNumber: finalPhone, location: form.location.trim() };
+      const payload = { name: form.name.trim(), phoneNumber: finalPhone, location: form.location.trim(), address: form.address.trim() };
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.put(`${API}/api/users/profile`, payload, { headers });
@@ -82,7 +82,7 @@ const Profile = () => {
       // Update local storage and refresh context
       const current = JSON.parse(localStorage.getItem('user') || '{}');
       localStorage.setItem('user', JSON.stringify({ ...current, ...updated }));
-      const nextState = { name: updated.name || form.name, email: form.email, phoneNumber: updated.phoneNumber || form.phoneNumber, location: updated.location || form.location };
+      const nextState = { name: updated.name || form.name, email: form.email, phoneNumber: updated.phoneNumber || form.phoneNumber, location: updated.location || form.location, address: updated.address || form.address };
       setForm(nextState);
       setOriginalForm(nextState);
       setMessage('Profile updated successfully');
@@ -191,6 +191,19 @@ const Profile = () => {
                 <label htmlFor="location">Location</label>
                 <input id="location" name="location" type="text" value={form.location} onChange={handleChange} placeholder="City, State" disabled={!editMode} />
               </div>
+            </div>
+            <div className="form-row">
+              <label htmlFor="address">Complete Address</label>
+              <textarea 
+                id="address" 
+                name="address" 
+                value={form.address} 
+                onChange={handleChange} 
+                placeholder="Enter your complete address (house/building, street, area, city, pincode)" 
+                disabled={!editMode}
+                rows="3"
+                style={{ resize: 'vertical', fontFamily: 'inherit' }}
+              />
             </div>
 
             <div className="form-actions">

@@ -2,7 +2,7 @@ const axios = require('axios');
 
 // Test the RFID endpoint
 async function testRFIDEndpoint() {
-    const baseURL = 'http://10.196.30.39:5000';
+    const baseURL = 'http://10.208.100.39:5000';
     
     console.log('Testing RFID Attendance Endpoint...\n');
     

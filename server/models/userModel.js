@@ -69,6 +69,25 @@ const userSchema = new mongoose.Schema({
         default: ''
     },
 
+    address: {
+        type: String,
+        required: false,
+        trim: true,
+        maxlength: 500,
+        default: '',
+        validate: {
+            validator: function (address) {
+                // If address is provided, it must be at least 10 characters
+                // If empty or not provided, that's okay for existing users
+                if (!address || address.trim().length === 0) {
+                    return true; // Allow empty for existing users
+                }
+                return address.trim().length >= 10;
+            },
+            message: "Address must be at least 10 characters long when provided."
+        }
+    },
+
     password: {
         type: String,
         required: [true, "Please provide a password."],
@@ -156,6 +175,55 @@ const userSchema = new mongoose.Schema({
         sparse: true,
         trim: true,
         uppercase: true
+    },
+
+    // Salary Configuration
+    salaryType: {
+        type: String,
+        enum: ['daily', 'monthly', 'weekly'],
+        default: 'daily'
+    },
+    baseSalary: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    dailySalary: {
+        type: Number,
+        default: null,
+        min: 0
+    },
+    // Additional salary components
+    allowances: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    overtime: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    bonus: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    // Deduction components
+    insurance: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    loanDeduction: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    otherDeductions: {
+        type: Number,
+        default: 0,
+        min: 0
     }
 
 }, { timestamps: true });

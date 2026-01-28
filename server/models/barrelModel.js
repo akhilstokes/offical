@@ -32,7 +32,7 @@ const barrelSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['available', 'in-use', 'maintenance', 'assigned'],
+    enum: ['available', 'in-use', 'maintenance', 'assigned', 'pending_sale', 'sold', 'in-storage'],
     default: 'available'
   },
   registeredBy: {

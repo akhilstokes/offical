@@ -6,6 +6,9 @@ const staffScheduleController = require('../controllers/staffScheduleController'
 // All routes require authentication and manager role
 router.use(protect);
 
+// Get schedule history with filters (must be before '/' route)
+router.get('/history', staffScheduleController.getScheduleHistory);
+
 // Bulk assign schedules
 router.post('/bulk-assign', staffScheduleController.bulkAssignSchedule);
 

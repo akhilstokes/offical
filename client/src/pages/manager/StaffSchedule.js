@@ -15,6 +15,15 @@ const StaffSchedule = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [schedules, setSchedules] = useState({});
   const [saving, setSaving] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyFilters, setHistoryFilters] = useState({
+    startDate: '',
+    endDate: '',
+    staffId: '',
+    shift: ''
+  });
 
   useEffect(() => {
     fetchStaff();
@@ -81,14 +90,31 @@ const StaffSchedule = () => {
 
   const handleSaveSchedule = async () => {
     try {
+      // Validation
+      if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+      }
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      if (start > end) {
+        alert('Start date must be before or equal to end date');
+        return;
+      }
+
+      const selectedCount = Object.values(schedules).filter(s => s.selected).length;
+      if (selectedCount === 0) {
+        alert('Please select at least one staff member');
+        return;
+      }
+
       setSaving(true);
       const token = localStorage.getItem('token');
       
       // Calculate all dates in the week range
-      const start = new Date(startDate);
-      const end = new Date(endDate);
       const dates = [];
-      
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         dates.push(new Date(d).toISOString().split('T')[0]);
       }
@@ -106,11 +132,6 @@ const StaffSchedule = () => {
             });
           });
         });
-
-      if (scheduleData.length === 0) {
-        alert('Please select at least one staff member');
-        return;
-      }
 
       const response = await axios.post(
         'http://localhost:5000/api/manager/schedule/bulk-assign',
@@ -132,10 +153,83 @@ const StaffSchedule = () => {
       }
     } catch (err) {
       console.error('Error saving schedule:', err);
-      alert('Failed to save schedule');
+      alert(err.response?.data?.message || 'Failed to save schedule');
     } finally {
       setSaving(false);
     }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const params = new URLSearchParams();
+      if (historyFilters.startDate) params.append('startDate', historyFilters.startDate);
+      if (historyFilters.endDate) params.append('endDate', historyFilters.endDate);
+      if (historyFilters.staffId) params.append('staffId', historyFilters.staffId);
+      if (historyFilters.shift) params.append('shift', historyFilters.shift);
+
+      const response = await axios.get(
+        `http://localhost:5000/api/manager/schedule/history?${params.toString()}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        setHistoryData(response.data.schedules);
+      }
+    } catch (err) {
+      console.error('Error fetching history:', err);
+      alert('Failed to load schedule history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleShowHistory = () => {
+    setShowHistory(true);
+    fetchHistory();
+  };
+
+  const handleCloseHistory = () => {
+    setShowHistory(false);
+    setHistoryFilters({
+      startDate: '',
+      endDate: '',
+      staffId: '',
+      shift: ''
+    });
+  };
+
+  const handleHistoryFilterChange = (field, value) => {
+    setHistoryFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleApplyHistoryFilters = () => {
+    fetchHistory();
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const getRoleBadgeClass = (role) => {
@@ -210,6 +304,13 @@ const StaffSchedule = () => {
           className="btn-save-schedule"
         >
           {saving ? 'Saving...' : 'Save Schedule'}
+        </button>
+
+        <button
+          onClick={handleShowHistory}
+          className="btn-history"
+        >
+          History
         </button>
       </div>
 
@@ -304,6 +405,124 @@ const StaffSchedule = () => {
           </span>
         </div>
       </div>
+
+      {/* History Modal */}
+      {showHistory && (
+        <div className="history-modal-overlay" onClick={handleCloseHistory}>
+          <div className="history-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="history-modal-header">
+              <h2>Schedule History</h2>
+              <button className="close-btn" onClick={handleCloseHistory}>×</button>
+            </div>
+
+            <div className="history-filters">
+              <div className="filter-group">
+                <label>Start Date</label>
+                <input
+                  type="date"
+                  value={historyFilters.startDate}
+                  onChange={(e) => handleHistoryFilterChange('startDate', e.target.value)}
+                  className="filter-input"
+                />
+              </div>
+              <div className="filter-group">
+                <label>End Date</label>
+                <input
+                  type="date"
+                  value={historyFilters.endDate}
+                  onChange={(e) => handleHistoryFilterChange('endDate', e.target.value)}
+                  className="filter-input"
+                />
+              </div>
+              <div className="filter-group">
+                <label>Staff</label>
+                <select
+                  value={historyFilters.staffId}
+                  onChange={(e) => handleHistoryFilterChange('staffId', e.target.value)}
+                  className="filter-input"
+                >
+                  <option value="">All Staff</option>
+                  {staff.map(s => (
+                    <option key={s._id} value={s._id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>Shift</label>
+                <select
+                  value={historyFilters.shift}
+                  onChange={(e) => handleHistoryFilterChange('shift', e.target.value)}
+                  className="filter-input"
+                >
+                  <option value="">All Shifts</option>
+                  <option value="morning">Morning</option>
+                  <option value="evening">Evening</option>
+                  <option value="full-day">Full Day</option>
+                  <option value="night">Night</option>
+                </select>
+              </div>
+              <button 
+                onClick={handleApplyHistoryFilters}
+                className="btn-apply-filters"
+                disabled={historyLoading}
+              >
+                {historyLoading ? 'Loading...' : 'Apply Filters'}
+              </button>
+            </div>
+
+            <div className="history-content">
+              {historyLoading ? (
+                <div className="history-loading">Loading history...</div>
+              ) : historyData.length === 0 ? (
+                <div className="history-empty">No schedule history found</div>
+              ) : (
+                <div className="history-table-container">
+                  <table className="history-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Staff Name</th>
+                        <th>Role</th>
+                        <th>Shift</th>
+                        <th>Status</th>
+                        <th>Assigned By</th>
+                        <th>Created At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyData.map((record) => (
+                        <tr key={record._id}>
+                          <td>{formatDate(record.date)}</td>
+                          <td>{record.staffName}</td>
+                          <td>
+                            <span className={`role-badge ${getRoleBadgeClass(record.staffRole)}`}>
+                              {formatRole(record.staffRole)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="shift-badge">{record.shift}</span>
+                          </td>
+                          <td>
+                            <span className={`status-badge status-${record.status}`}>
+                              {record.status}
+                            </span>
+                          </td>
+                          <td>{record.assignedBy?.name || 'N/A'}</td>
+                          <td className="date-time">{formatDateTime(record.createdAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="history-footer">
+              <p>Total Records: {historyData.length}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

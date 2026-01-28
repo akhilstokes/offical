@@ -18,10 +18,26 @@ const VehicleInfo = () => {
   const [loading, setLoading] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [error, setError] = useState(null);
+  
+  // Modal states
+  const [showFuelModal, setShowFuelModal] = useState(false);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false);
+  const [showTripHistoryModal, setShowTripHistoryModal] = useState(false);
+  
+  // Data states
+  const [fuelLogs, setFuelLogs] = useState([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [tripHistory, setTripHistory] = useState([]);
 
   useEffect(() => {
     loadVehicleData();
     getCurrentLocation();
+    loadFuelLogs();
+    loadMaintenanceRecords();
+    loadDocuments();
+    loadTripHistory();
   }, []);
 
   const loadVehicleData = async () => {
@@ -187,6 +203,74 @@ const VehicleInfo = () => {
 
   const refreshLocation = () => {
     getCurrentLocation();
+  };
+
+  // Load fuel logs
+  const loadFuelLogs = () => {
+    const saved = localStorage.getItem('vehicleFuelLogs');
+    if (saved) {
+      setFuelLogs(JSON.parse(saved));
+    }
+  };
+
+  // Load maintenance records
+  const loadMaintenanceRecords = () => {
+    const saved = localStorage.getItem('vehicleMaintenanceRecords');
+    if (saved) {
+      setMaintenanceRecords(JSON.parse(saved));
+    }
+  };
+
+  // Load documents
+  const loadDocuments = () => {
+    const saved = localStorage.getItem('vehicleDocuments');
+    if (saved) {
+      setDocuments(JSON.parse(saved));
+    }
+  };
+
+  // Load trip history
+  const loadTripHistory = () => {
+    const saved = localStorage.getItem('vehicleTripHistory');
+    if (saved) {
+      setTripHistory(JSON.parse(saved));
+    }
+  };
+
+  // Add fuel log
+  const addFuelLog = (log) => {
+    const newLog = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      ...log
+    };
+    const updated = [newLog, ...fuelLogs];
+    setFuelLogs(updated);
+    localStorage.setItem('vehicleFuelLogs', JSON.stringify(updated));
+  };
+
+  // Add maintenance record
+  const addMaintenanceRecord = (record) => {
+    const newRecord = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      ...record
+    };
+    const updated = [newRecord, ...maintenanceRecords];
+    setMaintenanceRecords(updated);
+    localStorage.setItem('vehicleMaintenanceRecords', JSON.stringify(updated));
+  };
+
+  // Add document
+  const addDocument = (doc) => {
+    const newDoc = {
+      id: Date.now(),
+      uploadDate: new Date().toISOString(),
+      ...doc
+    };
+    const updated = [newDoc, ...documents];
+    setDocuments(updated);
+    localStorage.setItem('vehicleDocuments', JSON.stringify(updated));
   };
 
   if (loading && !vehicleData.vehicleNumber) {
@@ -479,22 +563,462 @@ const VehicleInfo = () => {
         <div className="quick-actions-card">
           <h2>Quick Actions</h2>
           <div className="actions-grid">
-            <button className="action-btn" onClick={() => alert('Fuel log feature coming soon!')}>
+            <button className="action-btn" onClick={() => setShowFuelModal(true)}>
               <i className="fas fa-gas-pump"></i>
               <span>Fuel Log</span>
             </button>
-            <button className="action-btn" onClick={() => alert('Maintenance feature coming soon!')}>
+            <button className="action-btn" onClick={() => setShowMaintenanceModal(true)}>
               <i className="fas fa-wrench"></i>
               <span>Maintenance</span>
             </button>
-            <button className="action-btn" onClick={() => alert('Documents feature coming soon!')}>
+            <button className="action-btn" onClick={() => setShowDocumentsModal(true)}>
               <i className="fas fa-file-alt"></i>
               <span>Documents</span>
             </button>
-            <button className="action-btn" onClick={() => alert('Trip history feature coming soon!')}>
+            <button className="action-btn" onClick={() => setShowTripHistoryModal(true)}>
               <i className="fas fa-route"></i>
               <span>Trip History</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Fuel Log Modal */}
+      {showFuelModal && (
+        <FuelLogModal
+          fuelLogs={fuelLogs}
+          onClose={() => setShowFuelModal(false)}
+          onAdd={addFuelLog}
+        />
+      )}
+
+      {/* Maintenance Modal */}
+      {showMaintenanceModal && (
+        <MaintenanceModal
+          records={maintenanceRecords}
+          onClose={() => setShowMaintenanceModal(false)}
+          onAdd={addMaintenanceRecord}
+        />
+      )}
+
+      {/* Documents Modal */}
+      {showDocumentsModal && (
+        <DocumentsModal
+          documents={documents}
+          onClose={() => setShowDocumentsModal(false)}
+          onAdd={addDocument}
+        />
+      )}
+
+      {/* Trip History Modal */}
+      {showTripHistoryModal && (
+        <TripHistoryModal
+          trips={tripHistory}
+          onClose={() => setShowTripHistoryModal(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+// Fuel Log Modal Component
+const FuelLogModal = ({ fuelLogs, onClose, onAdd }) => {
+  const [formData, setFormData] = useState({
+    liters: '',
+    cost: '',
+    odometer: '',
+    station: '',
+    notes: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onAdd(formData);
+    setFormData({ liters: '', cost: '', odometer: '', station: '', notes: '' });
+    alert('Fuel log added successfully!');
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2><i className="fas fa-gas-pump"></i> Fuel Log</h2>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit} className="fuel-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label>Liters</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.liters}
+                  onChange={(e) => setFormData({...formData, liters: e.target.value})}
+                  required
+                  placeholder="e.g., 50"
+                />
+              </div>
+              <div className="form-group">
+                <label>Cost (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.cost}
+                  onChange={(e) => setFormData({...formData, cost: e.target.value})}
+                  required
+                  placeholder="e.g., 4500"
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Odometer (km)</label>
+                <input
+                  type="number"
+                  value={formData.odometer}
+                  onChange={(e) => setFormData({...formData, odometer: e.target.value})}
+                  required
+                  placeholder="e.g., 45000"
+                />
+              </div>
+              <div className="form-group">
+                <label>Station</label>
+                <input
+                  type="text"
+                  value={formData.station}
+                  onChange={(e) => setFormData({...formData, station: e.target.value})}
+                  placeholder="e.g., Indian Oil"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="Additional notes..."
+                rows="2"
+              />
+            </div>
+            <button type="submit" className="btn btn-primary">Add Fuel Log</button>
+          </form>
+
+          <div className="logs-list">
+            <h3>Recent Fuel Logs</h3>
+            {fuelLogs.length === 0 ? (
+              <p className="no-data">No fuel logs yet</p>
+            ) : (
+              fuelLogs.slice(0, 5).map(log => (
+                <div key={log.id} className="log-item">
+                  <div className="log-header">
+                    <span className="log-date">{new Date(log.date).toLocaleDateString()}</span>
+                    <span className="log-cost">₹{log.cost}</span>
+                  </div>
+                  <div className="log-details">
+                    <span>{log.liters}L</span>
+                    <span>•</span>
+                    <span>{log.odometer} km</span>
+                    {log.station && <><span>•</span><span>{log.station}</span></>}
+                  </div>
+                  {log.notes && <p className="log-notes">{log.notes}</p>}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Maintenance Modal Component
+const MaintenanceModal = ({ records, onClose, onAdd }) => {
+  const [formData, setFormData] = useState({
+    type: 'service',
+    description: '',
+    cost: '',
+    workshop: '',
+    nextDue: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onAdd(formData);
+    setFormData({ type: 'service', description: '', cost: '', workshop: '', nextDue: '' });
+    alert('Maintenance record added successfully!');
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2><i className="fas fa-wrench"></i> Maintenance Records</h2>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit} className="maintenance-form">
+            <div className="form-group">
+              <label>Type</label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({...formData, type: e.target.value})}
+                required
+              >
+                <option value="service">Regular Service</option>
+                <option value="repair">Repair</option>
+                <option value="tire">Tire Change</option>
+                <option value="oil">Oil Change</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                required
+                placeholder="Describe the maintenance work..."
+                rows="3"
+              />
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Cost (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.cost}
+                  onChange={(e) => setFormData({...formData, cost: e.target.value})}
+                  required
+                  placeholder="e.g., 5000"
+                />
+              </div>
+              <div className="form-group">
+                <label>Workshop</label>
+                <input
+                  type="text"
+                  value={formData.workshop}
+                  onChange={(e) => setFormData({...formData, workshop: e.target.value})}
+                  placeholder="Workshop name"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Next Due Date</label>
+              <input
+                type="date"
+                value={formData.nextDue}
+                onChange={(e) => setFormData({...formData, nextDue: e.target.value})}
+              />
+            </div>
+            <button type="submit" className="btn btn-primary">Add Record</button>
+          </form>
+
+          <div className="logs-list">
+            <h3>Recent Maintenance</h3>
+            {records.length === 0 ? (
+              <p className="no-data">No maintenance records yet</p>
+            ) : (
+              records.slice(0, 5).map(record => (
+                <div key={record.id} className="log-item">
+                  <div className="log-header">
+                    <span className="log-date">{new Date(record.date).toLocaleDateString()}</span>
+                    <span className="log-type">{record.type}</span>
+                  </div>
+                  <p className="log-description">{record.description}</p>
+                  <div className="log-details">
+                    <span>₹{record.cost}</span>
+                    {record.workshop && <><span>•</span><span>{record.workshop}</span></>}
+                  </div>
+                  {record.nextDue && (
+                    <p className="log-next-due">Next due: {new Date(record.nextDue).toLocaleDateString()}</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Documents Modal Component
+const DocumentsModal = ({ documents, onClose, onAdd }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'insurance',
+    number: '',
+    expiryDate: '',
+    notes: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onAdd(formData);
+    setFormData({ name: '', type: 'insurance', number: '', expiryDate: '', notes: '' });
+    alert('Document added successfully!');
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2><i className="fas fa-file-alt"></i> Vehicle Documents</h2>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit} className="documents-form">
+            <div className="form-group">
+              <label>Document Type</label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({...formData, type: e.target.value})}
+                required
+              >
+                <option value="insurance">Insurance</option>
+                <option value="registration">Registration</option>
+                <option value="permit">Permit</option>
+                <option value="pollution">Pollution Certificate</option>
+                <option value="fitness">Fitness Certificate</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Document Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                required
+                placeholder="e.g., Vehicle Insurance Policy"
+              />
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Document Number</label>
+                <input
+                  type="text"
+                  value={formData.number}
+                  onChange={(e) => setFormData({...formData, number: e.target.value})}
+                  placeholder="e.g., POL123456"
+                />
+              </div>
+              <div className="form-group">
+                <label>Expiry Date</label>
+                <input
+                  type="date"
+                  value={formData.expiryDate}
+                  onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="Additional notes..."
+                rows="2"
+              />
+            </div>
+            <button type="submit" className="btn btn-primary">Add Document</button>
+          </form>
+
+          <div className="logs-list">
+            <h3>Saved Documents</h3>
+            {documents.length === 0 ? (
+              <p className="no-data">No documents saved yet</p>
+            ) : (
+              documents.map(doc => (
+                <div key={doc.id} className="log-item">
+                  <div className="log-header">
+                    <span className="log-type">{doc.type}</span>
+                    {doc.expiryDate && (
+                      <span className={`log-expiry ${new Date(doc.expiryDate) < new Date() ? 'expired' : ''}`}>
+                        {new Date(doc.expiryDate) < new Date() ? 'Expired' : 'Valid'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="log-description">{doc.name}</p>
+                  <div className="log-details">
+                    {doc.number && <span>{doc.number}</span>}
+                    {doc.expiryDate && (
+                      <>
+                        <span>•</span>
+                        <span>Expires: {new Date(doc.expiryDate).toLocaleDateString()}</span>
+                      </>
+                    )}
+                  </div>
+                  {doc.notes && <p className="log-notes">{doc.notes}</p>}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Trip History Modal Component
+const TripHistoryModal = ({ trips, onClose }) => {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2><i className="fas fa-route"></i> Trip History</h2>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </div>
+        <div className="modal-body">
+          <div className="trip-stats">
+            <div className="stat-card">
+              <i className="fas fa-road"></i>
+              <div>
+                <h4>Total Trips</h4>
+                <p>{trips.length}</p>
+              </div>
+            </div>
+            <div className="stat-card">
+              <i className="fas fa-calendar-week"></i>
+              <div>
+                <h4>This Week</h4>
+                <p>{trips.filter(t => {
+                  const tripDate = new Date(t.date);
+                  const weekAgo = new Date();
+                  weekAgo.setDate(weekAgo.getDate() - 7);
+                  return tripDate >= weekAgo;
+                }).length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="logs-list">
+            <h3>Recent Trips</h3>
+            {trips.length === 0 ? (
+              <p className="no-data">No trip history available. Trips are automatically logged from your deliveries.</p>
+            ) : (
+              trips.slice(0, 10).map(trip => (
+                <div key={trip.id} className="log-item trip-item">
+                  <div className="log-header">
+                    <span className="log-date">{new Date(trip.date).toLocaleDateString()}</span>
+                    <span className="log-status">{trip.status}</span>
+                  </div>
+                  <div className="trip-route">
+                    <i className="fas fa-map-marker-alt"></i>
+                    <span>{trip.from}</span>
+                    <i className="fas fa-arrow-right"></i>
+                    <span>{trip.to}</span>
+                  </div>
+                  <div className="log-details">
+                    {trip.distance && <span>{trip.distance} km</span>}
+                    {trip.duration && <><span>•</span><span>{trip.duration}</span></>}
+                    {trip.barrels && <><span>•</span><span>{trip.barrels} barrels</span></>}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

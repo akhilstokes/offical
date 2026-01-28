@@ -92,4 +92,48 @@ router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);
 router.get('/my-submissions', protect, getMySubmissions);
 
+// PATCH route to update specific user fields (like dailySalary)
+router.patch('/:id', protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Only allow certain fields to be updated via PATCH
+    const allowedUpdates = ['dailySalary', 'baseSalary', 'salaryType', 'allowances', 'overtime', 'bonus'];
+    const updateKeys = Object.keys(updates);
+    const isValidUpdate = updateKeys.every(key => allowedUpdates.includes(key));
+
+    if (!isValidUpdate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid update fields'
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('_id name email role dailySalary baseSalary salaryType');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user'
+    });
+  }
+});
+
 module.exports = router;

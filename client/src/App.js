@@ -32,6 +32,7 @@ import ManagerSellRequests from "./pages/manager/ManagerSellRequests";
 import ManagerLatexBilling from "./pages/manager/ManagerLatexBilling";
 import ManagerBillVerification from "./pages/manager/ManagerBillVerification";
 import ManagerRateUpdate from "./pages/manager/ManagerRateUpdate";
+import AccountantLiveRate from "./pages/accountant/AccountantLiveRate";
 import ManagerWages from "./pages/manager/ManagerWages";
 import ManagerStaffSalary from "./pages/manager/ManagerStaffSalary";
 import ManagerShifts from "./pages/manager/ManagerShifts";
@@ -60,7 +61,7 @@ import LabShiftSchedule from "./pages/lab/LabShiftSchedule";
 
 // Accountant Module
 import AccountantProtectedRoute from "./components/common/AccountantProtectedRoute";
-import AccountantDashboardLayout from "./layouts/AccountantLayoutAntigravity";
+import AccountantLayoutAntigravity from "./layouts/AccountantLayoutAntigravity";
 import AccountantDashboard from "./pages/accountant/AccountantDashboard";
 import AccountantWages from "./pages/accountant/AccountantWages";
 import AccountantLatexVerify from "./pages/accountant/AccountantLatexVerify";
@@ -78,11 +79,13 @@ import AccountantAlerts from "./pages/accountant/AccountantAlerts";
 
 // Public Pages
 import HomePage from "./pages/HomePage";
+import NewLandingPage from "./pages/NewLandingPage";
 import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
 import HistoryPage from "./pages/HistoryPage";
 import GalleryPage from "./pages/GalleryPage";
 import AwardsPage from "./pages/AwardsPage";
+import LandingPage from "./pages/LandingPage";
 
 // Auth Pages
 import LoginPage from "./pages/auth/LoginPage";
@@ -111,6 +114,7 @@ import StaffDashboard from "./pages/user_dashboard/StaffDashboard";
 import StaffAttendance from "./pages/staff/StaffAttendance";
 import StaffLeave from "./pages/staff/StaffLeave";
 import StaffSalary from "./pages/staff/StaffSalary";
+import StaffEarningsAndBills from "./pages/staff/StaffEarningsAndBills";
 import StaffIssues from "./pages/staff/StaffIssues";
 import ReturnBarrels from "./pages/staff/ReturnBarrels";
 import MySchedule from "./pages/staff/MySchedule";
@@ -153,14 +157,19 @@ import BarrelIssueRegister from "./pages/admin/BarrelIssueRegister";
 import AdminExpenses from "./pages/admin/AdminExpenses";
 import AdminChemicalRequests from "./pages/admin/AdminChemicalRequests";
 import AdminRateVerification from "./pages/admin/AdminRateVerification";
+import AdminRateApproval from "./pages/admin/AdminRateApproval";
 
 function App() {
   return (
     <RoleThemeProvider>
       <Routes>
+        {/* New Landing Page - Standalone without layout */}
+        <Route path="/" element={<NewLandingPage />} />
+        
         {/* Public Routes */}
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/old-home" element={<HomePage />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/gallery" element={<GalleryPage />} />
@@ -368,7 +377,7 @@ function App() {
           element={
             <StaffProtectedRoute>
               <StaffDashboardLayout>
-                <StaffSalary />
+                <StaffEarningsAndBills />
               </StaffDashboardLayout>
             </StaffProtectedRoute>
           }
@@ -1095,6 +1104,16 @@ function App() {
           }
         />
         <Route
+          path="/admin/rate-approval"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminRateApproval />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/profile"
           element={
             <AdminProtectedRoute>
@@ -1120,9 +1139,9 @@ function App() {
           path="/accountant"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantDashboard />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1130,9 +1149,9 @@ function App() {
           path="/accountant/wages"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantWages />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1140,9 +1159,9 @@ function App() {
           path="/accountant/rates"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
-                <ManagerRateUpdate />
-              </AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
+                <AccountantLiveRate />
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1150,9 +1169,9 @@ function App() {
           path="/accountant/expenses"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantExpenseTracker />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1160,9 +1179,9 @@ function App() {
           path="/accountant/stock"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantStockMonitor />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1170,9 +1189,9 @@ function App() {
           path="/accountant/attendance"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantAttendance />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1180,9 +1199,9 @@ function App() {
           path="/accountant/leave"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantLeave />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1190,9 +1209,9 @@ function App() {
           path="/accountant/salaries"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantSalaries />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1200,9 +1219,9 @@ function App() {
           path="/accountant/bill-generation"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantBillGeneration />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1210,9 +1229,9 @@ function App() {
           path="/accountant/delivery-intake"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantDeliveryIntake />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1220,9 +1239,9 @@ function App() {
           path="/accountant/vendors"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantVendorLedger />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1230,9 +1249,9 @@ function App() {
           path="/accountant/documents"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantDocuments />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1240,9 +1259,9 @@ function App() {
           path="/accountant/reports"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantReports />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />
@@ -1250,9 +1269,9 @@ function App() {
           path="/accountant/alerts"
           element={
             <AccountantProtectedRoute>
-              <AccountantDashboardLayout>
+              <AccountantLayoutAntigravity>
                 <AccountantAlerts />
-              </AccountantDashboardLayout>
+              </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
         />

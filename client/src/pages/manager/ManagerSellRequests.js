@@ -469,22 +469,83 @@ const ManagerSellRequests = () => {
   };
 
   const approve = async (id) => {
+    // Find the request to get details for confirmation
+    const r = rows.find(x => x._id === id) || {};
+    const customerName = displayFarmer(r);
+    const barrelCount = r.barrelCount || r.quantity || 'N/A';
+    
+    // Show confirmation dialog with request details
+    const confirmMessage = `Are you sure you want to approve this request?\n\n` +
+      `Customer: ${customerName}\n` +
+      `Barrels: ${barrelCount}\n` +
+      `Type: ${r._type || 'SELL'}\n\n` +
+      `After approval, you can assign delivery staff.`;
+    
+    if (!window.confirm(confirmMessage)) {
+      return; // User cancelled
+    }
+    
     // Disable button after clicking
+    setApprovingId(id);
     setApprovedRequests(prev => new Set([...prev, id]));
-    setInfo('Approved! ✅ Now you can assign delivery staff.');
     setError('');
+    
     try {
-      const r = rows.find(x => x._id === id) || {};
       // If this row came from delivery barrel intake list, mark approved via generic update
       // The /approve endpoint requires pricePerBarrel and returns 400 without it.
       if (String(r._source || '').includes('/delivery/barrels/intake')) {
         const target = `${API}/api/delivery/barrels/intake/${id}`;
-        await fetch(target, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ status: 'approved' }) });
+        const res = await fetch(target, { 
+          method: 'PUT', 
+          headers: authHeaders(), 
+          body: JSON.stringify({ status: 'approved' }) 
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          const errorMessage = errorData.message || errorData.error || `Server error (${res.status})`;
+          throw new Error(errorMessage);
+        }
+        
+        const responseData = await res.json().catch(() => ({}));
+        console.log('Approval response:', responseData);
       }
+      
       // Reflect approved status immediately in the table
-      setRows(prev => prev.map(x => x._id === id ? { ...x, status: 'approved', _statusUpper: 'APPROVED' } : x));
-    } catch (_) { /* non-blocking */ }
-    // Don't automatically open assign modal - user will click "Assign Staff" button
+      setRows(prev => prev.map(x => x._id === id ? { 
+        ...x, 
+        status: 'approved', 
+        _statusUpper: 'APPROVED',
+        approvedAt: new Date().toISOString(),
+        approvedBy: user?.name || 'Manager'
+      } : x));
+      
+      setInfo(`✅ Request approved successfully! You can now assign delivery staff to ${customerName}.`);
+      
+    } catch (error) {
+      // If approval fails, remove from approved set
+      setApprovedRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      
+      // Better error message
+      let errorMsg = 'Failed to approve request';
+      if (error.message) {
+        errorMsg += `: ${error.message}`;
+      }
+      if (error.message && error.message.includes('500')) {
+        errorMsg += '. Please restart the server to apply recent updates.';
+      }
+      
+      setError(errorMsg);
+      console.error('Approval error:', error);
+      console.error('Request ID:', id);
+      console.error('Request data:', r);
+    } finally {
+      setApprovingId('');
+    }
   };
 
   const saveCompanyBarrel = async (id, value) => {
@@ -609,30 +670,36 @@ const ManagerSellRequests = () => {
             <div className="title-icon">
               <i className="fas fa-clipboard-list" />
             </div>
-            <h1>Sell Requests Management</h1>
+            <div className="title-content">
+              <h1>Sell Requests Management</h1>
+              <p className="header-subtitle">Manage and track all customer sell requests</p>
+            </div>
           </div>
           <div className="header-actions">
             <button 
               onClick={() => load(true)} 
               disabled={loading}
-              className="btn btn-secondary"
+              className="btn btn-refresh"
+              title="Refresh data"
             >
-              <i className="fas fa-sync-alt" />
-              {loading ? 'Loading...' : 'Refresh'}
+              <i className={loading ? "fas fa-sync-alt fa-spin" : "fas fa-sync-alt"} />
+              <span className="btn-text">Refresh</span>
             </button>
             <button 
-              onClick={() => navigate('/manager/live-locations')}
-              className="btn btn-secondary"
+              onClick={() => navigate('/manager/live')}
+              className="btn btn-map"
+              title="View live check-ins"
             >
-              <i className="fas fa-map-marked-alt" />
-              Live Map
+              <i className="fas fa-users" />
+              <span className="btn-text">Live Check-ins</span>
             </button>
             <button 
               onClick={() => { setShowHistory(true); loadHistory(); }}
-              className="btn btn-primary"
+              className="btn btn-history-primary"
+              title="View request history"
             >
               <i className="fas fa-history" />
-              View History
+              <span className="btn-text">View History</span>
             </button>
           </div>
         </div>
@@ -897,20 +964,31 @@ const ManagerSellRequests = () => {
                       <>
                         <button
                           onClick={() => approve(r._id)}
-                          disabled={approvedRequests.has(r._id)}
+                          disabled={approvedRequests.has(r._id) || approvingId === r._id}
                           className="action-btn action-btn-approve"
                         >
-                          <i className="fas fa-thumbs-up" />
-                          {approvedRequests.has(r._id) ? 'Approved' : 'Approve'}
+                          <i className={approvingId === r._id ? "fas fa-spinner fa-spin" : "fas fa-thumbs-up"} />
+                          {approvingId === r._id ? 'Approving...' : (approvedRequests.has(r._id) ? 'Approved ✓' : 'Approve')}
                         </button>
                         <button
                           onClick={() => openAssignDelivery(r._id)}
                           disabled={assignedRequests.has(r._id) || (!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED')}
                           className="action-btn action-btn-assign"
-                          title={(!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED') ? 'Approve first before assigning' : ''}
+                          title={
+                            assignedRequests.has(r._id) 
+                              ? 'Already assigned to delivery staff' 
+                              : (!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED') 
+                                ? '⚠️ Click APPROVE button first before assigning delivery staff' 
+                                : 'Assign delivery staff to pickup barrels'
+                          }
+                          style={{
+                            opacity: (!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED') ? 0.6 : 1
+                          }}
                         >
                           <i className="fas fa-truck" />
-                          {assignedRequests.has(r._id) ? 'Assigned' : 'Assign Staff'}
+                          {assignedRequests.has(r._id) ? 'Assigned ✓' : 
+                           (!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED') ? '🔒 Assign Staff' : 
+                           'Assign Staff'}
                         </button>
                       </>
                     )}
@@ -1112,11 +1190,11 @@ const ManagerSellRequests = () => {
                           <>
                             <button
                               onClick={() => approve(r._id)}
-                              disabled={approvedRequests.has(r._id)}
+                              disabled={approvedRequests.has(r._id) || approvingId === r._id}
                               className="action-btn action-btn-approve"
                             >
-                              <i className="fas fa-thumbs-up" />
-                              {approvedRequests.has(r._id) ? 'Approved' : 'Approve'}
+                              <i className={approvingId === r._id ? "fas fa-spinner fa-spin" : "fas fa-thumbs-up"} />
+                              {approvingId === r._id ? 'Approving...' : (approvedRequests.has(r._id) ? 'Approved ✓' : 'Approve')}
                             </button>
                             <button
                               onClick={() => openAssignDelivery(r._id)}
@@ -1243,7 +1321,63 @@ const ManagerSellRequests = () => {
             </div>
             
             <div className="modal-body">
-              <p>Select a delivery staff member to assign this request:</p>
+              {/* Customer Info */}
+              {assignDeliveryId && (() => {
+                const req = [...pendingRequests, ...approvedRequests].find(r => r._id === assignDeliveryId);
+                if (req) {
+                  const customerName = req.customerName || req.name || req.user?.name || req.farmerId?.name || 'Customer';
+                  const customerAddress = req.address || req.user?.address || req.farmerId?.address || req.notes || 'Address not provided';
+                  const barrelCount = req.barrelCount || 0;
+                  
+                  return (
+                    <div style={{
+                      background: '#f8fafc',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      marginBottom: '20px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong style={{ color: '#64748b', fontSize: '13px' }}>Customer:</strong>
+                        <div style={{ color: '#0f172a', fontSize: '15px', fontWeight: '600', marginTop: '4px' }}>
+                          {customerName}
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong style={{ color: '#64748b', fontSize: '13px' }}>Quantity:</strong>
+                        <div style={{ color: '#0f172a', fontSize: '15px', fontWeight: '600', marginTop: '4px' }}>
+                          {barrelCount} barrel(s)
+                        </div>
+                      </div>
+                      <div>
+                        <strong style={{ color: '#64748b', fontSize: '13px' }}>Delivery Location *</strong>
+                        <input
+                          type="text"
+                          value={customerAddress}
+                          readOnly
+                          placeholder="Enter delivery address"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #e2e8f0',
+                            marginTop: '6px',
+                            background: '#f1f5f9',
+                            color: '#475569',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', fontStyle: 'italic' }}>
+                          Auto-filled from customer address
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              
+              <p style={{ marginBottom: '12px', color: '#475569', fontSize: '14px' }}>Select a delivery staff member to assign this request:</p>
               <select
                 value={selectedStaff}
                 onChange={(e) => setSelectedStaff(e.target.value)}

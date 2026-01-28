@@ -271,8 +271,18 @@ exports.assignBatch = async (req, res) => {
 exports.listMyAssigned = async (req, res) => {
     try {
         const myId = req.user?._id;
-        const items = await Barrel.find({ assignedTo: myId }).sort({ updatedAt: -1 });
-        return res.json({ records: items, count: items.length });
+        // Only return barrels that are 'in-use' (available to the user)
+        // Exclude 'pending_sale' and 'sold' barrels
+        const items = await Barrel.find({ 
+            assignedTo: myId,
+            status: 'in-use' // Only count available barrels
+        }).sort({ assignedDate: 1 }); // Sort by oldest first (FIFO)
+        
+        return res.json({ 
+            records: items, 
+            count: items.length,
+            message: `User has ${items.length} barrel(s) available`
+        });
     } catch (error) {
         return res.status(500).json({ message: 'Server Error', error: error.message });
     }

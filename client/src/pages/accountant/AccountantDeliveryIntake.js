@@ -19,12 +19,18 @@ const AccountantDeliveryIntake = () => {
         phone: '',
         barrels: '',
         drcPercent: '',
+        barrelDetails: [], // Array of {barrelNumber, drc, liters}
+        barrelVolumes: {}, // Object to store volume per barrel: {0: 100, 1: 100}
         totalKg: '',
         dryKg: '',
         marketRate: '',
         amount: '',
         perBarrel: ''
     });
+
+    // Admin-approved company rate
+    const [approvedCompanyRate, setApprovedCompanyRate] = useState(null);
+    const [loadingRate, setLoadingRate] = useState(false);
 
     // Sample delivery data
     const [sampleDeliveries] = useState([
@@ -60,7 +66,55 @@ const AccountantDeliveryIntake = () => {
 
     useEffect(() => {
         fetchDeliveries();
+        fetchApprovedRate();
     }, []);
+
+    const fetchApprovedRate = async () => {
+        setLoadingRate(true);
+        try {
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+            const token = localStorage.getItem('token');
+            
+            const response = await fetch(`${API_URL}/api/rates/latex/today`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Check if admin rate is valid (within 24-hour window from 4 PM to 4 PM)
+                if (data.admin && data.admin.isValid && data.admin.companyRate) {
+                    const companyRate = data.admin.companyRate;
+                    setApprovedCompanyRate(companyRate);
+                    
+                    // Auto-fill market rate with company rate
+                    setIntakeForm(prev => ({
+                        ...prev,
+                        marketRate: companyRate.toString()
+                    }));
+                    
+                    console.log('✓ Auto-filled company rate:', companyRate);
+                    console.log('✓ Rate valid from:', data.admin.validFrom);
+                    console.log('✓ Rate valid until:', data.admin.validUntil);
+                } else if (data.admin && !data.admin.isValid) {
+                    // Rate exists but is expired or not yet valid
+                    setApprovedCompanyRate(null);
+                    console.log('⚠️ Rate not valid:', data.admin.reason);
+                    console.log('⚠️ Rate effective date:', data.admin.effectiveDate);
+                    console.log('⚠️ Rate valid from:', data.admin.validFrom);
+                    console.log('⚠️ Rate valid until:', data.admin.validUntil);
+                } else {
+                    // No rate found
+                    setApprovedCompanyRate(null);
+                    console.log('⚠️ No approved rate available');
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching approved rate:', err);
+        } finally {
+            setLoadingRate(false);
+        }
+    };
 
     const fetchDeliveries = async () => {
         setLoading(true);
@@ -75,14 +129,18 @@ const AccountantDeliveryIntake = () => {
                 buyer: sample.customerName || 'N/A',
                 phone: sample.phone || '-',
                 barrels: sample.barrelCount || 0,
-                drcPercent: sample.drc || 0, // DRC comes from lab staff
+                drcPercent: sample.drc || 0, // Average DRC for display
+                barrelDetails: sample.barrels || [], // Individual barrel DRC values
                 // These fields are MANUAL ENTRY ONLY
-                totalKg: 0,
-                dryKg: 0,
-                marketRate: 0,
-                amount: 0,
-                perBarrel: 0,
-                status: 'pending',
+                totalKg: sample.totalKg || 0,
+                dryKg: sample.dryKg || 0,
+                marketRate: sample.marketRate || 0,
+                amount: sample.totalAmount || 0,
+                perBarrel: sample.perBarrel || 0,
+                // PRESERVE STATUS - If bill was already calculated, keep it as 'calculated'
+                status: sample.status || 'pending',
+                billId: sample.billId,
+                billNumber: sample.billNumber,
                 sampleId: sample.sampleId,
                 labStaff: sample.labStaff,
                 notes: sample.notes
@@ -104,10 +162,150 @@ const AccountantDeliveryIntake = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setIntakeForm(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        
+        // VALIDATION: Market Rate - max 50000, positive only
+        if (name === 'marketRate') {
+            const rateValue = parseFloat(value);
+            if (value && rateValue < 0) {
+                setError('⚠️ Market rate must be a positive number');
+                setTimeout(() => setError(''), 3000);
+                return;
+            }
+            if (value && rateValue > 50000) {
+                setError('⚠️ Market rate cannot exceed ₹50,000 per 100KG');
+                setTimeout(() => setError(''), 3000);
+                return;
+            }
+        }
+        
+        // VALIDATION: Latex Volume - positive only
+        if (name === 'totalKg') {
+            const volumeValue = parseFloat(value);
+            if (value && volumeValue < 0) {
+                setError('⚠️ Latex volume must be a positive number');
+                setTimeout(() => setError(''), 3000);
+                return;
+            }
+        }
+        
+        setIntakeForm(prev => {
+            const updatedForm = {
+                ...prev,
+                [name]: value
+            };
+            
+            // Auto-calculate if latex volume (totalKg) is entered and we have rate and DRC
+            if (name === 'totalKg' && value && parseFloat(value) > 0) {
+                const totalKg = parseFloat(value);
+                const marketRate = parseFloat(prev.marketRate) || 0;
+                const drcPercent = parseFloat(prev.drcPercent) || 0;
+                
+                if (marketRate > 0 && drcPercent > 0) {
+                    const dryKg = totalKg * (drcPercent / 100);
+                    const perKgRate = marketRate / 100;
+                    const amount = dryKg * perKgRate;
+                    const barrels = parseFloat(prev.barrels) || 0;
+                    const perBarrel = barrels > 0 ? amount / barrels : 0;
+                    
+                    updatedForm.dryKg = dryKg.toFixed(2);
+                    updatedForm.amount = amount.toFixed(2);
+                    updatedForm.perBarrel = perBarrel.toFixed(2);
+                    
+                    console.log('✓ Auto-calculated billing:', {
+                        volume: totalKg,
+                        drc: drcPercent,
+                        dryRubber: dryKg.toFixed(2),
+                        rate: marketRate,
+                        amount: amount.toFixed(2)
+                    });
+                }
+            }
+            
+            // Auto-calculate if market rate is changed and we have volume and DRC
+            if (name === 'marketRate' && value && parseFloat(value) > 0) {
+                const marketRate = parseFloat(value);
+                const totalKg = parseFloat(prev.totalKg) || 0;
+                const drcPercent = parseFloat(prev.drcPercent) || 0;
+                
+                if (totalKg > 0 && drcPercent > 0) {
+                    const dryKg = totalKg * (drcPercent / 100);
+                    const perKgRate = marketRate / 100;
+                    const amount = dryKg * perKgRate;
+                    const barrels = parseFloat(prev.barrels) || 0;
+                    const perBarrel = barrels > 0 ? amount / barrels : 0;
+                    
+                    updatedForm.dryKg = dryKg.toFixed(2);
+                    updatedForm.amount = amount.toFixed(2);
+                    updatedForm.perBarrel = perBarrel.toFixed(2);
+                    
+                    console.log('✓ Auto-calculated billing (rate changed):', {
+                        volume: totalKg,
+                        drc: drcPercent,
+                        dryRubber: dryKg.toFixed(2),
+                        rate: marketRate,
+                        amount: amount.toFixed(2)
+                    });
+                }
+            }
+            
+            return updatedForm;
+        });
+    };
+
+    const handleBarrelVolumeChange = (barrelIndex, value) => {
+        // VALIDATION: Per-barrel volume - positive only, max 300 liters
+        const volumeValue = parseFloat(value);
+        if (value && volumeValue < 0) {
+            setError('⚠️ Latex volume must be a positive number');
+            setTimeout(() => setError(''), 3000);
+            return;
+        }
+        if (value && volumeValue > 300) {
+            setError('⚠️ Latex volume per barrel cannot exceed 300 liters');
+            setTimeout(() => setError(''), 3000);
+            return;
+        }
+        
+        setIntakeForm(prev => {
+            const newBarrelVolumes = {
+                ...prev.barrelVolumes,
+                [barrelIndex]: parseFloat(value) || 0
+            };
+            
+            // Calculate total volume
+            const totalVolume = Object.values(newBarrelVolumes).reduce((sum, vol) => sum + vol, 0);
+            
+            const updatedForm = {
+                ...prev,
+                barrelVolumes: newBarrelVolumes,
+                totalKg: totalVolume.toString()
+            };
+            
+            // Auto-calculate if we have all required data
+            if (totalVolume > 0 && prev.marketRate && parseFloat(prev.marketRate) > 0 && prev.drcPercent) {
+                const drcPercent = parseFloat(prev.drcPercent) || 0;
+                const dryKg = totalVolume * (drcPercent / 100);
+                const marketRate = parseFloat(prev.marketRate) || 0;
+                const perKgRate = marketRate / 100;
+                const amount = dryKg * perKgRate;
+                const barrels = parseFloat(prev.barrels) || 0;
+                const perBarrel = barrels > 0 ? amount / barrels : 0;
+                
+                updatedForm.dryKg = dryKg.toFixed(2);
+                updatedForm.amount = amount.toFixed(2);
+                updatedForm.perBarrel = perBarrel.toFixed(2);
+                
+                console.log('✓ Auto-calculated billing:', {
+                    volume: totalVolume,
+                    drc: drcPercent,
+                    dryRubber: dryKg.toFixed(2),
+                    rate: marketRate,
+                    amount: amount.toFixed(2)
+                });
+            }
+            
+            return updatedForm;
+        });
     };
 
     const handleCalculate = () => {
@@ -124,7 +322,7 @@ const AccountantDeliveryIntake = () => {
             return;
         }
 
-        // Calculate Dry Rubber
+        // Calculate Dry Rubber using average DRC
         const totalKg = parseFloat(intakeForm.totalKg) || 0;
         const drcPercent = parseFloat(intakeForm.drcPercent) || 0;
         const dryKg = totalKg * (drcPercent / 100);
@@ -145,7 +343,7 @@ const AccountantDeliveryIntake = () => {
             perBarrel: perBarrel.toFixed(2)
         }));
 
-        setSuccess('Calculation completed successfully!');
+        setSuccess('✓ Calculation completed successfully!');
         setTimeout(() => setSuccess(''), 2000);
     };
 
@@ -281,6 +479,28 @@ const AccountantDeliveryIntake = () => {
                 return d;
             }));
 
+            // PERSIST STATUS TO LOCALSTORAGE - Update the sample status so it persists across page refreshes
+            try {
+                const labPendingSamples = JSON.parse(localStorage.getItem('accountant_pending_samples') || '[]');
+                const updatedSamples = labPendingSamples.map(sample => {
+                    if (sample.sampleId === displayBillData.sampleId) {
+                        return {
+                            ...sample,
+                            status: 'calculated',
+                            billId: data.bill._id,
+                            billNumber: data.bill.billNumber,
+                            totalAmount: data.bill.totalAmount,
+                            calculatedAt: new Date().toISOString()
+                        };
+                    }
+                    return sample;
+                });
+                localStorage.setItem('accountant_pending_samples', JSON.stringify(updatedSamples));
+                console.log('✅ Bill status persisted to localStorage');
+            } catch (err) {
+                console.error('⚠️ Failed to update localStorage:', err);
+            }
+
             // Show bill modal for printing
             setSelectedBill(displayBillData);
             setShowBillModal(true);
@@ -307,9 +527,14 @@ const AccountantDeliveryIntake = () => {
         }
         
         if (!delivery.marketRate || delivery.marketRate <= 0) {
-            setError('⚠️ Please enter Market Rate (₹/100KG) before verifying');
-            setTimeout(() => setError(''), 4000);
-            return;
+            // Auto-use approved company rate if available
+            if (approvedCompanyRate && approvedCompanyRate > 0) {
+                delivery.marketRate = approvedCompanyRate;
+            } else {
+                setError('⚠️ No approved company rate available. Admin must approve a rate first.');
+                setTimeout(() => setError(''), 4000);
+                return;
+            }
         }
         
         if (!delivery.amount || delivery.amount <= 0) {
@@ -513,6 +738,8 @@ const AccountantDeliveryIntake = () => {
                                                         phone: delivery.phone,
                                                         barrels: delivery.barrels,
                                                         drcPercent: delivery.drcPercent,
+                                                        barrelDetails: delivery.barrelDetails || [],
+                                                        barrelVolumes: {}, // Reset volumes
                                                         totalKg: delivery.totalKg || '',
                                                         marketRate: delivery.marketRate || '',
                                                         sampleId: delivery.sampleId,
@@ -624,32 +851,168 @@ const AccountantDeliveryIntake = () => {
                                     />
                                 </div>
 
-                                <div className="form-group">
-                                    <label className="form-label">DRC %</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        value={`${intakeForm.drcPercent}%`}
-                                        readOnly
-                                        style={{
-                                            backgroundColor: '#f3f4f6',
-                                            cursor: 'not-allowed'
-                                        }}
-                                    />
-                                </div>
+                                {/* DRC Values - Show individual per barrel if available */}
+                                {intakeForm.barrelDetails && intakeForm.barrelDetails.length > 0 ? (
+                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                        <label className="form-label" style={{ marginBottom: '12px' }}>
+                                            DRC Values (Individual per Barrel)
+                                            <span style={{
+                                                marginLeft: '8px',
+                                                fontSize: '11px',
+                                                color: '#059669',
+                                                fontWeight: '600',
+                                                backgroundColor: '#d1fae5',
+                                                padding: '2px 6px',
+                                                borderRadius: '3px'
+                                            }}>From Lab</span>
+                                        </label>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                            gap: '12px',
+                                            padding: '16px',
+                                            backgroundColor: '#f0fdf4',
+                                            borderRadius: '8px',
+                                            border: '2px solid #86efac'
+                                        }}>
+                                            {intakeForm.barrelDetails.map((barrel, index) => (
+                                                <div key={index} style={{
+                                                    padding: '12px',
+                                                    backgroundColor: '#ffffff',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #bbf7d0'
+                                                }}>
+                                                    <div style={{
+                                                        fontSize: '12px',
+                                                        color: '#059669',
+                                                        fontWeight: '600',
+                                                        marginBottom: '6px'
+                                                    }}>
+                                                        Barrel {barrel.barrelNumber || index + 1}
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '20px',
+                                                        color: '#166534',
+                                                        fontWeight: '700'
+                                                    }}>
+                                                        {barrel.drc}%
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <small style={{ 
+                                            color: '#059669', 
+                                            fontSize: 12, 
+                                            marginTop: 8, 
+                                            display: 'block',
+                                            fontStyle: 'italic'
+                                        }}>
+                                            ℹ️ Average DRC: {intakeForm.drcPercent}% (used for calculation)
+                                        </small>
+                                    </div>
+                                ) : (
+                                    <div className="form-group">
+                                        <label className="form-label">DRC %</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={`${intakeForm.drcPercent}%`}
+                                            readOnly
+                                            style={{
+                                                backgroundColor: '#f3f4f6',
+                                                cursor: 'not-allowed'
+                                            }}
+                                        />
+                                    </div>
+                                )}
 
-                                <div className="form-group">
-                                    <label className="form-label">Latex Volume (Liters)</label>
-                                    <input
-                                        type="number"
-                                        name="totalKg"
-                                        className="form-input"
-                                        value={intakeForm.totalKg}
-                                        onChange={handleInputChange}
-                                        placeholder="Enter latex volume"
-                                        required
-                                    />
-                                </div>
+                                {/* Latex Volume - Separate input per barrel if barrel details available */}
+                                {intakeForm.barrelDetails && intakeForm.barrelDetails.length > 0 ? (
+                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                        <label className="form-label" style={{ marginBottom: '12px' }}>
+                                            Latex Volume per Barrel (Liters) *
+                                            <span style={{
+                                                marginLeft: '8px',
+                                                fontSize: '11px',
+                                                color: '#dc2626',
+                                                fontWeight: '600',
+                                                backgroundColor: '#fee2e2',
+                                                padding: '2px 6px',
+                                                borderRadius: '3px'
+                                            }}>Required</span>
+                                        </label>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                            gap: '12px',
+                                            padding: '16px',
+                                            backgroundColor: '#fef3c7',
+                                            borderRadius: '8px',
+                                            border: '2px solid #fbbf24'
+                                        }}>
+                                            {intakeForm.barrelDetails.map((barrel, index) => (
+                                                <div key={index} style={{
+                                                    padding: '12px',
+                                                    backgroundColor: '#ffffff',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #fde68a'
+                                                }}>
+                                                    <label style={{
+                                                        fontSize: '12px',
+                                                        color: '#92400e',
+                                                        fontWeight: '600',
+                                                        marginBottom: '6px',
+                                                        display: 'block'
+                                                    }}>
+                                                        Barrel {barrel.barrelNumber || index + 1} (DRC: {barrel.drc}%)
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        className="form-input"
+                                                        value={intakeForm.barrelVolumes[index] || ''}
+                                                        onChange={(e) => handleBarrelVolumeChange(index, e.target.value)}
+                                                        placeholder="Enter liters (max 300)"
+                                                        min="0"
+                                                        max="300"
+                                                        step="0.01"
+                                                        required
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '8px',
+                                                            fontSize: '14px',
+                                                            border: '2px solid #fbbf24',
+                                                            borderRadius: '4px'
+                                                        }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <small style={{ 
+                                            color: '#92400e', 
+                                            fontSize: 12, 
+                                            marginTop: 8, 
+                                            display: 'block',
+                                            fontWeight: '600'
+                                        }}>
+                                            ℹ️ Total Volume: {intakeForm.totalKg || 0} liters (Max 300 liters per barrel)
+                                        </small>
+                                    </div>
+                                ) : (
+                                    <div className="form-group">
+                                        <label className="form-label">Latex Volume (Liters)</label>
+                                        <input
+                                            type="number"
+                                            name="totalKg"
+                                            className="form-input"
+                                            value={intakeForm.totalKg}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter latex volume"
+                                            min="0"
+                                            step="0.01"
+                                            required
+                                        />
+                                    </div>
+                                )}
 
                                 <div className="form-group">
                                     <label className="form-label">
@@ -681,16 +1044,48 @@ const AccountantDeliveryIntake = () => {
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label">Market Rate (₹/100KG)</label>
+                                    <label className="form-label">
+                                        Market Rate (₹/100KG)
+                                        {approvedCompanyRate && (
+                                            <span style={{
+                                                marginLeft: '8px',
+                                                fontSize: '11px',
+                                                color: '#059669',
+                                                fontWeight: '600',
+                                                backgroundColor: '#d1fae5',
+                                                padding: '2px 6px',
+                                                borderRadius: '3px'
+                                            }}>Auto-filled</span>
+                                        )}
+                                    </label>
                                     <input
                                         type="number"
                                         name="marketRate"
                                         className="form-input"
                                         value={intakeForm.marketRate}
                                         onChange={handleInputChange}
-                                        placeholder="Enter market rate"
+                                        placeholder={loadingRate ? "Loading approved rate..." : "Enter market rate (max ₹50,000)"}
+                                        min="0"
+                                        max="50000"
                                         step="0.01"
+                                        required
+                                        style={{
+                                            backgroundColor: approvedCompanyRate ? '#f0fdf4' : '#ffffff',
+                                            color: approvedCompanyRate ? '#059669' : '#000000',
+                                            fontWeight: approvedCompanyRate ? '600' : 'normal',
+                                            border: approvedCompanyRate ? '2px solid #86efac' : '1px solid #d1d5db'
+                                        }}
                                     />
+                                    {approvedCompanyRate && (
+                                        <small style={{ color: '#059669', fontSize: 12, marginTop: 4, display: 'block' }}>
+                                            ✓ Using admin-approved company rate (editable, max ₹50,000)
+                                        </small>
+                                    )}
+                                    {!approvedCompanyRate && !loadingRate && (
+                                        <small style={{ color: '#92400e', fontSize: 12, marginTop: 4, display: 'block' }}>
+                                            ℹ️ No approved rate available. Please enter manually (max ₹50,000 per 100KG)
+                                        </small>
+                                    )}
                                 </div>
 
                                 <div className="form-group">

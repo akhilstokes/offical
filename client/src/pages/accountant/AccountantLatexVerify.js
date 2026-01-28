@@ -396,6 +396,7 @@ export default function AccountantLatexVerify() {
                 <tr>
                   <th>Date</th>
                   <th>Customer</th>
+                  <th>Barrel #</th>
                   <th>Qty (Liters)</th>
                   <th>DRC%</th>
                   <th>Estimated</th>
@@ -407,70 +408,191 @@ export default function AccountantLatexVerify() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.map(r => (
-                  <tr key={r._id}>
-
-                    <td>{formatTableDateTime(r.submittedAt || r.createdAt)}</td>
-                    <td>
-                      {(() => {
-                        const displayName = r.overrideBuyerName || r.user?.name || r.user?.email || null;
-                        const hasName = displayName && displayName !== '-';
-                        return (
-                          <span style={{
-                            color: !hasName ? '#d32f2f' : 'inherit',
-                            fontWeight: !hasName ? 'bold' : 'normal'
-                          }}>
-                            {displayName || '⚠️ User Name Missing'}
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td>{r.quantity ? `${r.quantity}L` : '-'}</td>
-                    <td>{r.drcPercentage ?? '-'}</td>
-                    <td>{r.estimatedPayment ?? '-'}</td>
-                    <td>{r.calculatedAmount ?? '-'}</td>
-                    <td>
-                      <span style={{
-                        color: r.marketRate ? 'inherit' : '#1976d2',
-                        fontWeight: r.marketRate ? 'normal' : 'bold'
+                {filteredRows.map(r => {
+                  // Check if this request has multiple barrels with individual DRC values
+                  const hasBarrelDetails = r.barrels && Array.isArray(r.barrels) && r.barrels.length > 0;
+                  
+                  if (hasBarrelDetails) {
+                    // Show one row per barrel
+                    return r.barrels.map((barrel, barrelIndex) => (
+                      <tr key={`${r._id}-barrel-${barrelIndex}`} style={{
+                        backgroundColor: barrelIndex % 2 === 0 ? '#f8fafc' : 'white'
                       }}>
-                        {r.marketRate || `₹${companyRate}`}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{
-                        color: statusColors[r.status] || '#333',
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        backgroundColor: `${statusColors[r.status] || '#333'}20`,
-                        fontSize: '12px',
-                        fontWeight: '500'
-                      }}>
-                        {r.status}
-                      </span>
-                    </td>
-                    {viewMode === 'history' && (
-                      <td>{formatTableDateTime(r.updatedAt || r.createdAt)}</td>
-                    )}
-                    {viewMode === 'current' && (
-                      <td className="action-buttons">
-
-                        {r.status === 'TEST_COMPLETED' && (
-                          <button className="btn" onClick={() => doCalculate(r)}>Calculate</button>
-                        )}
-                        {r.status === 'pending' && (
+                        {/* Show date and customer only for first barrel */}
+                        {barrelIndex === 0 ? (
                           <>
-                            <button className="btn" onClick={() => updateStatus(r._id, 'approved')}>Approve</button>
-                            <button className="btn-secondary" onClick={() => updateStatus(r._id, 'rejected')}>Reject</button>
+                            <td rowSpan={r.barrels.length}>{formatTableDateTime(r.submittedAt || r.createdAt)}</td>
+                            <td rowSpan={r.barrels.length}>
+                              {(() => {
+                                const displayName = r.overrideBuyerName || r.user?.name || r.user?.email || null;
+                                const hasName = displayName && displayName !== '-';
+                                return (
+                                  <span style={{
+                                    color: !hasName ? '#d32f2f' : 'inherit',
+                                    fontWeight: !hasName ? 'bold' : 'normal'
+                                  }}>
+                                    {displayName || '⚠️ User Name Missing'}
+                                  </span>
+                                );
+                              })()}
+                            </td>
                           </>
+                        ) : null}
+                        
+                        {/* Barrel-specific columns */}
+                        <td>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '4px 8px',
+                            backgroundColor: '#dbeafe',
+                            color: '#1e40af',
+                            borderRadius: '4px',
+                            fontWeight: '600',
+                            fontSize: '13px'
+                          }}>
+                            Barrel {barrel.barrelNumber || barrelIndex + 1}
+                          </span>
+                        </td>
+                        <td>{barrel.liters ? `${barrel.liters}L` : '-'}</td>
+                        <td>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '4px 8px',
+                            backgroundColor: '#dcfce7',
+                            color: '#166534',
+                            borderRadius: '4px',
+                            fontWeight: '600'
+                          }}>
+                            {barrel.drc != null ? `${Number(barrel.drc).toFixed(1)}%` : '-'}
+                          </span>
+                        </td>
+                        <td>{barrel.estimatedPayment ?? '-'}</td>
+                        <td>{barrel.calculatedAmount ?? '-'}</td>
+                        
+                        {/* Show company rate and status only for first barrel */}
+                        {barrelIndex === 0 ? (
+                          <>
+                            <td rowSpan={r.barrels.length}>
+                              <span style={{
+                                color: r.marketRate ? 'inherit' : '#1976d2',
+                                fontWeight: r.marketRate ? 'normal' : 'bold'
+                              }}>
+                                {r.marketRate || `₹${companyRate}`}
+                              </span>
+                            </td>
+                            <td rowSpan={r.barrels.length}>
+                              <span style={{
+                                color: statusColors[r.status] || '#333',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                backgroundColor: `${statusColors[r.status] || '#333'}20`,
+                                fontSize: '12px',
+                                fontWeight: '500'
+                              }}>
+                                {r.status}
+                              </span>
+                            </td>
+                            {viewMode === 'history' && (
+                              <td rowSpan={r.barrels.length}>{formatTableDateTime(r.updatedAt || r.createdAt)}</td>
+                            )}
+                            {viewMode === 'current' && (
+                              <td rowSpan={r.barrels.length} className="action-buttons">
+                                {r.status === 'TEST_COMPLETED' && (
+                                  <button className="btn" onClick={() => doCalculate(r)}>Calculate</button>
+                                )}
+                                {r.status === 'pending' && (
+                                  <>
+                                    <button className="btn" onClick={() => updateStatus(r._id, 'approved')}>Approve</button>
+                                    <button className="btn-secondary" onClick={() => updateStatus(r._id, 'rejected')}>Reject</button>
+                                  </>
+                                )}
+                                {r.status === 'approved' && (
+                                  <button className="btn" onClick={() => updateStatus(r._id, 'paid')}>Mark Paid</button>
+                                )}
+                              </td>
+                            )}
+                          </>
+                        ) : null}
+                      </tr>
+                    ));
+                  } else {
+                    // Original single-row display for requests without barrel details
+                    return (
+                      <tr key={r._id}>
+                        <td>{formatTableDateTime(r.submittedAt || r.createdAt)}</td>
+                        <td>
+                          {(() => {
+                            const displayName = r.overrideBuyerName || r.user?.name || r.user?.email || null;
+                            const hasName = displayName && displayName !== '-';
+                            return (
+                              <span style={{
+                                color: !hasName ? '#d32f2f' : 'inherit',
+                                fontWeight: !hasName ? 'bold' : 'normal'
+                              }}>
+                                {displayName || '⚠️ User Name Missing'}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '4px 8px',
+                            backgroundColor: '#f3f4f6',
+                            color: '#374151',
+                            borderRadius: '4px',
+                            fontSize: '13px'
+                          }}>
+                            All ({r.quantity || 0}L)
+                          </span>
+                        </td>
+                        <td>{r.quantity ? `${r.quantity}L` : '-'}</td>
+                        <td>{r.drcPercentage ?? '-'}</td>
+                        <td>{r.estimatedPayment ?? '-'}</td>
+                        <td>{r.calculatedAmount ?? '-'}</td>
+                        <td>
+                          <span style={{
+                            color: r.marketRate ? 'inherit' : '#1976d2',
+                            fontWeight: r.marketRate ? 'normal' : 'bold'
+                          }}>
+                            {r.marketRate || `₹${companyRate}`}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{
+                            color: statusColors[r.status] || '#333',
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            backgroundColor: `${statusColors[r.status] || '#333'}20`,
+                            fontSize: '12px',
+                            fontWeight: '500'
+                          }}>
+                            {r.status}
+                          </span>
+                        </td>
+                        {viewMode === 'history' && (
+                          <td>{formatTableDateTime(r.updatedAt || r.createdAt)}</td>
                         )}
-                        {r.status === 'approved' && (
-                          <button className="btn" onClick={() => updateStatus(r._id, 'paid')}>Mark Paid</button>
+                        {viewMode === 'current' && (
+                          <td className="action-buttons">
+                            {r.status === 'TEST_COMPLETED' && (
+                              <button className="btn" onClick={() => doCalculate(r)}>Calculate</button>
+                            )}
+                            {r.status === 'pending' && (
+                              <>
+                                <button className="btn" onClick={() => updateStatus(r._id, 'approved')}>Approve</button>
+                                <button className="btn-secondary" onClick={() => updateStatus(r._id, 'rejected')}>Reject</button>
+                              </>
+                            )}
+                            {r.status === 'approved' && (
+                              <button className="btn" onClick={() => updateStatus(r._id, 'paid')}>Mark Paid</button>
+                            )}
+                          </td>
                         )}
-                      </td>
-                    )}
-                  </tr>
-                ))}
+                      </tr>
+                    );
+                  }
+                })}
               </tbody>
             </table>
           </div>

@@ -1,212 +1,122 @@
 const mongoose = require('mongoose');
 
-const salarySchema = new mongoose.Schema(
-  {
-    staff: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User', 
-      required: true, 
-      index: true 
-    },
-    year: { 
-      type: Number, 
-      required: true 
-    },
-    month: { 
-      type: Number, 
-      required: true, 
-      min: 1, 
-      max: 12 
-    },
-    
-    // Basic Salary Components
-    basicSalary: { 
-      type: Number, 
-      required: true, 
-      min: 0 
-    },
-    
-    // Allowances
-    houseRentAllowance: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    medicalAllowance: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    transportAllowance: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    specialAllowance: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    
-    // Deductions
-    providentFund: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    professionalTax: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    incomeTax: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    otherDeductions: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    
-    // Computed Fields
-    grossSalary: { 
-      type: Number, 
-      default: 0 
-    },
-    totalDeductions: { 
-      type: Number, 
-      default: 0 
-    },
-    netSalary: { 
-      type: Number, 
-      default: 0 
-    },
-    
-    // Additional Payments
-    bonus: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    overtime: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
-    
-    // Status
-    status: { 
-      type: String, 
-      enum: ['draft', 'approved', 'paid'], 
-      default: 'draft' 
-    },
-    
-    // Payment Details
-    paymentDate: { 
-      type: Date, 
-      default: null 
-    },
-    paymentMethod: { 
-      type: String, 
-      enum: ['bank_transfer', 'cash', 'cheque'], 
-      default: null 
-    },
-    paymentReference: { 
-      type: String, 
-      default: '' 
-    },
-    
-    // Audit
-    createdBy: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User' 
-    },
-    approvedBy: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User' 
-    },
-    approvedAt: { 
-      type: Date, 
-      default: null 
-    },
-    
-    // Notes
-    notes: { 
-      type: String, 
-      default: '' 
-    }
+const salaryRecordSchema = new mongoose.Schema({
+  staffMember: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  { timestamps: true }
-);
-
-// Index for efficient queries
-salarySchema.index({ staff: 1, year: 1, month: 1 }, { unique: true });
-salarySchema.index({ status: 1, year: 1, month: 1 });
-
-// Pre-save middleware to calculate computed fields
-salarySchema.pre('save', function(next) {
-  // Calculate gross salary
-  this.grossSalary = this.basicSalary + 
-                    this.houseRentAllowance + 
-                    this.medicalAllowance + 
-                    this.transportAllowance + 
-                    this.specialAllowance + 
-                    this.bonus + 
-                    this.overtime;
-  
-  // Calculate total deductions
-  this.totalDeductions = this.providentFund + 
-                        this.professionalTax + 
-                        this.incomeTax + 
-                        this.otherDeductions;
-  
-  // Calculate net salary
-  this.netSalary = this.grossSalary - this.totalDeductions;
-  
-  next();
+  month: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 12
+  },
+  year: {
+    type: Number,
+    required: true
+  },
+  period: {
+    type: String,
+    required: true
+  },
+  // Attendance Data
+  totalDays: {
+    type: Number,
+    default: 0
+  },
+  presentDays: {
+    type: Number,
+    default: 0
+  },
+  absentDays: {
+    type: Number,
+    default: 0
+  },
+  leaveDays: {
+    type: Number,
+    default: 0
+  },
+  // Salary Components
+  basicSalary: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  medicalAllowance: {
+    type: Number,
+    default: 0
+  },
+  transportationAllowance: {
+    type: Number,
+    default: 0
+  },
+  overtime: {
+    type: Number,
+    default: 0
+  },
+  bonus: {
+    type: Number,
+    default: 0
+  },
+  grossSalary: {
+    type: Number,
+    required: true
+  },
+  // Deductions
+  deductions: {
+    tax: { type: Number, default: 0 },
+    providentFund: { type: Number, default: 0 },
+    professionalTax: { type: Number, default: 0 },
+    insurance: { type: Number, default: 0 },
+    loanDeduction: { type: Number, default: 0 },
+    other: { type: Number, default: 0 }
+  },
+  totalDeductions: {
+    type: Number,
+    default: 0
+  },
+  netSalary: {
+    type: Number,
+    required: true
+  },
+  // Payment Status
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'paid', 'rejected'],
+    default: 'pending'
+  },
+  paymentDate: {
+    type: Date
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['bank_transfer', 'cash', 'cheque', 'upi'],
+    default: 'bank_transfer'
+  },
+  transactionId: {
+    type: String
+  },
+  remarks: {
+    type: String
+  },
+  generatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  paidBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('Salary', salarySchema);
+// Compound index for unique salary records per staff per month
+salaryRecordSchema.index({ staffMember: 1, month: 1, year: 1 }, { unique: true });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+module.exports = mongoose.model('SalaryRecord', salaryRecordSchema);

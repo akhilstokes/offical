@@ -74,7 +74,7 @@ exports.listAssignedForDelivery = async (req, res) => {
     })
       .sort({ updatedAt: -1, createdAt: -1 })
       .limit(100)
-      .populate('farmerId', 'name email phoneNumber')
+      .populate('farmerId', 'name email phoneNumber address')
       .lean();
     return res.json({ records: items });
   } catch (e) {
@@ -249,7 +249,7 @@ exports.accountantCalculate = async (req, res) => {
 exports.managerVerify = async (req, res) => {
   try {
     const { id } = req.params;
-    const doc = await SellRequest.findById(id).populate('farmerId', 'name email');
+    const doc = await SellRequest.findById(id).populate('farmerId', 'name email address');
     if (!doc) return res.status(404).json({ message: 'Request not found' });
     if (!doc.amount || !doc.marketRate) return res.status(400).json({ message: 'Calculation not completed yet' });
     doc.verifiedAt = new Date();
@@ -268,7 +268,7 @@ exports.managerVerify = async (req, res) => {
 exports.getInvoice = async (req, res) => {
   try {
     const { id } = req.params;
-    const doc = await SellRequest.findById(id).populate('farmerId', 'name email phoneNumber');
+    const doc = await SellRequest.findById(id).populate('farmerId', 'name email phoneNumber address');
     if (!doc) return res.status(404).json({ message: 'Invoice not found' });
     if (doc.status !== 'VERIFIED') return res.status(400).json({ message: 'Invoice available only after verification' });
     const dryKg = Number(doc.totalVolumeKg || 0) * (Number(doc.drcPct || 0) / 100);
@@ -297,7 +297,7 @@ exports.listAllSellRequests = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit))
-      .populate('farmerId', 'name email')
+      .populate('farmerId', 'name email address')
       .populate('assignedDeliveryStaffId', 'name email')
       .lean();
     const total = await SellRequest.countDocuments(q);
@@ -313,7 +313,7 @@ exports.listLabPendingSellRequests = async (req, res) => {
   try {
     const items = await SellRequest.find({ status: 'DELIVERED_TO_LAB' })
       .sort({ deliveredAt: -1 })
-      .populate('farmerId', 'name email')
+      .populate('farmerId', 'name email address')
       .lean();
     return res.json(items);
   } catch (e) {

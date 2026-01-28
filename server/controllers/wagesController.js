@@ -51,24 +51,24 @@ exports.getPayslips = async (req, res) => {
     
     // Build query based on parameters
     if (userId) {
-      query.staff = userId;
+      query.staffMember = userId;
     } else if (group) {
       // Filter by group (delivery, field, lab, etc.)
       const users = await User.find({ role: { $regex: group, $options: 'i' } });
-      query.staff = { $in: users.map(u => u._id) };
+      query.staffMember = { $in: users.map(u => u._id) };
     } else if (role) {
       // Filter by role
       const users = await User.find({ role });
-      query.staff = { $in: users.map(u => u._id) };
+      query.staffMember = { $in: users.map(u => u._id) };
     }
     
     // If not admin/manager, only show own payslips
     if (!['admin', 'manager'].includes(userRole)) {
-      query.staff = req.user._id;
+      query.staffMember = req.user._id;
     }
     
     const payslips = await Salary.find(query)
-      .populate('staff', 'name email role staffId')
+      .populate('staffMember', 'name email role staffId')
       .sort({ year: -1, month: -1, createdAt: -1 })
       .limit(100);
     
@@ -101,7 +101,7 @@ exports.createPayslip = async (req, res) => {
     
     // Check if payslip already exists
     const existing = await Salary.findOne({
-      staff: staffId,
+      staffMember: staffId,
       year: Number(year),
       month: Number(month)
     });
@@ -114,7 +114,7 @@ exports.createPayslip = async (req, res) => {
     }
     
     const payslip = await Salary.create({
-      staff: staffId,
+      staffMember: staffId,
       year: Number(year),
       month: Number(month),
       grossSalary: Number(grossSalary),
@@ -125,13 +125,13 @@ exports.createPayslip = async (req, res) => {
       createdBy: req.user._id
     });
     
-    await payslip.populate('staff', 'name email role staffId');
+    await payslip.populate('staffMember', 'name email role staffId');
     
     // Send notification to staff member about new payslip
     try {
       await Notification.create({
-        userId: payslip.staff._id,
-        role: payslip.staff.role,
+        userId: payslip.staffMember._id,
+        role: payslip.staffMember.role,
         title: 'New Payslip Available',
         message: `Your payslip for ${payslip.month}/${payslip.year} has been created. Gross: ₹${payslip.grossSalary}, Net: ₹${payslip.netSalary}`,
         link: '/staff/salary',
@@ -172,7 +172,7 @@ exports.updatePayslip = async (req, res) => {
       id, 
       updates, 
       { new: true, runValidators: true }
-    ).populate('staff', 'name email role staffId');
+    ).populate('staffMember', 'name email role staffId');
     
     if (!payslip) {
       return res.status(404).json({ 
@@ -186,8 +186,8 @@ exports.updatePayslip = async (req, res) => {
       try {
         const statusMessage = updates.status === 'approved' ? 'approved' : 'paid';
         await Notification.create({
-          userId: payslip.staff._id,
-          role: payslip.staff.role,
+          userId: payslip.staffMember._id,
+          role: payslip.staffMember.role,
           title: `Salary ${statusMessage.charAt(0).toUpperCase() + statusMessage.slice(1)}`,
           message: `Your salary for ${payslip.month}/${payslip.year} has been ${statusMessage}. Amount: ₹${payslip.netSalary || payslip.grossSalary}`,
           link: '/staff/salary',

@@ -19,6 +19,7 @@ const RegisterPage = () => {
     name: '',
     email: '',
     phoneNumber: '',
+    address: '', // Add address field
     password: '',
     confirmPassword: ''
   });
@@ -32,12 +33,13 @@ const RegisterPage = () => {
   const { register, googleSignIn } = useAuth();
 
   const returnTo = location.state?.from || null;
-  const { name, email, phoneNumber, password, confirmPassword } = formData;
+  const { name, email, phoneNumber, address, password, confirmPassword } = formData;
 
   // ✅ Validation helpers
   const isValidName = (v) => validateName(v)?.valid || v.length > 2;
   const isValidEmail = (v) => !validateEmail(v);
   const isValidPhone = (v) => !validatePhoneNumber(v);
+  const isValidAddress = (v) => v && v.trim().length >= 10; // Address must be at least 10 characters
   const isValidPassword = (v) => !validatePassword(v);
   const isPasswordMatch = (a, b) => a === b && !!a;
 
@@ -54,6 +56,7 @@ const RegisterPage = () => {
     ) {
       e.preventDefault();
     }
+    // Allow spaces in address field
   };
 
   const validateForm = () => {
@@ -86,6 +89,7 @@ const RegisterPage = () => {
           name,
           email,
           phoneNumber: finalPhoneNumber,
+          address: address.trim(), // Include address
           password
         };
 
@@ -278,6 +282,31 @@ const RegisterPage = () => {
                     </span>
                   )}
                 </div>
+
+                <div className={`form-field ${errors.address ? 'error' : ''} ${isValidAddress(address) ? 'valid' : ''}`}>
+                  <label htmlFor="address">Complete Address *</label>
+                  <textarea
+                    id="address"
+                    name="address"
+                    value={address}
+                    onChange={onChange}
+                    placeholder="Enter your complete address (house/building, street, area, city, pincode)"
+                    rows="3"
+                    maxLength={500}
+                    style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: '14px' }}
+                  />
+                  {errors.address && <span className="field-error">{errors.address}</span>}
+                  {isValidAddress(address) && (
+                    <span className="field-success">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                  )}
+                  <small style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    Required for barrel delivery. Minimum 10 characters.
+                  </small>
+                </div>
               </>
             )}
 
@@ -346,6 +375,7 @@ const RegisterPage = () => {
                     if (!isValidName(name)) return setErrors({ name: 'Please enter a valid name' });
                     if (!isValidEmail(email)) return setErrors({ email: 'Please enter a valid email address' });
                     if (!isValidPhone(phoneNumber)) return setErrors({ phoneNumber: 'Please enter a valid phone number' });
+                    if (!isValidAddress(address)) return setErrors({ address: 'Please enter your complete address (minimum 10 characters)' });
                     setStep(2);
                   }}
                 >

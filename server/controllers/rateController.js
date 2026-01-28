@@ -163,10 +163,10 @@ exports.verifyRate = async (req, res) => {
 exports.getPendingRates = async (req, res) => {
   try {
     const product = req.query.product || 'latex60';
-    const list = await Rate.find({ product, status: 'pending' }).sort({ effectiveDate: -1, createdAt: -1 });
-    return res.json(list);
+    const list = await Rate.find({ product }).sort({ effectiveDate: -1, createdAt: -1 });
+    return res.json({ success: true, data: list });
   } catch (error) {
-    return res.status(500).json({ message: 'Error fetching pending rates', error: error.message });
+    return res.status(500).json({ success: false, message: 'Error fetching pending rates', error: error.message });
   }
 };
 
@@ -379,30 +379,75 @@ exports.getLatexToday = async (req, res) => {
       })
       .filter((v) => v !== null);
 
+    // Only use Kottayam market (first column, INR only)
     const markets = {};
-    const knownMarkets = ['Kottayam', 'Kochi', 'Agartala', 'USD'];
-    knownMarkets.forEach((mkt, idx) => {
-      if (numeric[idx] != null) markets[mkt] = numeric[idx];
-    });
+    if (numeric[0] != null && numeric[0] > 1000) { // Kottayam is first column, validate it's INR
+      markets.Kottayam = numeric[0];
+    }
 
     const pageText = $('body').text();
     const dateMatch = pageText.match(/on\s+(\d{1,2}-\d{1,2}-\d{4})/i);
     const asOnDate = dateMatch ? dateMatch[1] : null;
 
-    // 2) Fetch Admin latest
-    const latest = await Rate.findOne({ product }).sort({ effectiveDate: -1, createdAt: -1 });
+    // 2) Fetch Admin latest rate with 24-hour validity check
+    // Rubber Board publishes rates daily at 4:00 PM
+    // Rate is valid from 4:00 PM on effectiveDate to 4:00 PM next day
+    const now = new Date();
+    
+    // Find the most recent published rate
+    const latest = await Rate.findOne({ 
+      product, 
+      status: 'published' 
+    }).sort({ effectiveDate: -1, createdAt: -1 });
+
+    let validAdminRate = null;
+    
+    if (latest) {
+      // Check if rate is still valid (within 24-hour window from 4 PM to 4 PM)
+      const effectiveDate = new Date(latest.effectiveDate);
+      
+      // Rate becomes valid at 4:00 PM on effectiveDate
+      const validFrom = new Date(effectiveDate);
+      validFrom.setHours(16, 0, 0, 0); // 4:00 PM
+      
+      // Rate expires at 4:00 PM next day
+      const validUntil = new Date(validFrom);
+      validUntil.setDate(validUntil.getDate() + 1); // Next day 4:00 PM
+      
+      // Check if current time is within validity window
+      if (now >= validFrom && now < validUntil) {
+        validAdminRate = {
+          companyRate: latest.companyRate,
+          marketRate: latest.marketRate,
+          effectiveDate: latest.effectiveDate,
+          validFrom: validFrom,
+          validUntil: validUntil,
+          isValid: true
+        };
+      } else {
+        // Rate exists but is expired or not yet valid
+        validAdminRate = {
+          companyRate: null,
+          marketRate: null,
+          effectiveDate: latest.effectiveDate,
+          validFrom: validFrom,
+          validUntil: validUntil,
+          isValid: false,
+          reason: now < validFrom ? 'Rate not yet valid (before 4 PM)' : 'Rate expired (after 4 PM next day)'
+        };
+      }
+    }
 
     return res.json({
       product,
       unit: 'per 100 Kg',
-      admin: latest
-        ? { companyRate: latest.companyRate, marketRate: latest.marketRate, effectiveDate: latest.effectiveDate }
-        : null,
+      admin: validAdminRate,
       market: {
         productLabel: 'Latex(60%)',
         source: fetchedUrl,
         asOnDate,
         headers,
+        numeric,
         markets
       }
     });
@@ -411,96 +456,132 @@ exports.getLatexToday = async (req, res) => {
   }
 };
 
-// Combined: Admin latest company rate + Rubber Board live rate
-// @route GET /api/rates/latex/today?product=latex60
-exports.getLatexToday = async (req, res) => {
+// Accountant: Submit rate for approval
+// @route POST /api/rates/submit
+exports.submitRateForApproval = async (req, res) => {
   try {
-    const product = req.query.product || 'latex60';
+    const { marketRate, companyRate, product, effectiveDate, notes } = req.body;
 
-    // 1) Fetch Rubber Board live
-    const candidateUrls = [
-      'https://rubberboard.gov.in',
-      'https://rubberboard.org.in/public?lang=E',
-      'https://rubberboard.org.in/public'
-    ];
+    if (marketRate == null || companyRate == null) {
+      return res.status(400).json({ success: false, message: "Both marketRate and companyRate are required" });
+    }
 
-    let html = null;
-    let fetchedUrl = null;
+    // Check if accountant already submitted a rate today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    for (const url of candidateUrls) {
-      try {
-        const response = await axios.get(url, { timeout: 10000 });
-        if (response.status === 200 && typeof response.data === 'string') {
-          html = response.data;
-          fetchedUrl = url;
-          break;
+    const existingSubmissionToday = await Rate.findOne({
+      createdBy: req.user?._id,
+      source: 'accountant_submission',
+      product: product || 'latex60',
+      createdAt: {
+        $gte: today,
+        $lt: tomorrow
+      }
+    });
+
+    if (existingSubmissionToday) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "You have already submitted a rate today. Only one submission per day is allowed.",
+        existingSubmission: {
+          marketRate: existingSubmissionToday.marketRate,
+          companyRate: existingSubmissionToday.companyRate,
+          status: existingSubmissionToday.status,
+          submittedAt: existingSubmissionToday.createdAt
         }
-      } catch (_) {}
+      });
     }
 
-    if (!html) {
-      return res.status(502).json({ message: 'Unable to fetch Rubber Board page' });
-    }
-
-    const $ = cheerio.load(html);
-
-    let latexRow = null;
-    $('tr').each((_, el) => {
-      const text = $(el).text().trim();
-      if (/latex\s*\(60\%?\)/i.test(text)) {
-        latexRow = $(el);
-        return false;
-      }
+    const doc = new Rate({
+      marketRate,
+      companyRate,
+      product: product || 'latex60',
+      effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
+      status: 'pending',
+      source: 'accountant_submission',
+      ...(ifValidId(req.user?._id) ? { createdBy: req.user._id, updatedBy: req.user._id } : {}),
+      notes: notes || ''
     });
 
-    if (!latexRow || latexRow.length === 0) {
-      return res.status(404).json({ message: 'Latex(60%) row not found on source page', source: fetchedUrl });
-    }
-
-    const table = latexRow.closest('table');
-    let headers = [];
-    if (table.length) {
-      const headerRow = table.find('thead tr').first().length ? table.find('thead tr').first() : table.find('tr').first();
-      headers = headerRow.find('th,td').map((i, th) => $(th).text().trim().replace(/\s+/g, ' ')).get();
-    }
-
-    const cells = latexRow.find('td,th').map((i, td) => $(td).text().trim()).get();
-    const numeric = cells
-      .map((t) => {
-        const cleaned = t.replace(/[₹,]/g, '');
-        const m = cleaned.match(/-?\d+(?:\.\d+)?/);
-        return m ? parseFloat(m[0]) : null;
-      })
-      .filter((v) => v !== null);
-
-    const markets = {};
-    const knownMarkets = ['Kottayam', 'Kochi', 'Agartala', 'USD'];
-    knownMarkets.forEach((mkt, idx) => {
-      if (numeric[idx] != null) markets[mkt] = numeric[idx];
-    });
-
-    const pageText = $('body').text();
-    const dateMatch = pageText.match(/on\s+(\d{1,2}-\d{1,2}-\d{4})/i);
-    const asOnDate = dateMatch ? dateMatch[1] : null;
-
-    // 2) Fetch Admin latest
-    const latest = await Rate.findOne({ product }).sort({ effectiveDate: -1, createdAt: -1 });
-
-    return res.json({
-      product,
-      unit: 'per 100 Kg',
-      admin: latest
-        ? { companyRate: latest.companyRate, marketRate: latest.marketRate, effectiveDate: latest.effectiveDate }
-        : null,
-      market: {
-        productLabel: 'Latex(60%)',
-        source: fetchedUrl,
-        asOnDate,
-        headers,
-        markets
-      }
+    await doc.save();
+    return res.status(201).json({ 
+      success: true, 
+      message: "Rate submitted successfully for admin approval", 
+      data: doc 
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch combined latex data', error: error.message });
+    return res.status(500).json({ success: false, message: "Error submitting rate", error: error.message });
+  }
+};
+
+// Admin: Approve submitted rate
+// @route PUT /api/rates/approve/:id
+exports.approveRate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const rate = await Rate.findById(id);
+    
+    if (!rate) {
+      return res.status(404).json({ success: false, message: 'Rate not found' });
+    }
+
+    if (rate.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Only pending rates can be approved' });
+    }
+
+    rate.status = 'published';
+    if (ifValidId(req.user?._id)) {
+      rate.verifiedBy = req.user._id;
+    }
+    rate.verifiedAt = new Date();
+    await rate.save();
+
+    return res.json({ 
+      success: true, 
+      message: 'Rate approved and published successfully', 
+      data: rate 
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error approving rate', error: error.message });
+  }
+};
+
+// Admin: Reject submitted rate
+// @route PUT /api/rates/reject/:id
+exports.rejectRate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    
+    const rate = await Rate.findById(id);
+    
+    if (!rate) {
+      return res.status(404).json({ success: false, message: 'Rate not found' });
+    }
+
+    if (rate.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Only pending rates can be rejected' });
+    }
+
+    rate.status = 'rejected';
+    if (reason) {
+      rate.notes = rate.notes ? `${rate.notes}\n\nRejection reason: ${reason}` : `Rejection reason: ${reason}`;
+    }
+    if (ifValidId(req.user?._id)) {
+      rate.verifiedBy = req.user._id;
+    }
+    rate.verifiedAt = new Date();
+    await rate.save();
+
+    return res.json({ 
+      success: true, 
+      message: 'Rate rejected successfully', 
+      data: rate 
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error rejecting rate', error: error.message });
   }
 };

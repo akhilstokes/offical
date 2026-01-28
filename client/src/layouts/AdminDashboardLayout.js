@@ -58,6 +58,7 @@ const AdminDashboardLayout = ({ children }) => {
     if (path.includes('/barrel-requests')) return { title: 'Barrel Requests', subtitle: 'Handle barrel requests', icon: 'fa-drum' };
     if (path.includes('/chem-requests')) return { title: 'Chemical Requests', subtitle: 'Chemical request management', icon: 'fa-flask' };
     if (path.includes('/rates')) return { title: 'Rates', subtitle: 'Rate management', icon: 'fa-chart-line' };
+    if (path.includes('/rate-approval')) return { title: 'Rate Approval', subtitle: 'Approve submitted rates', icon: 'fa-check-circle' };
     return { title: 'Administration', subtitle: 'System administration', icon: 'fa-user-shield' };
   };
 
@@ -92,7 +93,6 @@ const AdminDashboardLayout = ({ children }) => {
     {
       section: 'Barrel Management',
       items: [
-        { to: '/admin/create-barrel', icon: 'fa-drum', label: 'Barrel' },
         { to: '/admin/barrel-requests', icon: 'fa-drum', label: 'Barrel Requests' },
         { to: '/admin/barrel-register', icon: 'fa-book', label: 'Issue Register' },
       ]
@@ -103,6 +103,7 @@ const AdminDashboardLayout = ({ children }) => {
         { to: '/admin/expenses', icon: 'fa-receipt', label: 'Expenses' },
         { to: '/admin/chem-requests', icon: 'fa-flask', label: 'Chemical Requests' },
         { to: '/admin/rates', icon: 'fa-chart-line', label: 'Rates' },
+        { to: '/admin/rate-approval', icon: 'fa-check-circle', label: 'Rate Approval' },
       ]
     }
   ];

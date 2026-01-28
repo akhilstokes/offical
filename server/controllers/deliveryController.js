@@ -570,25 +570,123 @@ exports.handleTaskAction = async (req, res) => {
 // Barrel intake functions
 exports.intakeBarrels = async (req, res) => {
   try {
-    const { barrelCount, customerName, customerPhone, notes, barrelIds, taskId, requestId, arrivalTime } = req.body;
-    const staffId = req.user._id;
+    const { barrelCount, customerName, customerPhone, address, notes, barrelIds, taskId, requestId, arrivalTime, location, locationAccuracy } = req.body;
+    const userId = req.user._id; // The user who owns the barrels (or delivery staff recording pickup)
+    const userRole = req.user.role; // Get user role
 
     if (!barrelCount || !customerName) {
       return res.status(400).json({ message: 'barrelCount and customerName are required' });
     }
 
-    const intake = await DeliveryIntake.create({
-      createdBy: staffId,
+    // ✅ VALIDATE ADDRESS IS PROVIDED (MANDATORY FOR SELL BARREL REQUESTS)
+    if (!address || address.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Address is required for sell barrel requests. Please provide your complete address.' 
+      });
+    }
+
+    const count = Number(barrelCount);
+    if (count < 1) {
+      return res.status(400).json({ message: 'Barrel count must be at least 1' });
+    }
+
+    const Barrel = require('../models/barrelModel');
+    let selectedBarrelIds = [];
+    let actualUserId = userId; // Default to current user
+
+    // ✅ CHECK IF THIS IS A DELIVERY STAFF RECORDING PICKUP
+    // Delivery staff should NEVER have barrel validation - they don't own barrels
+    const isDeliveryStaff = userRole === 'delivery' || userRole === 'delivery_staff';
+    
+    if (isDeliveryStaff || requestId) {
+      console.log(`\n📦 Delivery staff recording pickup (Role: ${userRole}, RequestId: ${requestId || 'none'})`);
+      
+      // Try to find existing intake if requestId provided
+      if (requestId) {
+        const existingIntake = await DeliveryIntake.findById(requestId);
+        if (existingIntake) {
+          selectedBarrelIds = existingIntake.barrelIds || [];
+          actualUserId = existingIntake.userId || userId;
+          console.log(`✅ Found existing intake with ${selectedBarrelIds.length} barrel(s) already allocated`);
+          console.log(`📋 Barrels: ${selectedBarrelIds.join(', ')}`);
+        } else {
+          console.log(`⚠️  Request ${requestId} not found as intake, proceeding without barrel validation`);
+        }
+      } else {
+        console.log(`⚠️  No requestId provided, but user is delivery staff - skipping barrel validation`);
+      }
+      // Skip barrel validation for delivery staff
+    } else {
+      // ✅ THIS IS A NEW SELL REQUEST FROM USER - VALIDATE AND ALLOCATE BARRELS
+      console.log(`\n📦 User ${userId} creating new sell request for ${count} barrel(s)`);
+      
+      const userBarrels = await Barrel.find({ 
+        assignedTo: userId,
+        status: 'in-use' // Only count barrels currently in use by the user
+      }).sort({ assignedDate: 1 }); // Oldest first (FIFO)
+
+      const availableCount = userBarrels.length;
+
+      if (availableCount < count) {
+        return res.status(400).json({ 
+          success: false,
+          message: `Insufficient barrels. You have ${availableCount} barrel(s) available, but requested to sell ${count} barrel(s).`,
+          available: availableCount,
+          requested: count
+        });
+      }
+
+      // ✅ SELECT BARRELS TO SELL (FIFO - First In, First Out)
+      const barrelsToSell = userBarrels.slice(0, count);
+      selectedBarrelIds = barrelsToSell.map(b => b.barrelId);
+
+      console.log(`✅ Available: ${availableCount}, Requested: ${count}`);
+      console.log(`📋 Selected barrels: ${selectedBarrelIds.join(', ')}`);
+
+      // ✅ UPDATE BARREL STATUS TO 'PENDING_SALE'
+      for (const barrel of barrelsToSell) {
+        barrel.status = 'pending_sale'; // Mark as pending sale
+        barrel.lastKnownLocation = 'Pending Sale - User Request';
+        barrel.notes = `Sell request created on ${new Date().toLocaleDateString()}`;
+        await barrel.save();
+        console.log(`   ✓ Barrel ${barrel.barrelId} marked as pending_sale`);
+      }
+    }
+
+    const intakeData = {
+      createdBy: userId, // User/delivery staff creating the record
+      userId: actualUserId, // User who owns the barrels
       name: customerName,
       phone: customerPhone,
-      barrelCount,
+      address: address.trim(), // Store the address
+      barrelCount: count,
       notes,
-      barrelIds: barrelIds || [], // Optional - barrel scanning moved to field staff
+      barrelIds: selectedBarrelIds, // Store the actual barrel IDs being sold
       taskId,
       requestId,
       arrivalTime: arrivalTime || new Date(),
       status: 'pending'
-    });
+    };
+
+    // Add location data if provided
+    if (location && location.coordinates && location.coordinates.length === 2) {
+      intakeData.location = location;
+      intakeData.locationAccuracy = locationAccuracy;
+    }
+
+    const intake = await DeliveryIntake.create(intakeData);
+
+    console.log(`✅ Sell barrel request created: ${intake._id}`);
+    if (!requestId) {
+      // Only log remaining barrels for new requests
+      const Barrel = require('../models/barrelModel');
+      const remainingBarrels = await Barrel.countDocuments({ 
+        assignedTo: actualUserId,
+        status: 'in-use'
+      });
+      console.log(`📊 User now has ${remainingBarrels} barrel(s) available`);
+    }
 
     // Automatically update the task status to intake_completed if taskId is provided
     if (taskId) {
@@ -610,8 +708,27 @@ exports.intakeBarrels = async (req, res) => {
       }
     }
 
-    return res.status(201).json(intake);
+    // Calculate remaining barrels only for new requests
+    let remainingBarrels = 0;
+    if (!requestId) {
+      const Barrel = require('../models/barrelModel');
+      remainingBarrels = await Barrel.countDocuments({ 
+        assignedTo: actualUserId,
+        status: 'in-use'
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      intake,
+      barrelsSelected: selectedBarrelIds,
+      remainingBarrels: requestId ? null : remainingBarrels,
+      message: requestId 
+        ? `Successfully recorded pickup for ${count} barrel(s).`
+        : `Successfully created sell request for ${count} barrel(s). ${remainingBarrels} barrel(s) remaining.`
+    });
   } catch (e) {
+    console.error('Error creating sell barrel intake:', e);
     return res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };
@@ -624,6 +741,7 @@ exports.listIntakes = async (req, res) => {
 
     const intakes = await DeliveryIntake.find(query)
       .populate('createdBy', 'name email role')
+      .populate('userId', 'name email phoneNumber')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -632,18 +750,28 @@ exports.listIntakes = async (req, res) => {
 
     return res.json({ items: intakes, total, page: parseInt(page), limit: parseInt(limit) });
   } catch (e) {
+    console.error('Error listing intakes:', e);
     return res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };
 
 exports.listMyIntakes = async (req, res) => {
   try {
-    const staffId = req.user._id;
-    const intakes = await DeliveryIntake.find({ createdBy: staffId })
-      .sort({ createdAt: -1 });
+    const userId = req.user._id;
+    // Find intakes where the user is either the creator or the owner
+    const intakes = await DeliveryIntake.find({ 
+      $or: [
+        { createdBy: userId },
+        { userId: userId }
+      ]
+    })
+    .populate('userId', 'name email phoneNumber')
+    .populate('createdBy', 'name email')
+    .sort({ createdAt: -1 });
 
     return res.json(intakes);
   } catch (e) {
+    console.error('Error listing my intakes:', e);
     return res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };
@@ -685,13 +813,76 @@ exports.approveIntake = async (req, res) => {
     const { id } = req.params;
     const doc = await DeliveryIntake.findById(id);
     if (!doc) return res.status(404).json({ message: 'Intake not found' });
+    
+    // Try to populate userId if it exists
+    if (doc.userId) {
+      await doc.populate('userId', 'name email');
+    }
+    
+    const previousStatus = doc.status;
     doc.status = 'approved';
     doc.approvedAt = new Date();
     doc.approvedBy = req.user._id;
     await doc.save();
 
-    return res.json(doc);
+    // ✅ UPDATE BARREL STATUS TO 'SOLD' WHEN APPROVED
+    if (doc.barrelIds && doc.barrelIds.length > 0) {
+      const Barrel = require('../models/barrelModel');
+      let updatedCount = 0;
+      
+      console.log(`\n✅ Approving sell request ${id}`);
+      console.log(`📦 Updating ${doc.barrelIds.length} barrel(s) to 'sold' status`);
+      
+      for (const barrelId of doc.barrelIds) {
+        try {
+          const barrel = await Barrel.findOne({ barrelId: barrelId });
+          if (barrel) {
+            barrel.status = 'sold';
+            barrel.lastKnownLocation = 'Sold - Approved by Manager/Accountant';
+            barrel.notes = `Sold on ${new Date().toLocaleDateString()} - Intake: ${id}`;
+            barrel.assignedTo = null; // Remove assignment since barrel is sold
+            await barrel.save();
+            updatedCount++;
+            console.log(`   ✓ Barrel ${barrelId} marked as sold`);
+          } else {
+            console.warn(`   ⚠️  Barrel ${barrelId} not found`);
+          }
+        } catch (barrelError) {
+          console.error(`   ❌ Error updating barrel ${barrelId}:`, barrelError.message);
+        }
+      }
+      
+      console.log(`✅ Updated ${updatedCount}/${doc.barrelIds.length} barrel(s) to sold status`);
+    }
+
+    // Send notification to user (only if userId exists)
+    if (doc.userId) {
+      try {
+        const Notification = require('../models/Notification');
+        const userIdToNotify = doc.userId._id || doc.userId;
+        await Notification.create({
+          userId: userIdToNotify,
+          role: 'user',
+          title: '✅ Sell Request Approved',
+          message: `Your request to sell ${doc.barrelCount} barrel(s) has been approved! Payment will be processed soon.`,
+          read: false
+        });
+        console.log(`✅ Notification sent to user ${userIdToNotify}`);
+      } catch (notifError) {
+        console.error('Error creating notification:', notifError.message);
+      }
+    } else {
+      console.log('ℹ️  No userId found, skipping notification');
+    }
+
+    return res.json({
+      success: true,
+      intake: doc,
+      barrelsUpdated: doc.barrelIds ? doc.barrelIds.length : 0,
+      message: `Sell request approved. ${doc.barrelIds ? doc.barrelIds.length : 0} barrel(s) marked as sold.`
+    });
   } catch (e) {
+    console.error('Error approving intake:', e);
     return res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };
@@ -701,6 +892,7 @@ exports.getIntake = async (req, res) => {
     const { id } = req.params;
     const intake = await DeliveryIntake.findById(id)
       .populate('createdBy', 'name email role')
+      .populate('userId', 'name email phoneNumber')
       .populate('verifiedBy', 'name email')
       .populate('approvedBy', 'name email');
 
@@ -710,6 +902,7 @@ exports.getIntake = async (req, res) => {
 
     return res.json(intake);
   } catch (e) {
+    console.error('Error getting intake:', e);
     return res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };
@@ -717,15 +910,84 @@ exports.getIntake = async (req, res) => {
 exports.updateIntake = async (req, res) => {
   try {
     const { id } = req.params;
-    const intake = await DeliveryIntake.findByIdAndUpdate(id, req.body, { new: true })
-      .populate('createdBy', 'name email role');
-
+    const { status: newStatus } = req.body;
+    
+    const intake = await DeliveryIntake.findById(id);
     if (!intake) {
       return res.status(404).json({ message: 'Intake not found' });
     }
 
-    return res.json(intake);
+    // Try to populate userId if it exists
+    if (intake.userId) {
+      await intake.populate('userId', 'name email');
+    }
+
+    const oldStatus = intake.status;
+
+    // ✅ HANDLE STATUS CHANGE TO 'REJECTED' - RETURN BARRELS TO USER
+    if (newStatus === 'rejected' && oldStatus !== 'rejected') {
+      if (intake.barrelIds && intake.barrelIds.length > 0 && intake.userId) {
+        const Barrel = require('../models/barrelModel');
+        let returnedCount = 0;
+        
+        const userIdValue = intake.userId._id || intake.userId;
+        console.log(`\n❌ Rejecting sell request ${id}`);
+        console.log(`🔄 Returning ${intake.barrelIds.length} barrel(s) to user ${userIdValue}`);
+        
+        for (const barrelId of intake.barrelIds) {
+          try {
+            const barrel = await Barrel.findOne({ barrelId: barrelId });
+            if (barrel) {
+              barrel.status = 'in-use'; // Return to in-use status
+              barrel.assignedTo = userIdValue; // Re-assign to user
+              barrel.lastKnownLocation = 'Returned - Sell Request Rejected';
+              barrel.notes = `Sell request rejected on ${new Date().toLocaleDateString()}`;
+              await barrel.save();
+              returnedCount++;
+              console.log(`   ✓ Barrel ${barrelId} returned to user`);
+            }
+          } catch (barrelError) {
+            console.error(`   ❌ Error returning barrel ${barrelId}:`, barrelError.message);
+          }
+        }
+        
+        console.log(`✅ Returned ${returnedCount}/${intake.barrelIds.length} barrel(s) to user`);
+        
+        // Send notification to user
+        try {
+          const Notification = require('../models/Notification');
+          await Notification.create({
+            userId: userIdValue,
+            role: 'user',
+            title: '❌ Sell Request Rejected',
+            message: `Your request to sell ${intake.barrelCount} barrel(s) has been rejected. The barrels have been returned to your account.`,
+            read: false
+          });
+          console.log(`✅ Notification sent to user ${userIdValue}`);
+        } catch (notifError) {
+          console.error('Error creating notification:', notifError.message);
+        }
+      } else if (newStatus === 'rejected' && !intake.userId) {
+        console.log('ℹ️  No userId found for rejected request, skipping barrel return');
+      }
+    }
+
+    // Update the intake
+    Object.assign(intake, req.body);
+    await intake.save();
+    
+    await intake.populate('createdBy', 'name email role');
+
+    return res.json({
+      success: true,
+      intake,
+      barrelsReturned: (newStatus === 'rejected' && intake.barrelIds) ? intake.barrelIds.length : 0,
+      message: newStatus === 'rejected' 
+        ? `Sell request rejected. ${intake.barrelIds ? intake.barrelIds.length : 0} barrel(s) returned to user.`
+        : 'Intake updated successfully'
+    });
   } catch (e) {
+    console.error('Error updating intake:', e);
     return res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };
@@ -733,14 +995,49 @@ exports.updateIntake = async (req, res) => {
 exports.deleteIntake = async (req, res) => {
   try {
     const { id } = req.params;
-    const intake = await DeliveryIntake.findByIdAndDelete(id);
+    const intake = await DeliveryIntake.findById(id);
 
     if (!intake) {
       return res.status(404).json({ message: 'Intake not found' });
     }
 
-    return res.json({ message: 'Intake deleted successfully' });
+    // ✅ RETURN BARRELS TO USER BEFORE DELETING (if not already sold/approved)
+    if (intake.status !== 'approved' && intake.status !== 'billed' && intake.barrelIds && intake.barrelIds.length > 0) {
+      const Barrel = require('../models/barrelModel');
+      let returnedCount = 0;
+      
+      console.log(`\n🗑️  Deleting sell request ${id}`);
+      console.log(`🔄 Returning ${intake.barrelIds.length} barrel(s) to user ${intake.userId}`);
+      
+      for (const barrelId of intake.barrelIds) {
+        try {
+          const barrel = await Barrel.findOne({ barrelId: barrelId });
+          if (barrel && barrel.status === 'pending_sale') {
+            barrel.status = 'in-use'; // Return to in-use status
+            barrel.assignedTo = intake.userId; // Re-assign to user
+            barrel.lastKnownLocation = 'Returned - Request Deleted';
+            barrel.notes = `Sell request deleted on ${new Date().toLocaleDateString()}`;
+            await barrel.save();
+            returnedCount++;
+            console.log(`   ✓ Barrel ${barrelId} returned to user`);
+          }
+        } catch (barrelError) {
+          console.error(`   ❌ Error returning barrel ${barrelId}:`, barrelError.message);
+        }
+      }
+      
+      console.log(`✅ Returned ${returnedCount}/${intake.barrelIds.length} barrel(s) to user before deletion`);
+    }
+
+    await intake.deleteOne();
+
+    return res.json({ 
+      success: true,
+      message: 'Intake deleted successfully',
+      barrelsReturned: intake.barrelIds ? intake.barrelIds.length : 0
+    });
   } catch (e) {
+    console.error('Error deleting intake:', e);
     return res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };
@@ -792,17 +1089,11 @@ exports.setUserSellAllowance = async (req, res) => {
 // Get delivery staff shift schedule
 exports.getDeliveryShiftSchedule = async (req, res) => {
   try {
+    const StaffSchedule = require('../models/staffScheduleModel');
     const staffId = req.user._id;
     
-    // Get user with assigned shift
-    const user = await User.findById(staffId).populate('assignedShift');
-    
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
     // Get current week dates
-      const now = new Date();
+    const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
@@ -811,7 +1102,16 @@ exports.getDeliveryShiftSchedule = async (req, res) => {
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    // Get all active shifts
+    // Fetch schedules for this week from StaffSchedule collection
+    const schedules = await StaffSchedule.find({
+      staffId: staffId,
+      date: {
+        $gte: startOfWeek,
+        $lte: endOfWeek
+      }
+    }).sort({ date: 1 });
+
+    // Get all active shifts from Shift model for display
     const allShifts = await Shift.find({ isActive: true })
       .populate('assignedStaff', 'name email role')
       .sort({ startTime: 1 });
@@ -829,22 +1129,47 @@ exports.getDeliveryShiftSchedule = async (req, res) => {
       assignedStaffCount: shift.assignedStaff.length
     }));
 
-    // Format my assignment
+    // Format my assignment from StaffSchedule
     let myAssignment = null;
-    if (user.assignedShift) {
-      const shift = user.assignedShift;
+    if (schedules && schedules.length > 0) {
+      // Group schedules by shift type and get working days
+      const workingDays = [];
+      const shiftTypes = {};
+      
+      schedules.forEach(schedule => {
+        const dayIndex = new Date(schedule.date).getDay();
+        workingDays.push(dayIndex);
+        shiftTypes[schedule.shift] = (shiftTypes[schedule.shift] || 0) + 1;
+      });
+
+      // Determine primary shift (most common)
+      const primaryShift = Object.keys(shiftTypes).reduce((a, b) => 
+        shiftTypes[a] > shiftTypes[b] ? a : b
+      );
+
+      // Set shift times based on shift type
+      let startTime, endTime, duration;
+      if (primaryShift === 'morning') {
+        startTime = '06:00';
+        endTime = '14:00';
+        duration = '8 hours';
+      } else if (primaryShift === 'evening') {
+        startTime = '14:00';
+        endTime = '22:00';
+        duration = '8 hours';
+      } else {
+        startTime = '22:00';
+        endTime = '06:00';
+        duration = '8 hours';
+      }
+
       myAssignment = {
-        _id: shift._id,
-        name: shift.name,
-        shiftType: shift.name.includes('Morning') ? 'Morning' : 
-                   shift.name.includes('Evening') ? 'Evening' : 
-                   shift.name.includes('Night') ? 'Night' : 'Regular',
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        duration: shift.duration,
-        gracePeriod: shift.gracePeriod,
-        description: shift.description,
-        days: [0, 1, 2, 3, 4, 5, 6] // Assume working all days, can be customized
+        shiftType: primaryShift.charAt(0).toUpperCase() + primaryShift.slice(1),
+        startTime: startTime,
+        endTime: endTime,
+        duration: duration,
+        days: workingDays,
+        description: `${primaryShift.charAt(0).toUpperCase() + primaryShift.slice(1)} shift assigned by manager`
       };
     }
 

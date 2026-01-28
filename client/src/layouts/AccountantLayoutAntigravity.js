@@ -63,9 +63,7 @@ const AccountantLayoutAntigravity = ({ children }) => {
         { path: '/accountant/salaries', label: 'Salaries' },
         { path: '/accountant/bill-generation', label: 'Bill Generation' },
         { path: '/accountant/delivery-intake', label: 'Delivery Intake/Verify' },
-        { path: '/accountant/vendors', label: 'Vendor Ledger' },
         { path: '/accountant/documents', label: 'Documents' },
-        { path: '/accountant/reports', label: 'Reports' },
     ];
 
     return (

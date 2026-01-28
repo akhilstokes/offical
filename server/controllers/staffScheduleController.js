@@ -109,6 +109,125 @@ exports.getSchedulesByDateRange = async (req, res) => {
   }
 };
 
+// Get schedule history with filters and validation
+exports.getScheduleHistory = async (req, res) => {
+  try {
+    const { startDate, endDate, staffId, shift } = req.query;
+
+    // Build query with validation
+    const query = {};
+
+    // Date range validation
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid date format'
+        });
+      }
+
+      if (start > end) {
+        return res.status(400).json({
+          success: false,
+          message: 'Start date must be before or equal to end date'
+        });
+      }
+
+      query.date = {
+        $gte: start,
+        $lte: end
+      };
+    } else if (startDate) {
+      const start = new Date(startDate);
+      if (isNaN(start.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid start date format'
+        });
+      }
+      query.date = { $gte: start };
+    } else if (endDate) {
+      const end = new Date(endDate);
+      if (isNaN(end.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid end date format'
+        });
+      }
+      query.date = { $lte: end };
+    }
+
+    // Staff filter validation
+    if (staffId) {
+      if (!staffId.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid staff ID format'
+        });
+      }
+      query.staffId = staffId;
+    }
+
+    // Shift filter validation
+    if (shift) {
+      const validShifts = ['morning', 'evening', 'full-day', 'night'];
+      if (!validShifts.includes(shift)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid shift type. Must be one of: morning, evening, full-day, night'
+        });
+      }
+      query.shift = shift;
+    }
+
+    // Fetch schedules with populated data
+    const schedules = await StaffSchedule.find(query)
+      .populate('staffId', 'name email phoneNumber role')
+      .populate('assignedBy', 'name email')
+      .sort({ date: -1, createdAt: -1 })
+      .limit(500); // Limit to prevent excessive data
+
+    // Format response
+    const formattedSchedules = schedules.map(schedule => ({
+      _id: schedule._id,
+      staffName: schedule.staffName,
+      staffRole: schedule.staffRole,
+      date: schedule.date,
+      shift: schedule.shift,
+      status: schedule.status,
+      assignedBy: schedule.assignedBy ? {
+        name: schedule.assignedBy.name,
+        email: schedule.assignedBy.email
+      } : null,
+      createdAt: schedule.createdAt,
+      updatedAt: schedule.updatedAt,
+      notes: schedule.notes
+    }));
+
+    res.json({
+      success: true,
+      count: formattedSchedules.length,
+      schedules: formattedSchedules,
+      filters: {
+        startDate: startDate || null,
+        endDate: endDate || null,
+        staffId: staffId || null,
+        shift: shift || null
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching schedule history:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch schedule history',
+      error: error.message
+    });
+  }
+};
+
 // Get schedule for specific staff
 exports.getStaffSchedule = async (req, res) => {
   try {

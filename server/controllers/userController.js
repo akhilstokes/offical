@@ -91,10 +91,18 @@ exports.getUserProfile = (req, res) => {
 exports.updateUserProfile = async (req, res) => {
     try {
         const updates = {};
-        const allowed = ['name', 'phoneNumber', 'location'];
+        const allowed = ['name', 'phoneNumber', 'location', 'address'];
         for (const key of allowed) {
             if (typeof req.body[key] === 'string') {
-                updates[key] = req.body[key];
+                // Only add address if it's not empty or if user is explicitly updating it
+                if (key === 'address') {
+                    const trimmedAddress = req.body[key].trim();
+                    if (trimmedAddress.length >= 10) {
+                        updates[key] = trimmedAddress;
+                    }
+                } else {
+                    updates[key] = req.body[key];
+                }
             }
         }
         if (Object.keys(updates).length === 0) {
@@ -109,6 +117,9 @@ exports.updateUserProfile = async (req, res) => {
         // Re-validate phone number using the same schema validation
         user.markModified('phoneNumber');
         user.markModified('location');
+        if (updates.address) {
+            user.markModified('address');
+        }
 
         await user.save();
 
@@ -118,6 +129,7 @@ exports.updateUserProfile = async (req, res) => {
             email: user.email,
             phoneNumber: user.phoneNumber,
             location: user.location,
+            address: user.address,
             role: user.role,
             isPhoneVerified: user.isPhoneVerified,
         };

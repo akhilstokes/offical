@@ -19,6 +19,7 @@ const SellBarrels = () => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    address: '', // Add address field
     barrelCount: 1,
     notes: '',
     location: null,
@@ -108,6 +109,12 @@ const SellBarrels = () => {
       return;
     }
 
+    // ✅ VALIDATE ADDRESS IS PROVIDED (MANDATORY)
+    if (!formData.address || formData.address.trim() === '') {
+      setError('Address is required. Please provide your complete address for barrel pickup.');
+      return;
+    }
+
     const count = Number(formData.barrelCount);
     if (count < 1) {
       setError('Barrel count must be at least 1');
@@ -130,6 +137,7 @@ const SellBarrels = () => {
       const payload = {
         name: formData.name.trim(),
         phone: formData.phone.trim(),
+        address: formData.address.trim(), // Include address
         barrelCount: count,
         notes: formData.notes || ''
       };
@@ -139,14 +147,24 @@ const SellBarrels = () => {
         payload.locationAccuracy = geo.accuracy;
       }
 
-      await createSellBarrelIntake(payload);
+      const response = await createSellBarrelIntake(payload);
       
-      setSuccess('Sell barrel request submitted successfully!');
+      // Update barrel count immediately based on response
+      if (response && response.remainingBarrels !== undefined) {
+        setMyCompanyBarrels(response.remainingBarrels);
+        setSuccess(`Sell barrel request submitted successfully! You now have ${response.remainingBarrels} barrel(s) remaining.`);
+      } else {
+        // Fallback: reload from server
+        await loadMyCompanyBarrels();
+        setSuccess('Sell barrel request submitted successfully!');
+      }
+      
       setShowCreateModal(false);
       resetForm();
-      await Promise.all([loadData(), loadMyCompanyBarrels()]);
+      await loadData(); // Reload sell requests list
     } catch (err) {
-      setError(err?.message || 'Failed to submit request');
+      console.error('Error submitting sell request:', err);
+      setError(err?.response?.data?.message || err?.message || 'Failed to submit request');
     } finally {
       setSubmitting(false);
     }
@@ -156,6 +174,7 @@ const SellBarrels = () => {
     setFormData({
       name: authUser?.name || '',
       phone: authUser?.phone || '',
+      address: authUser?.address || '', // Reset address
       barrelCount: 1,
       notes: ''
     });
@@ -210,6 +229,7 @@ const SellBarrels = () => {
       const payload = {
         name: request.name || request.customerName,
         phone: request.phone || request.customerPhone,
+        address: request.address || '', // Include address from previous request
         barrelCount: count,
         notes: request.notes || ''
       };
@@ -385,6 +405,9 @@ const SellBarrels = () => {
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
                   <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>
+                    Request ID
+                  </th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>
                     Date
                   </th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>
@@ -410,6 +433,20 @@ const SellBarrels = () => {
                     key={request._id}
                     style={{ borderBottom: '1px solid #f1f5f9' }}
                   >
+                    <td style={{ padding: '14px 16px', fontSize: '0.875rem' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '4px 10px',
+                        background: '#f3e8ff',
+                        color: '#7c3aed',
+                        borderRadius: '6px',
+                        fontFamily: 'monospace',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        {request.requestNumber || request._id.slice(-8).toUpperCase()}
+                      </span>
+                    </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.875rem', color: '#475569' }}>
                       {new Date(request.createdAt).toLocaleDateString()}
                     </td>
@@ -441,7 +478,7 @@ const SellBarrels = () => {
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.875rem', color: '#64748b' }}>
-                      {request.notes || '-'}
+                      {request.address || request.notes || '-'}
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       <button
@@ -574,6 +611,33 @@ const SellBarrels = () => {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', color: '#64748b', fontSize: '14px', fontWeight: '500' }}>
+                  Complete Address * (Required for pickup)
+                </label>
+                <textarea
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  rows="3"
+                  placeholder="Enter your complete address including house/building name, street, area, city, pincode..."
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${!formData.address ? '#fca5a5' : '#e2e8f0'}`,
+                    outline: 'none',
+                    resize: 'vertical',
+                    background: !formData.address ? '#fef2f2' : 'white'
+                  }}
+                />
+                {!formData.address && (
+                  <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px' }}>
+                    <i className="fas fa-exclamation-circle"></i> Complete address is required for barrel pickup
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#64748b', fontSize: '14px', fontWeight: '500' }}>
                   Number of Barrels * (Available: {myCompanyBarrels})
                 </label>
                 <input
@@ -617,13 +681,13 @@ const SellBarrels = () => {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', color: '#64748b', fontSize: '14px', fontWeight: '500' }}>
-                  Address (Optional)
+                  Additional Notes (Optional)
                 </label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows="3"
-                  placeholder="Enter your address or additional details..."
+                  rows="2"
+                  placeholder="Any additional information..."
                   style={{
                     width: '100%',
                     padding: '10px 12px',

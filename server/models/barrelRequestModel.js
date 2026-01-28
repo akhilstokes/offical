@@ -4,6 +4,7 @@ const barrelRequestSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     quantity: { type: Number, required: true, min: 1 },
+    address: { type: String, default: '' }, // Optional for barrel requests
     notes: { type: String, default: '' },
     status: { type: String, enum: ['pending', 'approved', 'rejected', 'fulfilled', 'assigned'], default: 'pending', index: true },
     adminNotes: { type: String, default: '' },

@@ -5,6 +5,36 @@ const Notification = require('../models/Notification');
 
 router.use(protect);
 
+// POST /api/notifications - Create a new notification (for accountants/admins)
+router.post('/', async (req, res) => {
+  try {
+    const { userId, role, title, message, link, meta } = req.body;
+    
+    // Only allow accountants and admins to create notifications for others
+    if (!['accountant', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Not authorized to create notifications' });
+    }
+    
+    const notification = await Notification.create({
+      userId,
+      role: role || 'staff',
+      title,
+      message,
+      link,
+      meta
+    });
+    
+    res.status(201).json({ 
+      success: true, 
+      message: 'Notification sent successfully',
+      notification 
+    });
+  } catch (e) {
+    console.error('Error creating notification:', e);
+    res.status(500).json({ message: 'Failed to create notification' });
+  }
+});
+
 // GET /api/notifications?limit=20
 router.get('/', async (req, res) => {
   try {

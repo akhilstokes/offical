@@ -11,7 +11,7 @@ const char* password = "akhilnknk";
 
 /* ===== SERVER ===== */
 // CORRECTED: Changed port from 3000 to 5000 and added /api/attendance/rfid path
-const char* serverUrl = "http://10.196.30.39:5000/api/attendance/rfid";
+const char* serverUrl = "http://10.208.100.39:5000/api/attendance/rfid";
 
 /* ===== NTP ===== */
 const char* ntpServer = "pool.ntp.org";

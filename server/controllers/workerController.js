@@ -169,59 +169,80 @@ exports.getMyLabShiftSchedule = async (req, res) => {
 };
 
 // Get field staff's assigned shift schedule for current week
-exports.getMyShiftSchedule = async (req, res) => {
-  try {
-    const staffId = req.user._id;
-    const today = new Date();
-    const sched = await getWeekScheduleForDate(today, 'field');
-    if (!sched) {
-      return res.json({ message: 'No schedule set for this week', schedule: null, myAssignment: null });
-    }
-    const myAssignment = (sched.assignments || []).find(a => String(a.staff) === String(staffId));
-    const response = {
-      weekStart: sched.weekStart,
-      morningStart: sched.morningStart,
-      morningEnd: sched.morningEnd,
-      eveningStart: sched.eveningStart,
-      eveningEnd: sched.eveningEnd,
-      myAssignment: myAssignment ? {
-        shiftType: myAssignment.shiftType,
-        startTime: myAssignment.shiftType === 'Morning' ? sched.morningStart : sched.eveningStart,
-        endTime: myAssignment.shiftType === 'Morning' ? sched.morningEnd : sched.eveningEnd
-      } : null
-    };
-
-    res.json(response);
-  } catch (e) {
-    res.status(500).json({ message: 'Server Error', error: e.message });
-  }
-};
-
 // Get field staff's assigned shift schedule for current week
 exports.getMyShiftSchedule = async (req, res) => {
   try {
+    const StaffSchedule = require('../models/staffScheduleModel');
     const staffId = req.user._id;
+    
+    // Get current week's date range
     const today = new Date();
-    const sched = await getWeekScheduleForDate(today, 'field');
-    if (!sched) {
-      return res.json({ message: 'No schedule set for this week', schedule: null, myAssignment: null });
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Fetch schedules for this week from StaffSchedule collection
+    const schedules = await StaffSchedule.find({
+      staffId: staffId,
+      date: {
+        $gte: startOfWeek,
+        $lte: endOfWeek
+      }
+    }).sort({ date: 1 });
+
+    if (!schedules || schedules.length === 0) {
+      return res.json({ 
+        message: 'No schedule assigned for this week', 
+        shift: null,
+        startTime: null,
+        endTime: null,
+        workingDays: []
+      });
     }
-    const myAssignment = (sched.assignments || []).find(a => String(a.staff) === String(staffId));
+
+    // Group schedules by shift type and get working days
+    const workingDays = [];
+    const shiftTypes = {};
+    
+    schedules.forEach(schedule => {
+      const dayName = new Date(schedule.date).toLocaleDateString('en-US', { weekday: 'long' });
+      workingDays.push(dayName);
+      shiftTypes[schedule.shift] = (shiftTypes[schedule.shift] || 0) + 1;
+    });
+
+    // Determine primary shift (most common)
+    const primaryShift = Object.keys(shiftTypes).reduce((a, b) => 
+      shiftTypes[a] > shiftTypes[b] ? a : b
+    );
+
+    // Set shift times based on shift type
+    let startTime, endTime;
+    if (primaryShift === 'morning') {
+      startTime = '06:00';
+      endTime = '14:00';
+    } else if (primaryShift === 'evening') {
+      startTime = '14:00';
+      endTime = '22:00';
+    } else {
+      startTime = '22:00';
+      endTime = '06:00';
+    }
+
     const response = {
-      weekStart: sched.weekStart,
-      morningStart: sched.morningStart,
-      morningEnd: sched.morningEnd,
-      eveningStart: sched.eveningStart,
-      eveningEnd: sched.eveningEnd,
-      myAssignment: myAssignment ? {
-        shiftType: myAssignment.shiftType,
-        startTime: myAssignment.shiftType === 'Morning' ? sched.morningStart : sched.eveningStart,
-        endTime: myAssignment.shiftType === 'Morning' ? sched.morningEnd : sched.eveningEnd
-      } : null
+      shift: primaryShift.charAt(0).toUpperCase() + primaryShift.slice(1),
+      startTime: startTime,
+      endTime: endTime,
+      workingDays: workingDays,
+      scheduleCount: schedules.length
     };
 
     res.json(response);
   } catch (e) {
+    console.error('Error fetching shift schedule:', e);
     res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };

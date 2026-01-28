@@ -35,9 +35,16 @@ router.get("/history-range", protect, rateController.getRatesByDateRange);
 // Public recent history (for dashboards without admin auth)
 router.get("/public-history", rateController.getPublicRates);
 
-// Admin/Manager: list pending, edit; Admin: verify
-router.get("/pending", protect, adminOrManager, rateController.getPendingRates);
+// Admin/Manager/Accountant: list pending rates
+router.get("/pending", protect, rateController.getPendingRates);
 router.put("/:id", protect, adminOrManager, rateController.editRate);
 router.post("/:id/verify", protect, admin, rateController.verifyRate);
+
+// Accountant: Submit rate for approval
+router.post("/submit", protect, rateController.submitRateForApproval);
+
+// Admin: Approve or reject submitted rates
+router.put("/approve/:id", protect, admin, rateController.approveRate);
+router.put("/reject/:id", protect, admin, rateController.rejectRate);
 
 module.exports = router;

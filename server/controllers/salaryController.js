@@ -1,586 +1,503 @@
-const Salary = require('../models/salaryModel');
-const SalaryTemplate = require('../models/salaryTemplateModel');
+const SalaryRecord = require('../models/salaryModel');
 const User = require('../models/userModel');
-const PayrollEntry = require('../models/payrollEntryModel');
-const SalarySummary = require('../models/salarySummaryModel');
-const Notification = require('../models/Notification');
-const sendEmail = require('../utils/sendEmail');
-const mongoose = require('mongoose');
-const { logAudit } = require('../services/auditService');
+const Attendance = require('../models/attendanceModel');
 
-// Create or update salary template for a staff member
-exports.createSalaryTemplate = async (req, res) => {
+// Calculate wages based on attendance
+exports.calculateWages = async (req, res) => {
   try {
-    const { staffId } = req.params;
-    const {
-      basicSalary,
-      houseRentAllowance,
-      medicalAllowance,
-      transportAllowance,
-      specialAllowance,
-      providentFundRate,
-      professionalTaxRate,
-      incomeTaxRate,
-      fixedDeductions,
-      effectiveFrom,
-      notes
-    } = req.body;
+    const { staffId, month, year } = req.body;
 
-    // Validate required fields
-    if (!basicSalary || basicSalary <= 0) {
-      return res.status(400).json({ message: 'Basic salary is required and must be greater than 0' });
-    }
-
-    // Check if staff exists
+    // Get staff details
     const staff = await User.findById(staffId);
     if (!staff) {
       return res.status(404).json({ message: 'Staff member not found' });
     }
 
-    // Check if staff is admin or field_staff (not daily wage worker)
-    if (staff.role === 'user') {
-      return res.status(400).json({ message: 'Salary template can only be created for admin or field staff' });
-    }
-
-    // Deactivate existing template if any
-    await SalaryTemplate.findOneAndUpdate(
-      { staff: staffId, isActive: true },
-      { isActive: false, effectiveTo: new Date() }
-    );
-
-    // Create new salary template
-    const salaryTemplate = await SalaryTemplate.create({
-      staff: staffId,
-      basicSalary,
-      houseRentAllowance: houseRentAllowance || 0,
-      medicalAllowance: medicalAllowance || 0,
-      transportAllowance: transportAllowance || 0,
-      specialAllowance: specialAllowance || 0,
-      providentFundRate: providentFundRate || 12,
-      professionalTaxRate: professionalTaxRate || 2.5,
-      incomeTaxRate: incomeTaxRate || 0,
-      fixedDeductions: fixedDeductions || 0,
-      effectiveFrom: effectiveFrom ? new Date(effectiveFrom) : new Date(),
-      createdBy: req.user._id,
-      notes: notes || ''
+    // Get attendance records for the month
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    
+    const attendanceRecords = await Attendance.find({
+      userId: staffId,
+      date: { $gte: startDate, $lte: endDate }
     });
 
-    res.status(201).json({
-      message: 'Salary template created successfully',
-      data: salaryTemplate
-    });
-  } catch (error) {
-    console.error('Error creating salary template:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
-  }
-};
+    // Calculate attendance stats
+    const totalDays = endDate.getDate();
+    const presentDays = attendanceRecords.filter(a => a.status === 'present').length;
+    const absentDays = attendanceRecords.filter(a => a.status === 'absent').length;
+    const leaveDays = attendanceRecords.filter(a => a.status === 'leave').length;
 
-// Simple payslip HTML endpoint
-exports.getPayslip = async (req, res) => {
-  try {
-    const { salaryId } = req.params;
-    const sal = await Salary.findById(salaryId).populate('staff', 'name email role staffId');
-    if (!sal) return res.status(404).send('Payslip not found');
-
-    const html = `<!doctype html>
-    <html><head><meta charset="utf-8" /><title>Payslip ${sal.month}/${sal.year}</title>
-    <style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px} h1{font-size:18px;margin:0 0 12px} table{width:100%;border-collapse:collapse;margin-top:12px} th,td{border:1px solid #ccc;padding:8px;text-align:left} .right{text-align:right}</style>
-    </head><body>
-    <h1>Holy Family Polymers - Payslip</h1>
-    <div>Employee: <b>${sal.staff?.name || '-'}</b> (${sal.staff?.staffId || sal.staff?._id})</div>
-    <div>Period: <b>${sal.month}/${sal.year}</b></div>
-    <div>Status: <b>${sal.status}</b></div>
-    <table>
-      <thead><tr><th>Description</th><th class="right">Amount (₹)</th></tr></thead>
-      <tbody>
-        <tr><td>Basic + Allowances + Bonus + Overtime</td><td class="right">${sal.grossSalary ?? '-'}</td></tr>
-        <tr><td>Provident Fund</td><td class="right">${sal.providentFund || 0}</td></tr>
-        <tr><td>Professional Tax</td><td class="right">${sal.professionalTax || 0}</td></tr>
-        <tr><td>Income Tax</td><td class="right">${sal.incomeTax || 0}</td></tr>
-        <tr><td>Other Deductions</td><td class="right">${sal.otherDeductions || 0}</td></tr>
-        <tr><td><b>Net Salary</b></td><td class="right"><b>${sal.netSalary ?? '-'}</b></td></tr>
-      </tbody>
-    </table>
-    <div style="margin-top:12px">Payment Method: ${sal.paymentMethod || '-'} ${sal.paymentReference ? (' | Ref: ' + sal.paymentReference) : ''}</div>
-    <div>Date: ${sal.paymentDate ? new Date(sal.paymentDate).toLocaleString() : '-'}</div>
-    </body></html>`;
-
-    res.setHeader('Content-Type', 'text/html');
-    return res.send(html);
-  } catch (e) {
-    return res.status(500).send('Failed to render payslip');
-  }
-};
-
-// Get salary template for a staff member
-exports.getSalaryTemplate = async (req, res) => {
-  try {
-    const { staffId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(staffId)) {
-      return res.status(400).json({ message: 'Invalid staff id' });
+    // Calculate salary based on salary type
+    let basicSalary = 0;
+    if (staff.salaryType === 'monthly') {
+      // Monthly salary - fixed amount regardless of attendance
+      basicSalary = staff.baseSalary || 0;
+    } else {
+      // Daily wage - calculate based on present days
+      const dailyRate = staff.baseSalary || 500;
+      basicSalary = presentDays * dailyRate;
     }
 
-    const salaryTemplate = await SalaryTemplate.findOne({ 
-      staff: staffId, 
-      isActive: true 
-    }).populate('staff', 'name email role staffId');
+    const allowances = staff.allowances || 0;
+    const overtime = staff.overtime || 0;
+    const bonus = staff.bonus || 0;
+    
+    const grossSalary = basicSalary + allowances + overtime + bonus;
 
-    if (!salaryTemplate) {
-      return res.status(404).json({ message: 'Salary template not found' });
-    }
+    // Calculate deductions
+    const tax = grossSalary * 0.05; // 5% tax
+    const providentFund = grossSalary * 0.12; // 12% PF
+    const insurance = staff.insurance || 0;
+    const loanDeduction = staff.loanDeduction || 0;
+    const otherDeductions = staff.otherDeductions || 0;
 
-    res.json({ data: salaryTemplate });
-  } catch (error) {
-    console.error('Error fetching salary template:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
-  }
-};
-
-// Update salary template
-exports.updateSalaryTemplate = async (req, res) => {
-  try {
-    const { staffId } = req.params;
-    const updateData = req.body;
-
-    const salaryTemplate = await SalaryTemplate.findOneAndUpdate(
-      { staff: staffId, isActive: true },
-      { ...updateData, updatedBy: req.user._id },
-      { new: true, runValidators: true }
-    );
-
-    if (!salaryTemplate) {
-      return res.status(404).json({ message: 'Salary template not found' });
-    }
+    const totalDeductions = tax + providentFund + insurance + loanDeduction + otherDeductions;
+    const netSalary = grossSalary - totalDeductions;
 
     res.json({
-      message: 'Salary template updated successfully',
-      data: salaryTemplate
+      success: true,
+      data: {
+        staffMember: staff,
+        attendance: {
+          totalDays,
+          presentDays,
+          absentDays,
+          leaveDays
+        },
+        salary: {
+          basicSalary,
+          allowances,
+          overtime,
+          bonus,
+          grossSalary,
+          deductions: {
+            tax,
+            providentFund,
+            insurance,
+            loanDeduction,
+            other: otherDeductions
+          },
+          totalDeductions,
+          netSalary
+        }
+      }
     });
   } catch (error) {
-    console.error('Error updating salary template:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error('Calculate wages error:', error);
+    res.status(500).json({ message: 'Error calculating wages', error: error.message });
   }
 };
 
-// Generate monthly salary for a staff member
-exports.generateMonthlySalary = async (req, res) => {
+// Generate salary record
+exports.generateSalaryRecord = async (req, res) => {
   try {
-    const { staffId } = req.params;
-    const { year, month, bonus, overtime, notes } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(staffId)) {
-      return res.status(400).json({ message: 'Invalid staff id' });
-    }
+    const { 
+      staffId, 
+      month, 
+      year,
+      startDate,
+      endDate,
+      numberOfWeeks,
+      workingDays,
+      dailyRate,
+      basicSalary,
+      medicalAllowance,
+      transportationAllowance,
+      overtime,
+      bonus,
+      grossSalary,
+      deductions,
+      totalDeductions,
+      netSalary,
+      wageType
+    } = req.body;
 
-    // Validate inputs
-    if (!year || !month || month < 1 || month > 12) {
-      return res.status(400).json({ message: 'Valid year and month (1-12) are required' });
-    }
-
-    // Get salary template
-    const salaryTemplate = await SalaryTemplate.findOne({ 
-      staff: staffId, 
-      isActive: true 
+    // Check if record already exists
+    const existingRecord = await SalaryRecord.findOne({
+      staffMember: staffId,
+      month,
+      year
     });
 
-    if (!salaryTemplate) {
-      return res.status(404).json({ message: 'Salary template not found for this staff member' });
+    if (existingRecord) {
+      return res.status(400).json({ 
+        message: 'Salary record already exists for this period',
+        record: existingRecord
+      });
     }
 
-    // Check if salary already exists for this month
-    const existingSalary = await Salary.findOne({ 
-      staff: staffId, 
-      year: Number(year), 
-      month: Number(month) 
-    });
-
-    if (existingSalary) {
-      return res.status(400).json({ message: 'Salary already generated for this month' });
+    // Get staff details
+    const staff = await User.findById(staffId);
+    if (!staff) {
+      return res.status(404).json({ message: 'Staff member not found' });
     }
 
-    // Calculate deductions based on rates
-    const grossSalary = salaryTemplate.basicSalary + 
-                       salaryTemplate.houseRentAllowance + 
-                       salaryTemplate.medicalAllowance + 
-                       salaryTemplate.transportAllowance + 
-                       salaryTemplate.specialAllowance + 
-                       (bonus || 0) + 
-                       (overtime || 0);
+    // Create period string
+    const periodString = wageType === 'Weekly' 
+      ? `${numberOfWeeks} week(s) (${startDate} to ${endDate})`
+      : `${month}/${year}`;
 
-    const providentFund = (grossSalary * salaryTemplate.providentFundRate) / 100;
-    const professionalTax = (grossSalary * salaryTemplate.professionalTaxRate) / 100;
-    const incomeTax = (grossSalary * salaryTemplate.incomeTaxRate) / 100;
+    // Get month name for notification
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthName = monthNames[month - 1];
 
     // Create salary record
-    const salary = await Salary.create({
-      staff: staffId,
-      year: Number(year),
-      month: Number(month),
-      basicSalary: salaryTemplate.basicSalary,
-      houseRentAllowance: salaryTemplate.houseRentAllowance,
-      medicalAllowance: salaryTemplate.medicalAllowance,
-      transportAllowance: salaryTemplate.transportAllowance,
-      specialAllowance: salaryTemplate.specialAllowance,
-      providentFund,
-      professionalTax,
-      incomeTax,
-      otherDeductions: salaryTemplate.fixedDeductions,
-      bonus: bonus || 0,
+    const salaryRecord = new SalaryRecord({
+      staffMember: staffId,
+      month,
+      year,
+      period: periodString,
+      totalDays: workingDays,
+      presentDays: workingDays,
+      absentDays: 0,
+      leaveDays: 0,
+      basicSalary,
+      medicalAllowance: medicalAllowance || 0,
+      transportationAllowance: transportationAllowance || 0,
       overtime: overtime || 0,
-      status: 'draft',
-      createdBy: req.user._id,
-      notes: notes || ''
+      bonus: bonus || 0,
+      grossSalary,
+      deductions: {
+        tax: deductions.tax || 0,
+        providentFund: deductions.providentFund || 0,
+        professionalTax: deductions.professionalTax || 0,
+        other: deductions.other || 0
+      },
+      totalDeductions,
+      netSalary,
+      status: 'pending',
+      generatedBy: req.user._id
     });
 
-    // Log audit
-    await logAudit({
-      action: 'salary_generated',
-      actor: req.user._id,
-      actorRole: req.user.role,
-      target: salary._id,
-      targetType: 'salary',
-      description: `Salary generated for ${month}/${year} - Net: ₹${salary.netSalary}`,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
+    await salaryRecord.save();
+
+    // Send notification to staff member
+    try {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        userId: staffId,
+        role: 'staff',
+        title: 'Salary Generated',
+        message: `Your salary for ${monthName} ${year} has been generated. Net Salary: ₹${netSalary.toFixed(2)}`,
+        link: '/staff/my-salary',
+        meta: {
+          salaryRecordId: salaryRecord._id,
+          month,
+          year,
+          netSalary,
+          type: 'salary_generated'
+        }
+      });
+    } catch (notifError) {
+      console.error('Error sending salary notification:', notifError);
+      // Don't fail the salary generation if notification fails
+    }
 
     res.status(201).json({
-      message: 'Monthly salary generated successfully',
-      data: salary
+      success: true,
+      message: 'Salary record generated successfully and notification sent to staff',
+      data: salaryRecord
     });
   } catch (error) {
-    console.error('Error generating monthly salary:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error('Generate salary record error:', error);
+    res.status(500).json({ message: 'Error generating salary record', error: error.message });
   }
 };
 
-// Get monthly salary for a staff member
-exports.getMonthlySalary = async (req, res) => {
+// Get all salary records
+exports.getAllSalaryRecords = async (req, res) => {
+  try {
+    const { month, year, status, staffId } = req.query;
+    
+    let query = {};
+    if (month) query.month = parseInt(month);
+    if (year) query.year = parseInt(year);
+    if (status) query.status = status;
+    if (staffId) query.staffMember = staffId;
+
+    const salaryRecords = await SalaryRecord.find(query)
+      .populate('staffMember', 'name email phone role')
+      .populate('generatedBy', 'name')
+      .populate('approvedBy', 'name')
+      .populate('paidBy', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: salaryRecords.length,
+      data: salaryRecords
+    });
+  } catch (error) {
+    console.error('Get salary records error:', error);
+    res.status(500).json({ message: 'Error fetching salary records', error: error.message });
+  }
+};
+
+// Get salary history for a specific staff member
+exports.getSalaryHistory = async (req, res) => {
   try {
     const { staffId } = req.params;
-    const { year, month } = req.query;
-    if (!mongoose.Types.ObjectId.isValid(staffId)) {
-      return res.status(400).json({ message: 'Invalid staff id' });
-    }
+    const { year } = req.query;
+    
+    let query = { staffMember: staffId };
+    if (year) query.year = parseInt(year);
 
-    if (!year || !month) {
-      return res.status(400).json({ message: 'Year and month are required' });
-    }
+    const salaryRecords = await SalaryRecord.find(query)
+      .populate('staffMember', 'name email phone role')
+      .populate('generatedBy', 'name')
+      .populate('approvedBy', 'name')
+      .populate('paidBy', 'name')
+      .sort({ year: -1, month: -1 });
 
-    const salary = await Salary.findOne({ 
-      staff: staffId, 
-      year: Number(year), 
-      month: Number(month) 
-    }).populate('staff', 'name email role staffId')
-      .populate('createdBy', 'name')
-      .populate('approvedBy', 'name');
-
-    if (!salary) {
-      return res.status(404).json({ message: 'Salary record not found for this month' });
-    }
-
-    res.json({ data: salary });
+    res.json({
+      success: true,
+      count: salaryRecords.length,
+      data: salaryRecords
+    });
   } catch (error) {
-    console.error('Error fetching monthly salary:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error('Get salary history error:', error);
+    res.status(500).json({ message: 'Error fetching salary history', error: error.message });
   }
 };
 
-// Update monthly salary
-exports.updateMonthlySalary = async (req, res) => {
+// Get salary record by ID
+exports.getSalaryRecordById = async (req, res) => {
   try {
-    const { salaryId } = req.params;
-    const updateData = req.body;
+    const salaryRecord = await SalaryRecord.findById(req.params.id)
+      .populate('staffMember', 'name email phone role dailyWage')
+      .populate('generatedBy', 'name')
+      .populate('approvedBy', 'name')
+      .populate('paidBy', 'name');
 
-    // Don't allow updating status to 'paid' directly
-    if (updateData.status === 'paid') {
-      return res.status(400).json({ message: 'Use approve and pay endpoint to mark salary as paid' });
-    }
-
-    const salary = await Salary.findByIdAndUpdate(
-      salaryId,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('staff', 'name email role staffId');
-
-    if (!salary) {
+    if (!salaryRecord) {
       return res.status(404).json({ message: 'Salary record not found' });
     }
 
     res.json({
-      message: 'Salary updated successfully',
-      data: salary
+      success: true,
+      data: salaryRecord
     });
   } catch (error) {
-    console.error('Error updating salary:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error('Get salary record error:', error);
+    res.status(500).json({ message: 'Error fetching salary record', error: error.message });
   }
 };
 
-// Approve salary
-exports.approveSalary = async (req, res) => {
+// Update salary record
+exports.updateSalaryRecord = async (req, res) => {
   try {
-    const { salaryId } = req.params;
+    const { id } = req.params;
+    const updates = req.body;
 
-    const salary = await Salary.findByIdAndUpdate(
-      salaryId,
-      { 
-        status: 'approved',
-        approvedBy: req.user._id,
-        approvedAt: new Date()
-      },
-      { new: true }
-    ).populate('staff', 'name email role staffId')
-     .populate('approvedBy', 'name');
-
-    if (!salary) {
+    const salaryRecord = await SalaryRecord.findById(id);
+    if (!salaryRecord) {
       return res.status(404).json({ message: 'Salary record not found' });
     }
 
-    // Send notification to staff member
-    await Notification.create({
-      userId: salary.staff._id,
-      role: salary.staff.role,
-      title: 'Salary Approved',
-      message: `Your salary for ${salary.month}/${salary.year} has been approved by ${salary.approvedBy?.name || 'Manager'}. Amount: ₹${salary.netSalary || salary.grossSalary}`,
-      link: '/staff/salary',
-      meta: { 
-        salaryId: salary._id, 
-        year: salary.year, 
-        month: salary.month,
-        amount: salary.netSalary || salary.grossSalary
+    // Update fields
+    Object.keys(updates).forEach(key => {
+      if (updates[key] !== undefined) {
+        salaryRecord[key] = updates[key];
       }
     });
 
+    // Recalculate if salary components changed
+    if (updates.basicSalary || updates.allowances || updates.overtime || updates.bonus) {
+      salaryRecord.grossSalary = 
+        (salaryRecord.basicSalary || 0) + 
+        (salaryRecord.allowances || 0) + 
+        (salaryRecord.overtime || 0) + 
+        (salaryRecord.bonus || 0);
+    }
+
+    if (updates.deductions) {
+      salaryRecord.totalDeductions = 
+        (salaryRecord.deductions.tax || 0) +
+        (salaryRecord.deductions.providentFund || 0) +
+        (salaryRecord.deductions.insurance || 0) +
+        (salaryRecord.deductions.loanDeduction || 0) +
+        (salaryRecord.deductions.other || 0);
+    }
+
+    salaryRecord.netSalary = salaryRecord.grossSalary - salaryRecord.totalDeductions;
+
+    await salaryRecord.save();
+
     res.json({
-      message: 'Salary approved successfully',
-      data: salary
+      success: true,
+      message: 'Salary record updated successfully',
+      data: salaryRecord
     });
   } catch (error) {
-    console.error('Error approving salary:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error('Update salary record error:', error);
+    res.status(500).json({ message: 'Error updating salary record', error: error.message });
+  }
+};
+
+// Approve salary record
+exports.approveSalaryRecord = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const salaryRecord = await SalaryRecord.findById(id);
+    if (!salaryRecord) {
+      return res.status(404).json({ message: 'Salary record not found' });
+    }
+
+    salaryRecord.status = 'approved';
+    salaryRecord.approvedBy = req.user._id;
+    await salaryRecord.save();
+
+    res.json({
+      success: true,
+      message: 'Salary record approved successfully',
+      data: salaryRecord
+    });
+  } catch (error) {
+    console.error('Approve salary record error:', error);
+    res.status(500).json({ message: 'Error approving salary record', error: error.message });
   }
 };
 
 // Mark salary as paid
-exports.paySalary = async (req, res) => {
+exports.markAsPaid = async (req, res) => {
   try {
-    const { salaryId } = req.params;
-    const { paymentMethod, paymentReference } = req.body;
+    const { id } = req.params;
+    const { paymentMethod, transactionId, paymentDate, remarks } = req.body;
 
-    if (!paymentMethod) {
-      return res.status(400).json({ message: 'Payment method is required' });
-    }
-
-    const salary = await Salary.findByIdAndUpdate(
-      salaryId,
-      { 
-        status: 'paid',
-        paymentDate: new Date(),
-        paymentMethod,
-        paymentReference: paymentReference || ''
-      },
-      { new: true }
-    ).populate('staff', 'name email role staffId');
-
-    if (!salary) {
+    const salaryRecord = await SalaryRecord.findById(id);
+    if (!salaryRecord) {
       return res.status(404).json({ message: 'Salary record not found' });
     }
 
-    // Create payroll entry for tracking
-    await PayrollEntry.create({
-      staff: salary.staff._id,
-      year: salary.year,
-      month: salary.month,
-      type: 'received',
-      amount: salary.netSalary,
-      note: `Monthly salary payment - ${paymentMethod}`,
-      createdBy: req.user._id
-    });
-
-    // Log audit
-    await logAudit({
-      action: 'salary_paid',
-      actor: req.user._id,
-      actorRole: req.user.role,
-      target: salary._id,
-      targetType: 'salary',
-      description: `Salary paid to ${salary.staff.name} for ${salary.month}/${salary.year} - ₹${salary.netSalary}`,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
-
-    // Notify staff
-    try {
-      await Notification.create({
-        userId: salary.staff._id,
-        role: 'staff',
-        title: 'Salary Paid',
-        message: `Your salary for ${salary.month}/${salary.year} has been paid. Net: ₹${salary.netSalary}`,
-        link: '/staff/salary',
-        meta: { salaryId: salary._id, month: salary.month, year: salary.year }
-      });
-    } catch (_) {}
-
-    // Email staff (if email available)
-    try {
-      if (salary.staff?.email) {
-        await sendEmail({
-          email: salary.staff.email,
-          subject: 'HFP: Salary Paid',
-          message: `Hello ${salary.staff.name || ''},\n\nYour salary for ${salary.month}/${salary.year} has been paid.\nNet Amount: ₹${salary.netSalary}\nMethod: ${paymentMethod}${paymentReference ? `\nReference: ${paymentReference}` : ''}.\n\nThank you.`,
-        });
-      }
-    } catch (_) {}
+    salaryRecord.status = 'paid';
+    salaryRecord.paymentMethod = paymentMethod;
+    salaryRecord.transactionId = transactionId;
+    salaryRecord.paymentDate = paymentDate || new Date();
+    salaryRecord.remarks = remarks;
+    salaryRecord.paidBy = req.user._id;
+    
+    await salaryRecord.save();
 
     res.json({
+      success: true,
       message: 'Salary marked as paid successfully',
-      data: salary
+      data: salaryRecord
     });
   } catch (error) {
-    console.error('Error marking salary as paid:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error('Mark as paid error:', error);
+    res.status(500).json({ message: 'Error marking salary as paid', error: error.message });
   }
 };
 
-// Get salary history for a staff member
-exports.getSalaryHistory = async (req, res) => {
+// Get my salary (for staff members)
+exports.getMySalary = async (req, res) => {
   try {
-    const { staffId } = req.params;
-    const { year, limit = 12 } = req.query;
-    if (!mongoose.Types.ObjectId.isValid(staffId)) {
-      return res.status(400).json({ message: 'Invalid staff id' });
+    const userId = req.user._id;
+    
+    // Get salary records
+    const salaryRecords = await SalaryRecord.find({ 
+      staffMember: userId
+    })
+    .sort({ year: -1, month: -1 })
+    .limit(12);
+
+    // Get user's daily salary rate from User model
+    const user = await User.findById(userId).select('dailySalary baseSalary role dailyWage');
+    let dailyRate = user.dailySalary || user.baseSalary || user.dailyWage || 0;
+
+    // If no rate found in User, check Worker model
+    if (!dailyRate || dailyRate === 0) {
+      const Worker = require('../models/workerModel');
+      const worker = await Worker.findOne({ user: userId });
+      if (worker) {
+        dailyRate = worker.dailyWage || worker.monthlySalary || 0;
+      }
     }
 
-    let query = { staff: staffId };
-    if (year) {
-      query.year = Number(year);
+    // Default to 500 if still no rate found
+    if (!dailyRate || dailyRate === 0) {
+      dailyRate = 500;
     }
-
-    const salaries = await Salary.find(query)
-      .sort({ year: -1, month: -1 })
-      .limit(Number(limit))
-      .populate('staff', 'name email role staffId')
-      .populate('createdBy', 'name')
-      .populate('approvedBy', 'name');
-
-    res.json({ data: salaries });
-  } catch (error) {
-    console.error('Error fetching salary history:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
-  }
-};
-
-// Get all salaries for admin dashboard
-exports.getAllSalaries = async (req, res) => {
-  try {
-    const { year, month, status, page = 1, limit = 20 } = req.query;
-
-    let query = {};
-    if (year) query.year = Number(year);
-    if (month) query.month = Number(month);
-    if (status) query.status = status;
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const salaries = await Salary.find(query)
-      .sort({ year: -1, month: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .populate('staff', 'name email role staffId')
-      .populate('createdBy', 'name')
-      .populate('approvedBy', 'name');
-
-    const total = await Salary.countDocuments(query);
 
     res.json({
-      data: salaries,
-      pagination: {
-        current: Number(page),
-        pages: Math.ceil(total / Number(limit)),
-        total
-      }
+      success: true,
+      count: salaryRecords.length,
+      dailyRate,
+      data: salaryRecords
     });
   } catch (error) {
-    console.error('Error fetching all salaries:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error('Get my salary error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching salary records', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
-// Get salary summary for dashboard
-exports.getSalarySummary = async (req, res) => {
+// Delete salary record
+exports.deleteSalaryRecord = async (req, res) => {
   try {
-    const { year, month } = req.query;
-    const currentYear = year || new Date().getFullYear();
-    const currentMonth = month || new Date().getMonth() + 1;
+    const { id } = req.params;
 
-    // Get salary statistics for the specified month
-    const salaryStats = await Salary.aggregate([
-      {
-        $match: {
-          year: Number(currentYear),
-          month: Number(currentMonth)
-        }
-      },
+    const salaryRecord = await SalaryRecord.findById(id);
+    if (!salaryRecord) {
+      return res.status(404).json({ message: 'Salary record not found' });
+    }
+
+    if (salaryRecord.status === 'paid') {
+      return res.status(400).json({ message: 'Cannot delete paid salary records' });
+    }
+
+    await salaryRecord.deleteOne();
+
+    res.json({
+      success: true,
+      message: 'Salary record deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete salary record error:', error);
+    res.status(500).json({ message: 'Error deleting salary record', error: error.message });
+  }
+};
+
+// Get salary statistics
+exports.getSalaryStatistics = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    
+    let query = {};
+    if (month) query.month = parseInt(month);
+    if (year) query.year = parseInt(year);
+
+    const stats = await SalaryRecord.aggregate([
+      { $match: query },
       {
         $group: {
           _id: '$status',
           count: { $sum: 1 },
-          totalAmount: { $sum: '$netSalary' }
+          totalGross: { $sum: '$grossSalary' },
+          totalNet: { $sum: '$netSalary' },
+          totalDeductions: { $sum: '$totalDeductions' }
         }
       }
     ]);
 
-    // Get total staff count with salary templates
-    const totalStaff = await SalaryTemplate.countDocuments({ isActive: true });
-
-    // Get pending salaries count
-    const pendingSalaries = await Salary.countDocuments({ 
-      status: 'draft',
-      year: Number(currentYear),
-      month: Number(currentMonth)
-    });
+    const totalRecords = await SalaryRecord.countDocuments(query);
 
     res.json({
+      success: true,
       data: {
-        salaryStats,
-        totalStaff,
-        pendingSalaries,
-        currentYear,
-        currentMonth
+        totalRecords,
+        byStatus: stats
       }
     });
   } catch (error) {
-    console.error('Error fetching salary summary:', error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error('Get salary statistics error:', error);
+    res.status(500).json({ message: 'Error fetching statistics', error: error.message });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

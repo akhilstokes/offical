@@ -12,6 +12,27 @@ const UserRequests = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [userAddress, setUserAddress] = useState('');
+  const [showAddressWarning, setShowAddressWarning] = useState(false);
+
+  const checkUserAddress = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${API}/api/users/profile`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        const address = data.address || '';
+        setUserAddress(address);
+        if (!address || address.trim() === '') {
+          setShowAddressWarning(true);
+        }
+      }
+    } catch (e) {
+      console.error('Error checking user address:', e);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -20,9 +41,19 @@ const UserRequests = () => {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { 
+    load(); 
+    checkUserAddress();
+  }, []);
 
   const submitBarrel = async () => {
+    // Check if user has address before allowing request
+    if (!userAddress || userAddress.trim() === '') {
+      setErr('Please complete your address in your profile before requesting barrels. Delivery staff need your address for barrel delivery.');
+      setShowAddressWarning(true);
+      return;
+    }
+
     setSubmitting(true); setErr('');
     try {
       const qty = Number(barrel.quantity) || 1;
@@ -31,7 +62,7 @@ const UserRequests = () => {
         setSubmitting(false);
         return;
       }
-      await createRequest({ type: 'BARREL', quantity: qty, notes: barrel.notes });
+      await createRequest({ type: 'BARREL', quantity: qty, notes: barrel.notes, address: userAddress });
       setBarrel(initialBarrel);
       await load();
     } catch (e) { setErr('Failed to submit request'); }
@@ -58,6 +89,23 @@ const UserRequests = () => {
       </div>
 
       {err && <div className="alert error">{err}</div>}
+
+      {showAddressWarning && (!userAddress || userAddress.trim() === '') && (
+        <div className="alert" style={{ background: '#fef3c7', border: '1px solid #fbbf24', color: '#92400e', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <i className="fas fa-exclamation-triangle" style={{ fontSize: '1.5rem' }}></i>
+            <div>
+              <strong>Address Required</strong>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem' }}>
+                Please complete your address in your profile before requesting barrels. 
+                <a href="/user/profile" style={{ color: '#92400e', textDecoration: 'underline', marginLeft: '4px' }}>
+                  Go to Profile →
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {tab === 'BARREL' ? (
         <div className="dash-card" style={{ maxWidth: 520, display: 'grid', gap: 12 }}>

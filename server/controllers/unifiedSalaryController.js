@@ -150,10 +150,10 @@ async function getMonthlySalaryData(userId, year, month) {
   try {
     // Get salary record for the month
     let salary = await Salary.findOne({
-      staff: userId,
+      staffMember: userId,
       year: year,
       month: month
-    }).populate('staff', 'name email role staffId');
+    }).populate('staffMember', 'name email role staffId');
 
     // If no salary record exists, check if template exists
     if (!salary) {
@@ -178,7 +178,7 @@ async function getMonthlySalaryData(userId, year, month) {
                          template.specialAllowance;
 
       salary = await Salary.create({
-        staff: userId,
+        staffMember: userId,
         year: year,
         month: month,
         basicSalary: template.basicSalary,
@@ -192,7 +192,7 @@ async function getMonthlySalaryData(userId, year, month) {
     }
 
     // Get salary history
-    const history = await Salary.find({ staff: userId })
+    const history = await Salary.find({ staffMember: userId })
       .sort({ year: -1, month: -1 })
       .limit(12)
       .select('year month basicSalary grossSalary netSalary status');
@@ -250,7 +250,7 @@ exports.getUnifiedSalaryHistory = async (req, res) => {
       case 'lab_manager':
       default:
         // Monthly salary history
-        const monthlyHistory = await Salary.find({ staff: userId })
+        const monthlyHistory = await Salary.find({ staffMember: userId })
           .sort({ year: -1, month: -1 })
           .limit(Number(limit))
           .select('year month basicSalary grossSalary netSalary status');

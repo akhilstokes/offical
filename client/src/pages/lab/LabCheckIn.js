@@ -7,8 +7,8 @@ const LabCheckIn = () => {
   const base = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const { user } = useAuth();
-  const [form, setForm] = useState({ sampleId: '', customerName: '', receivedAt: '', notes: '', barrelCount: 0, drc: '' });
-  const [barrels, setBarrels] = useState([]); // [{barrelId, liters}]
+  const [form, setForm] = useState({ sampleId: '', customerName: '', receivedAt: '', notes: '', barrelCount: 0 });
+  const [barrels, setBarrels] = useState([]); // [{barrelId, liters, drc}]
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -105,20 +105,45 @@ const LabCheckIn = () => {
     setBarrels(prev => {
       const arr = [...prev];
       if (arr.length > n) return arr.slice(0, n);
-      while (arr.length < n) arr.push({ barrelId: '', liters: '' });
+      while (arr.length < n) arr.push({ barrelId: '', liters: '', drc: '' });
       return arr;
     });
   }, [form.barrelCount]);
+
+  const onBarrelChange = (index, field, value) => {
+    setBarrels(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setMessage(''); setError(''); setValidation({});
     const v = {};
     if (!form.customerName?.trim()) v.customerName = 'Customer name is required';
-    if (!form.drc || form.drc === '' || parseFloat(form.drc) <= 0) v.drc = 'DRC value is required and must be greater than 0';
+    
+    // Validate that all barrels have DRC values
+    const barrelCount = Number(form.barrelCount) || 0;
+    if (barrelCount > 0) {
+      for (let i = 0; i < barrelCount; i++) {
+        const barrel = barrels[i];
+        if (!barrel || !barrel.drc || barrel.drc === '' || parseFloat(barrel.drc) <= 0) {
+          v[`barrel_${i}_drc`] = `DRC value for Barrel ${i + 1} is required`;
+        }
+      }
+    }
+    
     if (Object.keys(v).length) { setValidation(v); return; }
     try {
       setLoading(true);
+      
+      // Calculate average DRC from all barrels
+      const drcValues = barrels.map(b => parseFloat(b.drc || 0)).filter(d => d > 0);
+      const averageDrc = drcValues.length > 0 
+        ? (drcValues.reduce((sum, val) => sum + val, 0) / drcValues.length).toFixed(2)
+        : 0;
       
       // Prepare check-in data
       const checkInData = {
@@ -126,8 +151,14 @@ const LabCheckIn = () => {
         customerName: form.customerName,
         receivedAt: form.receivedAt,
         notes: form.notes,
-        barrelCount: Number(form.barrelCount) || 0,
-        drc: form.drc ? Number(form.drc) : undefined,
+        barrelCount: barrelCount,
+        drc: averageDrc, // Average DRC for display
+        barrels: barrels.map((b, idx) => ({
+          barrelNumber: idx + 1,
+          barrelId: b.barrelId || `Barrel-${idx + 1}`,
+          liters: b.liters || 0,
+          drc: parseFloat(b.drc || 0)
+        })),
         checkedInAt: new Date().toISOString()
       };
       
@@ -170,7 +201,7 @@ const LabCheckIn = () => {
       }
       
       setMessage('Sample checked in successfully! Notification sent to Accountant. Redirecting to dashboard...');
-      setForm({ sampleId: '', customerName: '', receivedAt: '', notes: '', barrelCount: 0, drc: '' });
+      setForm({ sampleId: '', customerName: '', receivedAt: '', notes: '', barrelCount: 0 });
       setBarrels([]);
       
       // Update history from localStorage
@@ -190,9 +221,20 @@ const LabCheckIn = () => {
   const canSubmit = useMemo(() => {
     if (loading) return false;
     if (!form.customerName?.trim()) return false;
-    if (!form.drc || form.drc === '' || parseFloat(form.drc) <= 0) return false;
+    
+    // Check that all barrels have DRC values
+    const barrelCount = Number(form.barrelCount) || 0;
+    if (barrelCount > 0) {
+      for (let i = 0; i < barrelCount; i++) {
+        const barrel = barrels[i];
+        if (!barrel || !barrel.drc || barrel.drc === '' || parseFloat(barrel.drc) <= 0) {
+          return false;
+        }
+      }
+    }
+    
     return true;
-  }, [loading, form]);
+  }, [loading, form, barrels]);
 
   const generateReport = (item) => {
     const reportDate = item.receivedAt ? new Date(item.receivedAt) : new Date(item.createdAt);
@@ -384,33 +426,78 @@ const LabCheckIn = () => {
         
         <label>Received At<input type="datetime-local" name="receivedAt" value={form.receivedAt} onChange={onChange} /></label>
         
-        <label>
-          DRC Value (%) <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
-          <input 
-            type="number" 
-            name="drc" 
-            placeholder="Enter DRC percentage (0-100)" 
-            value={form.drc} 
-            onChange={onChange}
-            min="0"
-            max="100"
-            step="0.1"
-            required
-            style={{
-              borderColor: validation.drc ? '#ef4444' : undefined
-            }}
-          />
-          {validation.drc && (
-            <span style={{ 
-              color: '#ef4444', 
-              fontSize: '12px', 
-              marginTop: '4px',
-              display: 'block'
+        {/* DRC inputs for each barrel */}
+        {form.barrelCount > 0 && (
+          <div style={{ gridColumn: '1 / -1', marginTop: 16 }}>
+            <h4 style={{ marginBottom: 12, color: '#1e293b', fontSize: '16px' }}>
+              DRC Values for Each Barrel <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
+            </h4>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+              gap: 12,
+              padding: 16,
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0'
             }}>
-              {validation.drc}
-            </span>
-          )}
-        </label>
+              {barrels.map((barrel, idx) => (
+                <div key={idx} style={{
+                  padding: 12,
+                  backgroundColor: 'white',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <label style={{ marginBottom: 0 }}>
+                    <div style={{
+                      fontWeight: '600',
+                      color: '#475569',
+                      marginBottom: 6,
+                      fontSize: '14px'
+                    }}>
+                      Barrel {idx + 1} DRC (%)
+                    </div>
+                    <input 
+                      type="number" 
+                      placeholder="Enter DRC %" 
+                      value={barrel.drc || ''} 
+                      onChange={(e) => onBarrelChange(idx, 'drc', e.target.value)}
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      required
+                      style={{
+                        width: '100%',
+                        borderColor: validation[`barrel_${idx}_drc`] ? '#ef4444' : undefined
+                      }}
+                    />
+                    {validation[`barrel_${idx}_drc`] && (
+                      <span style={{ 
+                        color: '#ef4444', 
+                        fontSize: '12px', 
+                        marginTop: '4px',
+                        display: 'block'
+                      }}>
+                        {validation[`barrel_${idx}_drc`]}
+                      </span>
+                    )}
+                  </label>
+                </div>
+              ))}
+            </div>
+            <div style={{
+              marginTop: 12,
+              padding: 12,
+              backgroundColor: '#dbeafe',
+              borderRadius: '6px',
+              border: '1px solid #3b82f6',
+              fontSize: '14px',
+              color: '#1e40af'
+            }}>
+              <strong>ℹ️ Note:</strong> Enter the DRC percentage for each barrel separately. The average will be calculated automatically.
+            </div>
+          </div>
+        )}
         
         <label style={{ gridColumn: '1 / -1' }}>Notes<textarea name="notes" placeholder="Optional notes" value={form.notes} onChange={onChange} rows={3} /></label>
         <div style={{ gridColumn: '1 / -1' }}>

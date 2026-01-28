@@ -23,8 +23,8 @@ const rateSchema = new mongoose.Schema(
     // Effective date chosen by admin (calendar). Defaults to creation date if not provided
     effectiveDate: { type: Date, default: Date.now },
 
-    // Workflow status: draft -> pending -> published
-    status: { type: String, enum: ['draft', 'pending', 'published'], default: 'draft', index: true },
+    // Workflow status: draft -> pending -> published/rejected
+    status: { type: String, enum: ['draft', 'pending', 'published', 'rejected'], default: 'draft', index: true },
 
     // Who created/last edited this rate
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true, default: null },
