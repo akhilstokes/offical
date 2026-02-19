@@ -12,9 +12,9 @@ const Profile = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [editMode, setEditMode] = useState(false);
-  const [activeTab, setActiveTab] = useState('edit'); // edit | password | history
-  const [form, setForm] = useState({ name: '', email: '', phoneNumber: '', location: '', address: '' });
-  const [originalForm, setOriginalForm] = useState({ name: '', email: '', phoneNumber: '', location: '', address: '' });
+  const [activeTab, setActiveTab] = useState('edit'); // edit | password | bank | history
+  const [form, setForm] = useState({ name: '', email: '', phoneNumber: '', location: '', address: '', accountHolderName: '', accountNumber: '', ifscCode: '', bankName: '', branchName: '' });
+  const [originalForm, setOriginalForm] = useState({ name: '', email: '', phoneNumber: '', location: '', address: '', accountHolderName: '', accountNumber: '', ifscCode: '', bankName: '', branchName: '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
   useEffect(() => {
@@ -24,7 +24,18 @@ const Profile = () => {
         const userStr = localStorage.getItem('user');
         if (userStr) {
           const u = JSON.parse(userStr);
-          const prefill = { name: u.name || '', email: u.email || '', phoneNumber: u.phoneNumber || '', location: u.location || '', address: u.address || '' };
+          const prefill = { 
+            name: u.name || '', 
+            email: u.email || '', 
+            phoneNumber: u.phoneNumber || '', 
+            location: u.location || '', 
+            address: u.address || '',
+            accountHolderName: u.accountHolderName || '',
+            accountNumber: u.accountNumber || '',
+            ifscCode: u.ifscCode || '',
+            bankName: u.bankName || '',
+            branchName: u.branchName || ''
+          };
           setForm(prev => ({ ...prev, ...prefill }));
           setOriginalForm(prefill);
         }
@@ -33,7 +44,18 @@ const Profile = () => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await axios.get(`${API}/api/users/profile`, { headers });
         const u = res.data;
-        const fetched = { name: u.name || '', email: u.email || '', phoneNumber: u.phoneNumber || '', location: u.location || '', address: u.address || '' };
+        const fetched = { 
+          name: u.name || '', 
+          email: u.email || '', 
+          phoneNumber: u.phoneNumber || '', 
+          location: u.location || '', 
+          address: u.address || '',
+          accountHolderName: u.accountHolderName || '',
+          accountNumber: u.accountNumber || '',
+          ifscCode: u.ifscCode || '',
+          bankName: u.bankName || '',
+          branchName: u.branchName || ''
+        };
         setForm(fetched);
         setOriginalForm(fetched);
       } catch (e) {
@@ -74,7 +96,17 @@ const Profile = () => {
       // Normalize phone: strip non-digits, drop leading +, 91 or 0
       const clean = form.phoneNumber.replace(/\D/g, '');
       const finalPhone = clean.startsWith('91') && clean.length === 12 ? clean.slice(2) : (clean.startsWith('0') ? clean.slice(1) : clean);
-      const payload = { name: form.name.trim(), phoneNumber: finalPhone, location: form.location.trim(), address: form.address.trim() };
+      const payload = { 
+        name: form.name.trim(), 
+        phoneNumber: finalPhone, 
+        location: form.location.trim(), 
+        address: form.address.trim(),
+        accountHolderName: form.accountHolderName.trim(),
+        accountNumber: form.accountNumber.trim(),
+        ifscCode: form.ifscCode.trim(),
+        bankName: form.bankName.trim(),
+        branchName: form.branchName.trim()
+      };
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.put(`${API}/api/users/profile`, payload, { headers });
@@ -82,7 +114,18 @@ const Profile = () => {
       // Update local storage and refresh context
       const current = JSON.parse(localStorage.getItem('user') || '{}');
       localStorage.setItem('user', JSON.stringify({ ...current, ...updated }));
-      const nextState = { name: updated.name || form.name, email: form.email, phoneNumber: updated.phoneNumber || form.phoneNumber, location: updated.location || form.location, address: updated.address || form.address };
+      const nextState = { 
+        name: updated.name || form.name, 
+        email: form.email, 
+        phoneNumber: updated.phoneNumber || form.phoneNumber, 
+        location: updated.location || form.location, 
+        address: updated.address || form.address,
+        accountHolderName: updated.accountHolderName || form.accountHolderName,
+        accountNumber: updated.accountNumber || form.accountNumber,
+        ifscCode: updated.ifscCode || form.ifscCode,
+        bankName: updated.bankName || form.bankName,
+        branchName: updated.branchName || form.branchName
+      };
       setForm(nextState);
       setOriginalForm(nextState);
       setMessage('Profile updated successfully');
@@ -164,6 +207,7 @@ const Profile = () => {
       <section className="profile-content">
         <div className="tabs">
           <button className={`tab ${activeTab==='edit'?'active':''}`} onClick={() => setActiveTab('edit')}>Edit Profile</button>
+          <button className={`tab ${activeTab==='bank'?'active':''}`} onClick={() => setActiveTab('bank')}>Bank Details</button>
           <button className={`tab ${activeTab==='password'?'active':''}`} onClick={() => setActiveTab('password')}>Change Password</button>
         </div>
 
@@ -214,6 +258,47 @@ const Profile = () => {
                 <>
                   <button type="button" className="btn" onClick={handleCancel} disabled={saving} style={{ marginRight: 8 }}>Cancel</button>
                   <button type="submit" className="btn primary" disabled={saving}>{saving ? 'Saving...' : 'Update'}</button>
+                </>
+              )}
+            </div>
+          </form>
+        )}
+
+        {activeTab === 'bank' && (
+          <form className="profile-form" onSubmit={handleSubmit}>
+            <div className="grid-2">
+              <div className="form-row">
+                <label htmlFor="accountHolderName">Account Holder Name</label>
+                <input id="accountHolderName" name="accountHolderName" type="text" value={form.accountHolderName} onChange={handleChange} placeholder="As per bank passbook" disabled={!editMode} />
+              </div>
+              <div className="form-row">
+                <label htmlFor="accountNumber">Account Number</label>
+                <input id="accountNumber" name="accountNumber" type="text" value={form.accountNumber} onChange={handleChange} placeholder="Enter account number" disabled={!editMode} />
+              </div>
+            </div>
+            <div className="grid-2">
+              <div className="form-row">
+                <label htmlFor="ifscCode">IFSC Code</label>
+                <input id="ifscCode" name="ifscCode" type="text" value={form.ifscCode} onChange={handleChange} placeholder="e.g. SBIN0001234" disabled={!editMode} />
+              </div>
+              <div className="form-row">
+                <label htmlFor="bankName">Bank Name</label>
+                <input id="bankName" name="bankName" type="text" value={form.bankName} onChange={handleChange} placeholder="e.g. State Bank of India" disabled={!editMode} />
+              </div>
+            </div>
+            <div className="form-row">
+              <label htmlFor="branchName">Branch Name</label>
+              <input id="branchName" name="branchName" type="text" value={form.branchName} onChange={handleChange} placeholder="Enter branch name" disabled={!editMode} />
+            </div>
+
+            <div className="form-actions">
+              {!editMode && (
+                <button type="button" className="btn primary" onClick={() => setEditMode(true)}>Edit Bank Details</button>
+              )}
+              {editMode && (
+                <>
+                  <button type="button" className="btn" onClick={handleCancel} disabled={saving} style={{ marginRight: 8 }}>Cancel</button>
+                  <button type="submit" className="btn primary" disabled={saving}>{saving ? 'Saving...' : 'Update Bank Details'}</button>
                 </>
               )}
             </div>

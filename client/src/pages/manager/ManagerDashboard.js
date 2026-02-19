@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 import './ManagerDashboard.css';
+import '../user_dashboard/userDashboardTheme.css';
 
 
 
@@ -200,251 +201,224 @@ const ManagerDashboard = () => {
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>Manager Dashboard</h2>
-        <button onClick={loadDashboardData} disabled={loading}>
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
+    <div className="user-dashboard">
+      <div className="userdash-header">
+        <div className="userdash-title">
+          <h2>Manager Dashboard</h2>
+          <p>Real-time overview of operations, stock, and staff activity.</p>
+        </div>
+        <div className="userdash-header-actions">
+          <button type="button" className="btn-secondary" onClick={loadDashboardData} disabled={loading}>
+            <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i>
+            <span>Refresh All Data</span>
+          </button>
+        </div>
       </div>
 
       {error && (
-        <div style={{ color: 'tomato', marginBottom: 16, padding: 12, background: '#fee', borderRadius: 4 }}>
-          {error}
+        <div className="alert error">
+          <i className="fas fa-exclamation-circle"></i>
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Quick Stats Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-        gap: 16, 
-        marginBottom: 32 
-      }}>
-        {/* Attendance Card */}
-        <div className="dash-card">
-          <h4 style={{ marginTop: 0, color: '#2563eb' }}>Today's Attendance</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#16a34a' }}>
-                {dashboardData.attendance.today.present}
-              </div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Present</div>
+      {/* Stats Row */}
+      <div className="userdash-stats-row">
+        <div className="userdash-stat-card">
+          <div className="userdash-stat-content">
+            <div className="userdash-stat-icon-wrapper wallet">
+              <i className="fas fa-users"></i>
             </div>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#dc2626' }}>
-                {dashboardData.attendance.today.absent}
-              </div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Absent</div>
+            <div className="userdash-stat-info">
+              <span className="userdash-stat-label">Daily Attendance</span>
+              <h3 className="userdash-stat-value">{dashboardData.attendance.today.present} Workers Present</h3>
             </div>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#d97706' }}>
-                {dashboardData.attendance.today.late}
-              </div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Late</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#7c3aed' }}>
-                {dashboardData.attendance.stats.unverifiedRecords}
-              </div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Unverified</div>
-            </div>
+          </div>
+          <div className="userdash-stat-link" onClick={() => navigate('/manager/attendance')} style={{ cursor: 'pointer' }}>
+            <span>{dashboardData.attendance.stats.unverifiedRecords} Unverified Records</span>
+            <i className="fas fa-chevron-right"></i>
           </div>
         </div>
 
-        {/* Bill Requests Card */}
-        <div className="dash-card">
-          <h4 style={{ marginTop: 0, color: '#2563eb' }}>Pending Bill Requests</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#dc2626' }}>
-                {dashboardData.bills.pending}
-              </div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Requests</div>
+        <div className="userdash-stat-card">
+          <div className="userdash-stat-content">
+            <div className="userdash-stat-icon-wrapper alert">
+              <i className="fas fa-file-invoice-dollar"></i>
             </div>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#16a34a' }}>
-                ₹{dashboardData.bills.totalAmount.toLocaleString()}
-              </div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Total Amount</div>
+            <div className="userdash-stat-info">
+              <span className="userdash-stat-label">Pending Reviews</span>
+              <h3 className="userdash-stat-value">{dashboardData.bills.pending} Bills to Verify</h3>
             </div>
           </div>
-          {dashboardData.bills.byCategory.length > 0 && (
-            <div style={{ marginTop: 12, fontSize: 12 }}>
-              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>By Category:</div>
-              {dashboardData.bills.byCategory.map((cat, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{cat._id}:</span>
-                  <span>{cat.count} (₹{cat.totalAmount.toLocaleString()})</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Rate Updates Card */}
-        <div className="dash-card">
-          <h4 style={{ marginTop: 0, color: '#2563eb' }}>Rate Updates</h4>
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#dc2626' }}>
-              {dashboardData.rates.pending}
-            </div>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Pending Admin Approval</div>
+          <div className="userdash-stat-link" onClick={() => navigate('/manager/bill-verification')} style={{ cursor: 'pointer' }}>
+            <span>Total Value: ₹{dashboardData.bills.totalAmount.toLocaleString()}</span>
+            <i className="fas fa-chevron-right"></i>
           </div>
-          {dashboardData.rates.latest.length > 0 && (
-            <div style={{ marginTop: 12, fontSize: 12 }}>
-              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Recent Submissions:</div>
-              {dashboardData.rates.latest.slice(0, 3).map((rate, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{rate.category}:</span>
-                  <span>₹{rate.inr} / ${rate.usd}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Stock Overview Card */}
-        <div className="dash-card">
-          <h4 style={{ marginTop: 0, color: '#2563eb' }}>Stock Overview</h4>
-          {dashboardData.stock.summary ? (
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#16a34a' }}>
-                {dashboardData.stock.summary.rubberBandUnits || 0}
-              </div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Rubber Band Units</div>
-              {dashboardData.stock.summary.latexLiters !== undefined && (
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: 18, fontWeight: 'bold', color: '#2563eb' }}>
-                    {dashboardData.stock.summary.latexLiters}L
-                  </div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>Latex Stock</div>
-                </div>
-              )}
+        <div className="userdash-stat-card">
+          <div className="userdash-stat-content">
+            <div className="userdash-stat-icon-wrapper rate">
+              <i className="fas fa-boxes"></i>
             </div>
-          ) : (
-            <div style={{ color: '#6b7280' }}>No stock data available</div>
-          )}
+            <div className="userdash-stat-info">
+              <span className="userdash-stat-label">Current Stock</span>
+              <h3 className="userdash-stat-value">{dashboardData.stock.summary?.latexLiters || 0}L Latex</h3>
+            </div>
+          </div>
+          <div className="userdash-stat-link" onClick={() => navigate('/manager/stock')} style={{ cursor: 'pointer' }}>
+            <span>{dashboardData.stock.summary?.rubberBandUnits || 0} Rubber Band Units</span>
+            <i className="fas fa-chevron-right"></i>
+          </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: 16, 
-        marginBottom: 32 
-      }}>
-        <button 
-          className="btn btn-primary" 
-          onClick={() => window.location.href = '/manager/attendance'}
-          style={{ padding: 16, textAlign: 'center' }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 'bold' }}>Verify Attendance</div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>GPS-based verification</div>
-        </button>
+      <div className="userdash-content-grid">
+        {/* Left Main Column: Quick Actions */}
+        <div className="userdash-main-col">
+          <div className="userdash-section-label">
+            <h3>Operational Controls</h3>
+            <div className="section-divider"></div>
+          </div>
 
-        <button 
-          className="btn btn-primary" 
-          onClick={() => window.location.href = '/manager/bills'}
-          style={{ padding: 16, textAlign: 'center' }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 'bold' }}>Review Bills</div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>{dashboardData.bills.pending} pending</div>
-        </button>
+          <div className="userdash-grid">
+            <div className="userdash-card" onClick={() => navigate('/manager/sell-requests')} style={{ cursor: 'pointer' }}>
+              <div className="userdash-card-icon support">
+                <i className="fas fa-handshake"></i>
+              </div>
+              <div className="userdash-card-body">
+                <div className="userdash-card-title">Sell Requests</div>
+                <div className="userdash-card-desc">Approve or reject customer barrel selling requests.</div>
+              </div>
+              <div className="userdash-card-cta">
+                <i className="fas fa-arrow-right"></i>
+              </div>
+            </div>
 
-        <button 
-          className="btn btn-primary" 
-          onClick={() => window.location.href = '/manager/rates'}
-          style={{ padding: 16, textAlign: 'center' }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 'bold' }}>Update Rates</div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>Submit for admin approval</div>
-        </button>
+            <div className="userdash-card" onClick={() => navigate('/manager/barrel-allocation')} style={{ cursor: 'pointer' }}>
+              <div className="userdash-card-icon profile">
+                <i className="fas fa-truck-loading"></i>
+              </div>
+              <div className="userdash-card-body">
+                <div className="userdash-card-title">Pickup Dispatch</div>
+                <div className="userdash-card-desc">Assign field staff for collection tasks and deliveries.</div>
+              </div>
+              <div className="userdash-card-cta">
+                <i className="fas fa-arrow-right"></i>
+              </div>
+            </div>
 
-        <button 
-          className="btn btn-primary" 
-          onClick={() => window.location.href = '/manager/shifts'}
-          style={{ padding: 16, textAlign: 'center' }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 'bold' }}>Manage Shifts</div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>Create schedules</div>
-        </button>
+            <div className="userdash-card" onClick={() => navigate('/manager/bill-verification')} style={{ cursor: 'pointer' }}>
+              <div className="userdash-card-icon transactions">
+                <i className="fas fa-check-circle"></i>
+              </div>
+              <div className="userdash-card-body">
+                <div className="userdash-card-title">Verify Bills</div>
+                <div className="userdash-card-desc">Final audit of bills before payment processing.</div>
+              </div>
+              <div className="userdash-card-cta">
+                <i className="fas fa-arrow-right"></i>
+              </div>
+            </div>
 
-        <button 
-          className="btn btn-primary" 
-          onClick={() => window.location.href = '/manager/stock'}
-          style={{ padding: 16, textAlign: 'center' }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 'bold' }}>Monitor Stock</div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>View-only access</div>
-        </button>
+            <div className="userdash-card" onClick={() => navigate('/manager/shifts')} style={{ cursor: 'pointer' }}>
+              <div className="userdash-card-icon notifications">
+                <i className="fas fa-clock"></i>
+              </div>
+              <div className="userdash-card-body">
+                <div className="userdash-card-title">Shift Planning</div>
+                <div className="userdash-card-desc">Manage staff attendance and weekly work schedules.</div>
+              </div>
+              <div className="userdash-card-cta">
+                <i className="fas fa-arrow-right"></i>
+              </div>
+            </div>
 
-        <button 
-          className="btn btn-primary" 
-          onClick={() => window.location.href = '/manager/reports'}
-          style={{ padding: 16, textAlign: 'center' }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 'bold' }}>Generate Reports</div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>For admin review</div>
-        </button>
-      </div>
+            <div className="userdash-card" onClick={() => navigate('/manager/expenses')} style={{ cursor: 'pointer' }}>
+              <div className="userdash-card-icon sell">
+                <i className="fas fa-wallet"></i>
+              </div>
+              <div className="userdash-card-body">
+                <div className="userdash-card-title">Expenses</div>
+                <div className="userdash-card-desc">Track and approve operational expense claims.</div>
+              </div>
+              <div className="userdash-card-cta">
+                <i className="fas fa-arrow-right"></i>
+              </div>
+            </div>
 
-      {/* Notifications Section */}
-      <div className="dash-card" style={{ padding: 16 }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <h4 style={{ marginTop: 0 }}>Recent Notifications</h4>
-          <span style={{ color:'#64748b', fontSize:12 }}>Unread: {unread}</span>
+            <div className="userdash-card" onClick={() => navigate('/manager/complaints')} style={{ cursor: 'pointer' }}>
+              <div className="userdash-card-icon support">
+                <i className="fas fa-headset"></i>
+              </div>
+              <div className="userdash-card-body">
+                <div className="userdash-card-title">Complaints</div>
+                <div className="userdash-card-desc">Resolve issues reported by customers or staff.</div>
+              </div>
+              <div className="userdash-card-cta">
+                <i className="fas fa-arrow-right"></i>
+              </div>
+            </div>
+          </div>
         </div>
-        {notifs.length === 0 ? (
-          <div style={{ color:'#94a3b8' }}>No notifications</div>
-        ) : (
-          <ul style={{ listStyle:'none', padding:0, margin:0, display:'grid', gap:8 }}>
-            {notifs.slice(0, 5).map(n => (
-              <li key={n._id} style={{
-                border:'1px solid #e2e8f0', borderRadius:8, padding:12, background: n.read ? '#fff' : '#f8fafc'
-              }}>
-                <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}>
-                  <div>
-                    <div style={{ fontWeight:600 }}>{n.title || 'Update'}</div>
-                    <div style={{ color:'#475569', fontSize:14 }}>{n.message}</div>
-                    {n.meta && (
-                      <div style={{ marginTop:6, display:'flex', gap:8, flexWrap:'wrap', color:'#64748b', fontSize:12 }}>
-                        {Object.entries(n.meta).map(([k,v]) => (
-                          <span key={k}><strong>{k}:</strong> {String(v)}</span>
-                        ))}
+
+        {/* Right Sidebar Column: Notifications */}
+        <div className="userdash-side-col">
+          <div className="dash-card">
+            <div className="card-header" style={{ padding: '20px 24px' }}>
+              <h3><i className="fas fa-bell"></i> Recent Activity</h3>
+              <span className="badge status-pending">{unread} New</span>
+            </div>
+            
+            {notifs.length === 0 ? (
+              <div className="no-data" style={{ padding: '60px 20px' }}>
+                <i className="fas fa-bell-slash" style={{ fontSize: '2rem', color: '#e2e8f0', marginBottom: '16px', display: 'block' }}></i>
+                <span>No new updates</span>
+              </div>
+            ) : (
+              <div className="notifications-list" style={{ padding: '0 16px 16px' }}>
+                {notifs.slice(0, 6).map((n) => (
+                  <div 
+                    key={n._id} 
+                    className={`notification-item ${!n.read ? 'unread' : ''}`}
+                    onClick={() => markRead(n._id)}
+                    style={{ padding: '16px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
+                  >
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <div className="notification-icon" style={{ fontSize: '1.2rem', width: '32px', height: '32px' }}>
+                        {getNotificationIcon(n.title)}
                       </div>
-                    )}
-                    <div style={{ color:'#94a3b8', fontSize:12, marginTop:6 }}>{new Date(n.createdAt).toLocaleString()}</div>
+                      <div className="notification-content" style={{ flex: 1 }}>
+                        <div className="notification-title" style={{ fontSize: '0.95rem' }}>{n.title}</div>
+                        <div className="notification-message" style={{ fontSize: '0.85rem', color: '#64748b' }}>{n.message}</div>
+                        <div className="notification-time" style={{ marginTop: '4px', fontSize: '0.75rem' }}>
+                          {new Date(n.createdAt).toLocaleDateString()} • {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:8, alignItems:'flex-end' }}>
-                    {n.link && (
-                      <button className="btn" onClick={() => {
-
-                        if (n.link.startsWith('http')) {
-                          window.open(n.link, '_blank');
-                        } else {
-                          navigate(n.link);
-                        }
-                      }}
-                    >
-                      Open
-                    </button>
-                  )}
-                  {!n.read && (
-                    <button 
-                      className="notif-action-btn notif-mark-btn" 
-                      onClick={() => markRead(n._id)}
-                    >
-                      Mark Read
-                    </button>
-                  )}
-                </div>
+                ))}
               </div>
-              </li>
-            ))}
-          </ul>
-        )}
+            )}
+            
+            <div style={{ padding: '16px', textAlign: 'center', borderTop: '1px solid #f1f5f9' }}>
+              <button className="btn-secondary" onClick={() => navigate('/manager/notifications')} style={{ width: '100%', fontSize: '0.85rem' }}>
+                View All Notifications
+              </button>
+            </div>
+          </div>
+
+          <div className="dash-card" style={{ padding: '24px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', border: 'none' }}>
+            <h4 style={{ margin: '0 0 10px 0', color: '#2563eb', fontWeight: '800' }}>System Status</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 0 4px rgba(16, 185, 129, 0.1)' }}></div>
+              <span style={{ fontSize: '0.9rem', color: '#1e40af', fontWeight: '700' }}>Server Online</span>
+            </div>
+            <p style={{ margin: '12px 0 0 0', fontSize: '0.85rem', color: '#3b82f6', lineHeight: '1.5', fontWeight: '500' }}>
+              All modules are functioning normally. Last sync was successful.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

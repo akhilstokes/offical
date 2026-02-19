@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import { toast } from 'react-toastify';
+import jsPDF from 'jspdf';
 import './AccountantSalaries.css';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -18,8 +19,8 @@ const AccountantSalaries = () => {
   const [error, setError] = useState('');
   const doConfirm = useConfirm();
 
-  // Track which staff have calculated salaries
-  const [staffWithSalaries, setStaffWithSalaries] = useState(new Set());
+  // Track which staff have calculated salaries and their status
+  const [staffSalariesInfo, setStaffSalariesInfo] = useState({});
 
   // Filter State - only one role can be selected at a time
   const [selectedRole, setSelectedRole] = useState('all'); // 'all', 'manager', 'accountant', 'field_staff', 'delivery_staff'
@@ -57,6 +58,20 @@ const AccountantSalaries = () => {
   const [showPayslip, setShowPayslip] = useState(false);
   const [payslipData, setPayslipData] = useState(null);
 
+  // Credit Salary Modal State
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [bankDetails, setBankDetails] = useState({ accountNumber: '', ifsc: '' });
+  const [upiId, setUpiId] = useState('');
+  const [upiHandle, setUpiHandle] = useState('@okaxis');
+  const [processingPayment, setProcessingPayment] = useState(false);
+
+  // History Modal State
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyStaff, setHistoryStaff] = useState(null);
+  const [salaryHistory, setSalaryHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   // Load initial data
   useEffect(() => {
     loadStaff();
@@ -92,7 +107,7 @@ const AccountantSalaries = () => {
 
   // Check which staff members have calculated salaries
   const checkStaffSalaries = async (staffList) => {
-    const staffIds = new Set();
+    const info = {};
     
     for (const staffMember of staffList) {
       try {
@@ -104,7 +119,13 @@ const AccountantSalaries = () => {
           const response = await res.json();
           // Check if data array exists and has records
           if (response.data && response.data.length > 0) {
-            staffIds.add(staffMember._id);
+            const latest = response.data[0];
+            info[staffMember._id] = {
+              hasSalary: true,
+              status: latest.status || 'pending',
+              salaryId: latest._id,
+              netSalary: latest.netSalary
+            };
           }
         }
       } catch (error) {
@@ -112,13 +133,13 @@ const AccountantSalaries = () => {
       }
     }
     
-    setStaffWithSalaries(staffIds);
+    setStaffSalariesInfo(info);
   };
 
   // Open Calculator Modal
   const openCalculator = (staffMember) => {
     // Prevent opening calculator if salary already calculated
-    if (staffWithSalaries.has(staffMember._id)) {
+    if (staffSalariesInfo[staffMember._id]?.hasSalary) {
       toast.info('Salary already calculated for this staff member');
       return;
     }
@@ -278,6 +299,179 @@ const AccountantSalaries = () => {
     }
   };
 
+  // Open Credit Salary Modal
+  const openCreditModal = (staffMember) => {
+    const info = staffSalariesInfo[staffMember._id];
+    if (!info || !info.hasSalary) {
+      toast.warning('Please calculate salary first');
+      return;
+    }
+    
+    if (info.status === 'paid' || info.status === 'credited') {
+      toast.info('Salary already credited');
+      return;
+    }
+
+    setSelectedStaff(staffMember);
+    setPaymentMethod('bank'); // Default to bank if we have details
+    
+    // Auto-fill bank details if available in staff object
+    setBankDetails({ 
+      accountNumber: staffMember.accountNumber || '', 
+      ifsc: staffMember.ifscCode || '' 
+    });
+    
+    setUpiId('');
+    setUpiHandle('@okaxis');
+    setShowCreditModal(true);
+  };
+
+  // Handle Credit Salary
+  const handleCreditSalary = async () => {
+    const info = staffSalariesInfo[selectedStaff._id];
+    const salaryId = info.salaryId;
+
+    let remarks = '';
+    let transactionId = 'N/A';
+
+    if (paymentMethod === 'bank') {
+      if (!bankDetails.accountNumber || !bankDetails.ifsc) {
+        toast.error('Please enter bank account number and IFSC');
+        return;
+      }
+      remarks = `Bank Transfer: ${bankDetails.accountNumber} (${bankDetails.ifsc})`;
+      transactionId = `BANK-${Date.now()}`;
+      
+      const ok = await doConfirm(
+        'Confirm Payment',
+        `Are you sure you want to credit ₹${info.netSalary?.toFixed(2)} to ${selectedStaff.name} via BANK TRANSFER?`
+      );
+      if (!ok) return;
+    } else if (paymentMethod === 'upi') {
+      if (!upiId) {
+        toast.error('Please enter UPI username');
+        return;
+      }
+      const fullUpiId = upiId.includes('@') ? upiId : `${upiId}${upiHandle}`;
+      remarks = `UPI: ${fullUpiId}`;
+      transactionId = `UPI-${Date.now()}`;
+      
+      const ok = await doConfirm(
+        'Confirm Payment',
+        `Are you sure you want to credit ₹${info.netSalary?.toFixed(2)} to ${selectedStaff.name} via UPI (${fullUpiId})?`
+      );
+      if (!ok) return;
+    } else {
+      remarks = 'Paid in Cash';
+      transactionId = `CASH-${Date.now()}`;
+      
+      const ok = await doConfirm(
+        'Confirm Payment',
+        `Are you sure you want to credit ₹${info.netSalary?.toFixed(2)} to ${selectedStaff.name} via CASH?`
+      );
+      if (!ok) return;
+    }
+
+    try {
+      setProcessingPayment(true);
+      
+      const res = await fetch(`${API}/api/salary/${salaryId}/pay`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          paymentMethod,
+          transactionId,
+          remarks,
+          paymentDate: new Date()
+        })
+      });
+
+      if (!res.ok) throw new Error('Payment processing failed');
+
+      toast.success('Salary credited successfully');
+      setShowCreditModal(false);
+      
+      // Update local state
+      await loadStaff();
+      
+      // Generate Receipt
+      generatePaymentReceipt(selectedStaff, info, { paymentMethod, transactionId, remarks });
+
+    } catch (err) {
+      toast.error(err.message || 'Failed to credit salary');
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  // Generate Payment Receipt
+  const generatePaymentReceipt = (staff, salaryInfo, payment) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(40, 44, 52);
+    doc.text('HOLY FAMILY POLYMERS', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.text('SALARY PAYMENT RECEIPT', 105, 30, { align: 'center' });
+    
+    // Line separator
+    doc.setLineWidth(0.5);
+    doc.line(20, 35, 190, 35);
+    
+    // Info
+    doc.setFontSize(12);
+    doc.text(`Staff Name: ${staff.name}`, 20, 45);
+    doc.text(`Staff ID: ${staff.staffId || 'N/A'}`, 20, 52);
+    doc.text(`Role: ${staff.role?.replace('_', ' ').toUpperCase()}`, 20, 59);
+    
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 140, 45);
+    doc.text(`Receipt No: ${payment.transactionId}`, 140, 52);
+    
+    // Table Header
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, 70, 170, 10, 'F');
+    doc.setFont(undefined, 'bold');
+    doc.text('Description', 25, 77);
+    doc.text('Amount (INR)', 150, 77);
+    
+    // Content
+    doc.setFont(undefined, 'normal');
+    doc.text('Net Salary Paid', 25, 90);
+    doc.text(`₹${salaryInfo.netSalary?.toFixed(2)}`, 150, 90);
+    
+    doc.line(20, 95, 190, 95);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('TOTAL PAID', 25, 105);
+    doc.text(`INR ${salaryInfo.netSalary?.toFixed(2)}`, 150, 105);
+    
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(11);
+    doc.text('Payment Details:', 20, 120);
+    const methodDisplay = payment.paymentMethod === 'upi' ? 'UPI' : 
+                         payment.paymentMethod === 'bank' ? 'Bank Transfer' : 
+                         payment.paymentMethod === 'cash' ? 'Cash' : payment.paymentMethod.toUpperCase();
+    doc.text(`Method: ${methodDisplay}`, 25, 130);
+    doc.text(`Transaction ID: ${payment.transactionId}`, 25, 140);
+    
+    if (payment.paymentMethod === 'upi') {
+      doc.text(`UPI ID: ${payment.remarks.replace('UPI: ', '')}`, 25, 150);
+    } else {
+      doc.text(`Remarks: ${payment.remarks}`, 25, 150);
+    }
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.text('__________________________', 140, 180);
+    doc.text('Authorized Signatory', 143, 187);
+    
+    doc.text('This is a computer generated receipt.', 105, 220, { align: 'center' });
+    
+    doc.save(`Receipt_${staff.name.replace(' ', '_')}_${Date.now()}.pdf`);
+  };
+
   // Helper function to get month name
   const getMonthName = (monthNum) => {
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 
@@ -289,6 +483,7 @@ const AccountantSalaries = () => {
   const generatePayslip = async (staffMember) => {
     // Check if staff has any salary records
     try {
+      setLoading(true);
       const res = await fetch(`${API}/api/salary/history/${staffMember._id}`, {
         headers: authHeaders()
       });
@@ -309,14 +504,54 @@ const AccountantSalaries = () => {
       const latestSalary = response.data[0];
       const monthName = getMonthName(latestSalary.month);
       
-      toast.success(`Payslip for ${staffMember.name} - ${monthName} ${latestSalary.year}\nNet Salary: ₹${latestSalary.netSalary.toFixed(2)}`);
+      // Prepare payslip data for modal
+      const payslip = {
+        staff: staffMember,
+        monthName: monthName,
+        month: latestSalary.month,
+        year: latestSalary.year,
+        period: latestSalary.period || `${monthName} ${latestSalary.year}`,
+        wageType: latestSalary.wageType || getWageType(staffMember),
+        workingDays: latestSalary.presentDays || latestSalary.totalDays || latestSalary.workingDays || 0,
+        numberOfWeeks: latestSalary.numberOfWeeks || 1,
+        dailyRate: latestSalary.dailyRate || getDailySalary(staffMember),
+        basicSalary: latestSalary.basicSalary || 0,
+        medicalAllowance: latestSalary.medicalAllowance || 0,
+        transportationAllowance: latestSalary.transportationAllowance || 0,
+        overtime: latestSalary.overtime || 0,
+        bonus: latestSalary.bonus || 0,
+        grossSalary: latestSalary.grossSalary || 0,
+        deductions: {
+          providentFund: latestSalary.deductions?.providentFund || 0,
+          professionalTax: latestSalary.deductions?.professionalTax || 0,
+          incomeTax: latestSalary.deductions?.tax || latestSalary.deductions?.incomeTax || 0,
+          otherDeductions: latestSalary.deductions?.other || latestSalary.deductions?.otherDeductions || 0
+        },
+        totalDeductions: latestSalary.totalDeductions || 0,
+        netSalary: latestSalary.netSalary || 0,
+        status: latestSalary.status || 'pending',
+        paymentMethod: latestSalary.paymentMethod,
+        transactionId: latestSalary.transactionId,
+        paymentDate: latestSalary.paymentDate,
+        generatedAt: latestSalary.createdAt,
+        generatedDate: new Date().toLocaleDateString('en-IN', { 
+          day: '2-digit', 
+          month: 'short', 
+          year: 'numeric' 
+        }),
+        payslipSent: latestSalary.payslipSent || false,
+        payslipSentAt: latestSalary.payslipSentAt
+      };
       
-      // TODO: Generate actual PDF payslip here
-      // For now, just show the data
-      console.log('Payslip Data:', latestSalary);
+      // Show payslip modal
+      setPayslipData(payslip);
+      setShowPayslip(true);
       
     } catch (error) {
+      console.error('Error generating payslip:', error);
       toast.error('Failed to fetch salary records');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -325,6 +560,7 @@ const AccountantSalaries = () => {
     try {
       setLoading(true);
       
+      // Send notification
       const res = await fetch(`${API}/api/notifications`, {
         method: 'POST',
         headers: authHeaders(),
@@ -347,6 +583,28 @@ const AccountantSalaries = () => {
         throw new Error('Failed to send notification');
       }
 
+      // Mark payslip as sent in database
+      const markSentRes = await fetch(`${API}/api/salary/mark-sent`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          staffId: payslipData.staff._id,
+          month: payslipData.month,
+          year: payslipData.year
+        })
+      });
+
+      if (!markSentRes.ok) {
+        console.error('Failed to mark payslip as sent');
+      }
+
+      // Update payslip data to reflect sent status
+      setPayslipData({
+        ...payslipData,
+        payslipSent: true,
+        payslipSentAt: new Date()
+      });
+
       toast.success(`Payslip sent to ${payslipData.staff.name} successfully!`);
     } catch (error) {
       console.error('Error sending payslip:', error);
@@ -354,6 +612,79 @@ const AccountantSalaries = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Open History Modal
+  const openHistoryModal = async (staffMember) => {
+    setHistoryStaff(staffMember);
+    setShowHistoryModal(true);
+    setLoadingHistory(true);
+    
+    try {
+      const res = await fetch(`${API}/api/salary/history/${staffMember._id}`, {
+        headers: authHeaders()
+      });
+      
+      if (res.ok) {
+        const response = await res.json();
+        setSalaryHistory(response.data || []);
+      } else {
+        setSalaryHistory([]);
+      }
+    } catch (error) {
+      console.error('Error loading history:', error);
+      setSalaryHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // View Payslip from History
+  const viewHistoryPayslip = (record) => {
+    const monthName = getMonthName(record.month);
+    
+    const payslip = {
+      staff: historyStaff,
+      monthName: monthName,
+      month: record.month,
+      year: record.year,
+      period: record.period || `${monthName} ${record.year}`,
+      wageType: record.wageType || getWageType(historyStaff),
+      workingDays: record.presentDays || record.totalDays || record.workingDays || 0,
+      numberOfWeeks: record.numberOfWeeks || 1,
+      dailyRate: record.dailyRate || getDailySalary(historyStaff),
+      basicSalary: record.basicSalary || 0,
+      medicalAllowance: record.medicalAllowance || 0,
+      transportationAllowance: record.transportationAllowance || 0,
+      overtime: record.overtime || 0,
+      bonus: record.bonus || 0,
+      grossSalary: record.grossSalary || 0,
+      deductions: {
+        providentFund: record.deductions?.providentFund || 0,
+        professionalTax: record.deductions?.professionalTax || 0,
+        incomeTax: record.deductions?.tax || record.deductions?.incomeTax || 0,
+        otherDeductions: record.deductions?.other || record.deductions?.otherDeductions || 0
+      },
+      totalDeductions: record.totalDeductions || 0,
+      netSalary: record.netSalary || 0,
+      status: record.status || 'pending',
+      paymentMethod: record.paymentMethod,
+      transactionId: record.transactionId,
+      paymentDate: record.paymentDate,
+      generatedAt: record.createdAt,
+      generatedDate: new Date(record.createdAt).toLocaleDateString('en-IN', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+      }),
+      payslipSent: record.payslipSent || false,
+      payslipSentAt: record.payslipSentAt
+    };
+    
+    // Close history modal and show payslip
+    setShowHistoryModal(false);
+    setPayslipData(payslip);
+    setShowPayslip(true);
   };
 
   // Get wage type display
@@ -545,6 +876,8 @@ const AccountantSalaries = () => {
                   <th>SALARY TYPE (WEEKLY/MONTHLY)</th>
                   <th>CALCULATOR</th>
                   <th>PAYSLIP</th>
+                  <th>PAYMENT</th>
+                  <th>HISTORY</th>
                 </tr>
               </thead>
               <tbody>
@@ -615,22 +948,57 @@ const AccountantSalaries = () => {
                     </td>
                     <td>
                       <button 
-                        className={`action-btn calculator-btn ${staffWithSalaries.has(s._id) ? 'disabled' : ''}`}
+                        className={`action-btn calculator-btn ${staffSalariesInfo[s._id]?.hasSalary ? 'disabled' : ''}`}
                         onClick={() => openCalculator(s)}
-                        disabled={loading || staffWithSalaries.has(s._id)}
-                        title={staffWithSalaries.has(s._id) ? 'Salary already calculated' : 'Calculate salary'}
+                        disabled={loading || staffSalariesInfo[s._id]?.hasSalary}
+                        title={staffSalariesInfo[s._id]?.hasSalary ? 'Salary already calculated' : 'Calculate salary'}
                       >
-                        <i className="fas fa-calculator"></i> {staffWithSalaries.has(s._id) ? 'Calculated' : 'Calculate'}
+                        <i className="fas fa-calculator"></i> {staffSalariesInfo[s._id]?.hasSalary ? 'CALCULATED' : 'CALCULATE'}
                       </button>
                     </td>
                     <td>
                       <button 
-                        className={`action-btn payslip-btn ${!staffWithSalaries.has(s._id) ? 'disabled' : ''}`}
+                        className={`action-btn payslip-btn ${!staffSalariesInfo[s._id]?.hasSalary ? 'disabled' : ''}`}
                         onClick={() => generatePayslip(s)}
-                        disabled={loading || !staffWithSalaries.has(s._id)}
-                        title={!staffWithSalaries.has(s._id) ? 'Calculate salary first' : 'Generate payslip'}
+                        disabled={loading || !staffSalariesInfo[s._id]?.hasSalary}
+                        title={!staffSalariesInfo[s._id]?.hasSalary ? 'Calculate salary first' : 'Generate payslip'}
                       >
-                        <i className="fas fa-file-invoice"></i> Payslip
+                        <i className="fas fa-file-invoice-dollar"></i> PAYSLIP
+                      </button>
+                    </td>
+                    <td>
+                      <button 
+                        className={`action-btn payment-btn ${
+                          !staffSalariesInfo[s._id]?.hasSalary ? 'disabled' : ''
+                        }`}
+                        onClick={() => openCreditModal(s)}
+                        disabled={
+                          loading || 
+                          !staffSalariesInfo[s._id]?.hasSalary
+                        }
+                        title={
+                          !staffSalariesInfo[s._id]?.hasSalary 
+                            ? 'Calculate salary first' 
+                            : (staffSalariesInfo[s._id]?.status === 'paid' || staffSalariesInfo[s._id]?.status === 'credited' 
+                                ? 'Edit payment details' 
+                                : 'Credit Salary')
+                        }
+                      >
+                        <i className="fas fa-money-bill-wave"></i> {
+                          staffSalariesInfo[s._id]?.status === 'paid' || staffSalariesInfo[s._id]?.status === 'credited' 
+                            ? 'CREDITED' 
+                            : 'CREDIT SALARY'
+                        }
+                      </button>
+                    </td>
+                    <td>
+                      <button 
+                        className="action-btn history-btn"
+                        onClick={() => openHistoryModal(s)}
+                        disabled={loading}
+                        title="View salary history"
+                      >
+                        <i className="fas fa-folder-open"></i> HISTORY
                       </button>
                     </td>
                   </tr>
@@ -995,6 +1363,45 @@ const AccountantSalaries = () => {
                 </div>
               </div>
 
+              {/* Payment Information */}
+              {(payslipData.status === 'paid' || payslipData.status === 'credited') && (
+                <div className="payslip-section" style={{ borderLeft: '4px solid #f97316' }}>
+                  <h4>Payment Information</h4>
+                  <div className="detail-grid">
+                    <div className="detail-row">
+                      <span className="detail-label">Status:</span>
+                      <span className="detail-value" style={{ color: '#10b981' }}>CREDITED</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Payment Method:</span>
+                      <span className="detail-value">
+                        {payslipData.paymentMethod === 'upi' ? 'Paid via UPI' : 
+                         payslipData.paymentMethod === 'bank' ? 'Bank Transfer' : 
+                         payslipData.paymentMethod === 'cash' ? 'Cash Payment' : 'N/A'}
+                      </span>
+                    </div>
+                    {payslipData.transactionId && (
+                      <div className="detail-row">
+                        <span className="detail-label">Transaction ID:</span>
+                        <span className="detail-value">{payslipData.transactionId}</span>
+                      </div>
+                    )}
+                    {payslipData.paymentDate && (
+                      <div className="detail-row">
+                        <span className="detail-label">Payment Date:</span>
+                        <span className="detail-value">
+                          {new Date(payslipData.paymentDate).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Salary Period */}
               <div className="payslip-section">
                 <h4>Salary Period</h4>
@@ -1011,7 +1418,7 @@ const AccountantSalaries = () => {
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Daily Rate:</span>
-                    <span className="detail-value">₹{payslipData.dailyRate.toFixed(2)}</span>
+                    <span className="detail-value">₹{(payslipData.dailyRate || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -1022,35 +1429,35 @@ const AccountantSalaries = () => {
                 <div className="breakdown-table">
                   <div className="breakdown-row">
                     <span>Base Salary</span>
-                    <span>₹{payslipData.baseSalary.toFixed(2)}</span>
+                    <span>₹{(payslipData.baseSalary || 0).toFixed(2)}</span>
                   </div>
-                  {payslipData.medicalAllowance > 0 && (
+                  {(payslipData.medicalAllowance || 0) > 0 && (
                     <div className="breakdown-row">
                       <span>Medical Allowance</span>
-                      <span>₹{payslipData.medicalAllowance.toFixed(2)}</span>
+                      <span>₹{(payslipData.medicalAllowance || 0).toFixed(2)}</span>
                     </div>
                   )}
-                  {payslipData.transportationAllowance > 0 && (
+                  {(payslipData.transportationAllowance || 0) > 0 && (
                     <div className="breakdown-row">
                       <span>Transportation Allowance</span>
-                      <span>₹{payslipData.transportationAllowance.toFixed(2)}</span>
+                      <span>₹{(payslipData.transportationAllowance || 0).toFixed(2)}</span>
                     </div>
                   )}
-                  {payslipData.overtime > 0 && (
+                  {(payslipData.overtime || 0) > 0 && (
                     <div className="breakdown-row">
                       <span>Overtime</span>
-                      <span>₹{payslipData.overtime.toFixed(2)}</span>
+                      <span>₹{(payslipData.overtime || 0).toFixed(2)}</span>
                     </div>
                   )}
-                  {payslipData.bonus > 0 && (
+                  {(payslipData.bonus || 0) > 0 && (
                     <div className="breakdown-row">
                       <span>Bonus</span>
-                      <span>₹{payslipData.bonus.toFixed(2)}</span>
+                      <span>₹{(payslipData.bonus || 0).toFixed(2)}</span>
                     </div>
                   )}
                   <div className="breakdown-row total">
                     <span>Gross Salary</span>
-                    <span>₹{payslipData.grossSalary.toFixed(2)}</span>
+                    <span>₹{(payslipData.grossSalary || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -1059,40 +1466,40 @@ const AccountantSalaries = () => {
               <div className="payslip-section">
                 <h4>Deductions</h4>
                 <div className="breakdown-table">
-                  {payslipData.deductions.providentFund > 0 && (
+                  {(payslipData.deductions?.providentFund || 0) > 0 && (
                     <div className="breakdown-row deduction">
                       <span>Provident Fund</span>
-                      <span>₹{payslipData.deductions.providentFund.toFixed(2)}</span>
+                      <span>₹{(payslipData.deductions?.providentFund || 0).toFixed(2)}</span>
                     </div>
                   )}
-                  {payslipData.deductions.professionalTax > 0 && (
+                  {(payslipData.deductions?.professionalTax || 0) > 0 && (
                     <div className="breakdown-row deduction">
                       <span>Professional Tax</span>
-                      <span>₹{payslipData.deductions.professionalTax.toFixed(2)}</span>
+                      <span>₹{(payslipData.deductions?.professionalTax || 0).toFixed(2)}</span>
                     </div>
                   )}
-                  {payslipData.deductions.incomeTax > 0 && (
+                  {(payslipData.deductions?.incomeTax || 0) > 0 && (
                     <div className="breakdown-row deduction">
                       <span>Income Tax</span>
-                      <span>₹{payslipData.deductions.incomeTax.toFixed(2)}</span>
+                      <span>₹{(payslipData.deductions?.incomeTax || 0).toFixed(2)}</span>
                     </div>
                   )}
-                  {payslipData.deductions.otherDeductions > 0 && (
+                  {(payslipData.deductions?.otherDeductions || 0) > 0 && (
                     <div className="breakdown-row deduction">
                       <span>Other Deductions</span>
-                      <span>₹{payslipData.deductions.otherDeductions.toFixed(2)}</span>
+                      <span>₹{(payslipData.deductions?.otherDeductions || 0).toFixed(2)}</span>
                     </div>
                   )}
-                  {payslipData.totalDeductions === 0 && (
+                  {(payslipData.totalDeductions || 0) === 0 && (
                     <div className="breakdown-row">
                       <span>No Deductions</span>
                       <span>₹0.00</span>
                     </div>
                   )}
-                  {payslipData.totalDeductions > 0 && (
+                  {(payslipData.totalDeductions || 0) > 0 && (
                     <div className="breakdown-row total deduction">
                       <span>Total Deductions</span>
-                      <span>₹{payslipData.totalDeductions.toFixed(2)}</span>
+                      <span>₹{(payslipData.totalDeductions || 0).toFixed(2)}</span>
                     </div>
                   )}
                 </div>
@@ -1102,10 +1509,10 @@ const AccountantSalaries = () => {
               <div className="payslip-net-salary">
                 <div className="net-salary-row">
                   <span>Net Salary</span>
-                  <span className="net-amount">₹{payslipData.netSalary.toFixed(2)}</span>
+                  <span className="net-amount">₹{(payslipData.netSalary || 0).toFixed(2)}</span>
                 </div>
                 <p className="net-salary-words">
-                  (Amount in words: {convertToWords(payslipData.netSalary)} Rupees Only)
+                  (Amount in words: {convertToWords(payslipData.netSalary || 0)} Rupees Only)
                 </p>
               </div>
 
@@ -1116,14 +1523,31 @@ const AccountantSalaries = () => {
             </div>
 
             <div className="modal-actions">
-              <button 
-                type="button" 
-                onClick={() => sendPayslipToStaff(payslipData)} 
-                className="btn-success"
-                disabled={loading}
-              >
-                <i className="fas fa-paper-plane"></i> Send to Staff
-              </button>
+              {!payslipData.payslipSent ? (
+                <button 
+                  type="button" 
+                  onClick={() => sendPayslipToStaff(payslipData)} 
+                  className="btn-success"
+                  disabled={loading}
+                >
+                  <i className="fas fa-paper-plane"></i> Send to Staff
+                </button>
+              ) : (
+                <div className="payslip-sent-badge">
+                  <i className="fas fa-check-circle"></i> Payslip Sent
+                  {payslipData.payslipSentAt && (
+                    <span className="sent-date">
+                      {new Date(payslipData.payslipSentAt).toLocaleDateString('en-IN', { 
+                        day: '2-digit', 
+                        month: 'short', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  )}
+                </div>
+              )}
               <button 
                 type="button" 
                 onClick={() => window.print()} 
@@ -1138,6 +1562,211 @@ const AccountantSalaries = () => {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Salary Modal */}
+      {showCreditModal && selectedStaff && (
+        <div className="modal-overlay" onClick={() => setShowCreditModal(false)}>
+          <div className="modal-content credit-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Credit Salary to {selectedStaff.name}</h3>
+              <button className="close-btn" onClick={() => setShowCreditModal(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="credit-modal-body">
+              <div className="payment-summary-box">
+                <div className="summary-item">
+                  <span>Net Salary:</span>
+                  <span className="amount">₹{staffSalariesInfo[selectedStaff._id]?.netSalary?.toFixed(2)}</span>
+                </div>
+                <div className="summary-item">
+                  <span>Period:</span>
+                  <span>{staffSalariesInfo[selectedStaff._id]?.period || 'Current Month'}</span>
+                </div>
+              </div>
+
+              <div className="payment-options">
+                <label className="section-label">Select Payment Method</label>
+                <div className="options-grid">
+                  <div 
+                    className={`option-card ${paymentMethod === 'cash' ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod('cash')}
+                  >
+                    <i className="fas fa-money-bill-wave"></i>
+                    <span>Cash</span>
+                  </div>
+                  <div 
+                    className={`option-card ${paymentMethod === 'bank' ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod('bank')}
+                  >
+                    <i className="fas fa-university"></i>
+                    <span>Bank Transfer</span>
+                  </div>
+                  <div 
+                    className={`option-card ${paymentMethod === 'upi' ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod('upi')}
+                  >
+                    <i className="fas fa-mobile-alt"></i>
+                    <span>UPI</span>
+                  </div>
+                </div>
+              </div>
+
+              {paymentMethod === 'bank' && (
+                <div className="payment-form">
+                  <div className="form-group">
+                    <label>Bank Account Number</label>
+                    <input 
+                      type="text" 
+                      placeholder="Enter Account Number"
+                      value={bankDetails.accountNumber}
+                      onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>IFSC Code</label>
+                    <input 
+                      type="text" 
+                      placeholder="Enter IFSC Code"
+                      value={bankDetails.ifsc}
+                      onChange={(e) => setBankDetails({...bankDetails, ifsc: e.target.value})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === 'upi' && (
+                <div className="payment-form">
+                  <div className="form-group">
+                    <label>UPI ID</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="username"
+                        value={upiId}
+                        onChange={(e) => setUpiId(e.target.value)}
+                        style={{ flex: 1 }}
+                      />
+                      <select 
+                        value={upiHandle} 
+                        onChange={(e) => setUpiHandle(e.target.value)}
+                        style={{ 
+                          padding: '10px', 
+                          borderRadius: '6px', 
+                          border: '1px solid #d1d5db',
+                          background: '#f9fafb',
+                          fontWeight: '600',
+                          color: '#374151',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="@okaxis">@okaxis</option>
+                        <option value="@hdfc">@hdfc</option>
+                        <option value="@ybl">@ybl</option>
+                        <option value="@upi">@upi</option>
+                        <option value="@icici">@icici</option>
+                        <option value="@sbi">@sbi</option>
+                      </select>
+                    </div>
+                    <small className="help-text" style={{ fontSize: '11px', color: '#6b7280', marginTop: '8px', display: 'block' }}>
+                      Enter the UPI username and select the bank handle.
+                    </small>
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === 'cash' && (
+                <div className="info-notice">
+                  <i className="fas fa-info-circle"></i>
+                  <span>Please ensure the cash is handed over before confirming.</span>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setShowCreditModal(false)}>Cancel</button>
+              <button 
+                className="btn-primary credit-submit-btn" 
+                onClick={handleCreditSalary}
+                disabled={processingPayment}
+              >
+                {processingPayment ? 'Processing...' : `Confirm & Credit ₹${staffSalariesInfo[selectedStaff._id]?.netSalary?.toFixed(2)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {showHistoryModal && historyStaff && (
+        <div className="modal-overlay" onClick={() => setShowHistoryModal(false)}>
+          <div className="modal-content history-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3>Salary History - {historyStaff.name}</h3>
+                <p className="history-subtitle">{historyStaff.email}</p>
+              </div>
+              <button className="close-btn" onClick={() => setShowHistoryModal(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div className="history-content">
+              {loadingHistory ? (
+                <div className="loading-state">
+                  <div className="loading-spinner"></div>
+                  <p>Loading history...</p>
+                </div>
+              ) : salaryHistory.length === 0 ? (
+                <div className="empty-state">
+                  <i className="fas fa-folder-open"></i>
+                  <p>No salary records found</p>
+                </div>
+              ) : (
+                <div className="history-folders">
+                  {salaryHistory.map((record, index) => (
+                    <div key={record._id || index} className="history-folder">
+                      <div className="folder-icon">
+                        <i className="fas fa-folder"></i>
+                      </div>
+                      <div className="folder-content">
+                        <div className="folder-header">
+                          <h4>{getMonthName(record.month)} {record.year}</h4>
+                          <span className={`status-badge badge-${record.status || 'pending'}`}>
+                            {(record.status || 'pending').toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="folder-details">
+                          <div className="detail-item">
+                            <i className="fas fa-calendar"></i>
+                            <span>Generated: {new Date(record.createdAt).toLocaleDateString('en-IN')}</span>
+                          </div>
+                          <div className="detail-item">
+                            <i className="fas fa-rupee-sign"></i>
+                            <span>Net Salary: ₹{record.netSalary?.toFixed(2)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <i className="fas fa-briefcase"></i>
+                            <span>{record.wageType || 'Monthly'}</span>
+                          </div>
+                        </div>
+                        <button 
+                          className="view-payslip-btn"
+                          onClick={() => viewHistoryPayslip(record)}
+                        >
+                          <i className="fas fa-file-invoice"></i>
+                          View Payslip
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

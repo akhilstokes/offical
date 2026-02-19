@@ -1,310 +1,86 @@
-/* AwardsPage.css - Modern Professional Design */
-
-:root {
-    --primary-green: #10b981;
-    --primary-green-hover: #059669;
-    --text-dark: #1f2937;
-    --text-light: #6b7280;
-    --bg-white: #ffffff;
-    --bg-gray: #f9fafb;
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.15);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --navbar-height: 110px;
-}
-
 .awards-page {
-    width: 100%;
+    background-color: #fcfcfc;
     min-height: 100vh;
-    background: var(--bg-white);
-    padding-top: var(--navbar-height);
-    position: relative;
-    z-index: 1;
+    font-family: 'Inter', sans-serif;
 }
 
-.awards-page .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 2rem;
-}
-
-/* Hero Section */
-.awards-hero {
+.awards-banner {
     width: 100%;
-    padding: 5rem 0;
-    text-align: center;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-    position: relative;
-}
-
-.awards-hero .hero-content h1 {
-    font-size: 3rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    margin-bottom: 1.5rem;
-}
-
-.awards-hero .hero-content p {
-    font-size: 1.125rem;
-    color: var(--text-light);
-    max-width: 700px;
-    margin: 0 auto;
-    line-height: 1.7;
-}
-
-/* Section Headers */
-.section-header {
-    text-align: center;
-    margin-bottom: 4rem;
-}
-
-.section-header h2 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    margin-bottom: 1rem;
-}
-
-.section-header p {
-    font-size: 1.125rem;
-    color: var(--text-light);
-}
-
-/* Awards Content */
-.awards-content {
-    padding: 5rem 0;
-    background: var(--bg-white);
-}
-
-/* Awards Grid */
-.awards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 2rem;
-}
-
-.award-card {
-    background: white;
-    border-radius: 20px;
+    height: 350px;
     overflow: hidden;
-    box-shadow: var(--shadow-md);
-    transition: var(--transition-smooth);
-    border: 1px solid #e5e7eb;
+    margin-top: 80px;
 }
 
-.award-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow-xl);
-    border-color: rgba(16, 185, 129, 0.3);
+.banner-image-container {
+    width: 100%;
+    height: 100%;
 }
 
-.award-card.featured {
-    grid-column: span 2;
-}
-
-.award-image {
-    height: 250px;
-    overflow: hidden;
-    background: #f1f5f9;
-}
-
-.award-image img {
+.banner-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.5s ease;
 }
 
-.award-card:hover .award-image img {
-    transform: scale(1.05);
+.awards-content-section {
+    padding: 60px 0;
 }
 
-.award-content {
-    padding: 2rem;
-}
-
-.award-year {
-    display: inline-block;
-    background: linear-gradient(135deg, var(--primary-green) 0%, #34d399 100%);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-}
-
-.award-content h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    margin-bottom: 1rem;
-    line-height: 1.3;
-}
-
-.award-content p {
-    color: var(--text-light);
-    line-height: 1.6;
-    margin-bottom: 1.5rem;
-}
-
-.award-organization {
-    font-size: 0.875rem;
-    color: var(--primary-green);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Recognition Stats */
-.recognition-stats {
-    padding: 5rem 0;
-    background: var(--bg-gray);
-    text-align: center;
-}
-
-.recognition-stats h2 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    margin-bottom: 3rem;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-}
-
-.stat-item {
-    background: white;
-    padding: 2.5rem 2rem;
-    border-radius: 16px;
-    box-shadow: var(--shadow-md);
-    transition: var(--transition-smooth);
-    border: 1px solid #e5e7eb;
-}
-
-.stat-item:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
-}
-
-.stat-number {
+.awards-title {
     font-size: 3rem;
-    font-weight: 700;
-    color: var(--primary-green);
-    margin-bottom: 0.5rem;
+    color: #003366;
+    margin-bottom: 50px;
+    font-weight: 800;
+    text-align: left;
 }
 
-.stat-label {
-    font-size: 0.9375rem;
-    color: var(--text-light);
-    font-weight: 600;
-}
-
-/* Certifications */
-.certifications-section {
-    padding: 5rem 0;
-    background: var(--bg-white);
-}
-
-.certifications-grid {
+.awards-certificates-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
 }
 
-.cert-item {
+.certificate-card {
     background: white;
-    padding: 2.5rem 2rem;
-    border-radius: 16px;
-    text-align: center;
-    box-shadow: var(--shadow-md);
-    transition: var(--transition-smooth);
-    border: 1px solid #e5e7eb;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: transform 0.3s ease;
 }
 
-.cert-item:hover {
+.certificate-card:hover {
     transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
-    border-color: rgba(16, 185, 129, 0.3);
 }
 
-.cert-icon {
-    width: 70px;
-    height: 70px;
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--primary-green);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    margin: 0 auto 1.5rem;
-    transition: var(--transition-smooth);
+.certificate-image-wrapper {
+    width: 100%;
+    aspect-ratio: 4/3;
+    overflow: hidden;
+    border: 1px solid #eee;
+    margin-bottom: 15px;
 }
 
-.cert-item:hover .cert-icon {
-    background: linear-gradient(135deg, var(--primary-green) 0%, #34d399 100%);
-    color: white;
-    transform: scale(1.1);
+.certificate-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: #f9f9f9;
 }
 
-.cert-item h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    margin-bottom: 0.5rem;
-}
-
-.cert-item p {
-    color: var(--text-light);
-    font-size: 0.9375rem;
-}
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-    .award-card.featured {
-        grid-column: span 1;
-    }
-    
-    .awards-hero .hero-content h1 {
-        font-size: 2.5rem;
-    }
-    
-    .awards-grid {
-        grid-template-columns: 1fr;
-    }
+.certificate-info h3 {
+    font-size: 1rem;
+    color: #444;
+    text-align: center;
+    font-weight: 600;
 }
 
 @media (max-width: 768px) {
-    .awards-hero {
-        padding: 3rem 0;
+    .awards-banner {
+        height: 200px;
     }
     
-    .awards-hero .hero-content h1 {
-        font-size: 2rem;
-    }
-    
-    .awards-hero .hero-content p {
-        font-size: 1rem;
-    }
-    
-    .awards-content,
-    .recognition-stats,
-    .certifications-section {
-        padding: 3rem 0;
-    }
-    
-    .section-header h2,
-    .recognition-stats h2 {
-        font-size: 2rem;
-    }
-    
-    .stats-grid,
-    .certifications-grid {
-        grid-template-columns: 1fr;
+    .awards-title {
+        font-size: 2.2rem;
+        margin-bottom: 30px;
     }
 }

@@ -141,12 +141,13 @@ export const getRequests = async (params = {}) => {
 };
 
 // Create a sell barrels intake (delivery collects and accountant approves)
-export const createSellBarrelIntake = async ({ name, phone, barrelCount, notes, location, locationAccuracy }) => {
+export const createSellBarrelIntake = async ({ name, phone, address, barrelCount, notes, location, locationAccuracy }) => {
   const token = localStorage.getItem('token');
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const payload = { 
     customerName: name, 
-    customerPhone: phone, 
+    customerPhone: phone,
+    address: address, // Backend expects 'address', not 'customerAddress'
     barrelCount: Number(barrelCount), 
     notes 
   };

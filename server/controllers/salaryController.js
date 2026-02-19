@@ -501,3 +501,44 @@ exports.getSalaryStatistics = async (req, res) => {
     res.status(500).json({ message: 'Error fetching statistics', error: error.message });
   }
 };
+
+// Mark payslip as sent to staff
+exports.markPayslipAsSent = async (req, res) => {
+  try {
+    const { staffId, month, year } = req.body;
+
+    // Find the salary record
+    const salaryRecord = await SalaryRecord.findOne({
+      staffMember: staffId,
+      month,
+      year
+    });
+
+    if (!salaryRecord) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Salary record not found' 
+      });
+    }
+
+    // Update payslip sent status
+    salaryRecord.payslipSent = true;
+    salaryRecord.payslipSentAt = new Date();
+    salaryRecord.payslipSentBy = req.user._id;
+    
+    await salaryRecord.save();
+
+    res.json({
+      success: true,
+      message: 'Payslip marked as sent successfully',
+      data: salaryRecord
+    });
+  } catch (error) {
+    console.error('Mark payslip as sent error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error marking payslip as sent', 
+      error: error.message 
+    });
+  }
+};

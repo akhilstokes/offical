@@ -51,7 +51,16 @@
     "test:staff": "cd client && npm test -- --testPathPattern=StaffFunctionalityComprehensive.test.js",
     "test:user": "cd client && npm test -- --testPathPattern=UserFunctionalityComprehensive.test.js",
     "test:auth-flow": "cd client && npm test -- --testPathPattern=AuthenticationFlowComprehensive.test.js",
-    "test:knn": "cd client && npm test -- --testPathPattern=KNNAlgorithmComprehensive.test.js"
+    "test:knn": "cd client && npm test -- --testPathPattern=KNNAlgorithmComprehensive.test.js",
+    "test:accountant": "node tests/selenium/accountant-crud-tests.js",
+    "test:accountant:report": "node tests/selenium/generate-accountant-report.js",
+    "test:accountant:full": "npm run test:accountant && npm run test:accountant:report",
+    "test:accountant-crud": "playwright test tests/e2e/accountant-crud.spec.js --reporter=html,list",
+    "test:accountant-crud:headed": "playwright test tests/e2e/accountant-crud.spec.js --headed",
+    "test:accountant-crud:ui": "playwright test tests/e2e/accountant-crud.spec.js --ui",
+    "test:accountant-crud:report": "node tests/e2e/generate-accountant-report.js && playwright show-report",
+    "test:comprehensive": "playwright test --reporter=html,json && node tests/e2e/generate-comprehensive-report.js",
+    "test:comprehensive:open": "npm run test:comprehensive && start COMPREHENSIVE_TEST_REPORT.html"
   },
   "repository": {
     "type": "git",

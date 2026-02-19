@@ -23,10 +23,10 @@ router.get('/find-by-phone', protect, async (req, res) => {
   try {
     const { phone } = req.query;
     
-    if (!phone) {
+    if (!phone || phone === '-' || phone === 'N/A') {
       return res.status(400).json({ 
         success: false,
-        message: 'Phone number is required' 
+        message: 'Valid phone number is required' 
       });
     }
     
@@ -42,7 +42,7 @@ router.get('/find-by-phone', protect, async (req, res) => {
         { phoneNumber: `91${cleanPhone}` },
         { phoneNumber: `0${cleanPhone}` }
       ]
-    }).select('_id name email phoneNumber role');
+    }).select('_id name email phoneNumber role accountHolderName accountNumber ifscCode bankName branchName');
     
     if (!user) {
       return res.status(404).json({ 
@@ -65,12 +65,38 @@ router.get('/find-by-phone', protect, async (req, res) => {
   }
 });
 
+// Get user by ID (for billing/payments - restricted to staff)
+router.get('/:id', protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Ensure the ID is valid
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, message: 'Invalid User ID format' });
+    }
+
+    const user = await User.findById(id).select('_id name email phoneNumber role accountHolderName accountNumber ifscCode bankName branchName');
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    console.error('Error fetching user by ID:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch user details' });
+  }
+});
+
 // Get all staff members (for manager schedule page)
 router.get('/all-staff', protect, async (req, res) => {
   try {
     const staff = await User.find({
       role: { $in: ['field_staff', 'delivery_staff', 'lab_staff', 'staff', 'accountant'] }
-    }).select('name email phoneNumber role').sort({ name: 1 });
+    }).select('name email phoneNumber role accountHolderName accountNumber ifscCode bankName branchName').sort({ name: 1 });
 
     res.json({
       success: true,

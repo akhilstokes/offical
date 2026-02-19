@@ -1,35 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-    FiBell, FiUser, FiLogOut
+    FiBell, FiUser, FiLogOut, FiSettings, FiCheckCircle, FiClock, FiAlertCircle
 } from 'react-icons/fi';
 import './AccountantLayout.css';
 
 const AccountantLayoutAntigravity = ({ children }) => {
     const navigate = useNavigate();
     const { user, updateProfile, logout } = useAuth();
+    const notificationRef = useRef(null);
+    const profileRef = useRef(null);
+
+    // Dropdown States
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [notifications, setNotifications] = useState([
+        { id: 1, title: 'New Salary Request', time: '5m ago', type: 'pending' },
+        { id: 2, title: 'Inventory Low', time: '1h ago', type: 'alert' },
+        { id: 3, title: 'Bill Approved', time: '2h ago', type: 'success' }
+    ]);
 
     // Edit Profile State
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [editFormData, setEditFormData] = useState({ name: '', email: '' });
 
-    // Initialize form data when user data is available
-    React.useEffect(() => {
+    // Initialize form data
+    useEffect(() => {
         if (user) {
             setEditFormData({ name: user.name || '', email: user.email || '' });
         }
     }, [user]);
+
+    // Close dropdowns on outside click
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setIsNotificationOpen(false);
+            }
+            if (profileRef.current && !profileRef.current.contains(event.target)) {
+                setIsProfileOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
         try {
             await updateProfile(editFormData);
             setIsEditProfileOpen(false);
-            // Optional: Show success notification
         } catch (error) {
             console.error('Failed to update profile', error);
-            // Optional: Show error
         }
     };
 
@@ -45,7 +68,6 @@ const AccountantLayoutAntigravity = ({ children }) => {
         }
     };
 
-    // Get current time for greeting
     const getGreeting = () => {
         const hour = new Date().getHours();
         if (hour < 12) return "Good Morning";
@@ -54,7 +76,6 @@ const AccountantLayoutAntigravity = ({ children }) => {
     };
 
     const menuItems = [
-        { path: '/accountant/wages', label: 'Auto Wages' },
         { path: '/accountant/rates', label: 'Set Live Rate' },
         { path: '/accountant/expenses', label: 'Expenses' },
         { path: '/accountant/stock', label: 'Stock Monitor' },
@@ -70,19 +91,9 @@ const AccountantLayoutAntigravity = ({ children }) => {
         <div className="modern-dashboard">
             {/* Modern Sidebar */}
             <aside className="modern-sidebar">
-                {/* Logo Section */}
                 <div className="sidebar-brand">
                     <div className="brand-logo">
-                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                            <rect width="32" height="32" rx="8" fill="url(#brandGradient)" />
-                            <path d="M8 16L14 10L24 20L18 26L8 16Z" fill="white" fillOpacity="0.9" />
-                            <defs>
-                                <linearGradient id="brandGradient" x1="0" y1="0" x2="32" y2="32">
-                                    <stop stopColor="#3B82F6" />
-                                    <stop offset="1" stopColor="#1D4ED8" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
+                        <img src="/images/logo.png" alt="Holy Family Polymers Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </div>
                     <div className="brand-text">
                         <h3>Holy Family Polymers</h3>
@@ -90,14 +101,12 @@ const AccountantLayoutAntigravity = ({ children }) => {
                     </div>
                 </div>
 
-                {/* Navigation Menu */}
                 <nav className="sidebar-navigation">
                     <div className="nav-section">
                         <h4 className="nav-section-title">Main Menu</h4>
                         <ul className="nav-list">
                             {menuItems.map((item) => {
                                 const validPath = item.path.startsWith('/') ? item.path : `/${item.path}`;
-
                                 return (
                                     <li key={validPath} className="nav-item">
                                         <NavLink
@@ -113,55 +122,97 @@ const AccountantLayoutAntigravity = ({ children }) => {
                     </div>
                 </nav>
 
-                {/* Logout Section */}
                 <div className="sidebar-logout">
-                    <button
-                        className="logout-btn"
-                        onClick={handleLogout}
-                        title="Logout"
-                    >
+                    <button className="logout-btn" onClick={handleLogout}>
                         <FiLogOut className="logout-icon" />
                         <span className="logout-text">Logout</span>
                     </button>
                 </div>
             </aside>
 
-            {/* Main Content Area */}
             <div className="main-wrapper">
-                {/* Modern Header */}
                 <header className="modern-header">
                     <div className="header-content">
-                        {/* Greeting Section */}
-                        <div className="header-greeting">
-                            <h1>{getGreeting()}, {user?.name || 'Jeffin'}!</h1>
-                            <p>Welcome to your dashboard 👋</p>
+                        <div className="header-left">
+                            <div className="header-logo">
+                                <img src="/images/logo.png" alt="Logo" />
+                            </div>
+                            <div className="header-greeting">
+                                <h1>{getGreeting()}, {user?.name || 'Jeffin'}!</h1>
+                                <p>Holy Family Polymers - Accountant Dashboard 👋</p>
+                            </div>
                         </div>
 
-                        {/* Header Actions */}
                         <div className="header-actions">
-                            {/* Notifications */}
-                            <button
-                                className="header-action-btn notification-btn"
-                                onClick={() => navigate('/accountant/alerts')}
-                                title="Notifications"
-                            >
-                                <FiBell />
-                                <span className="notification-badge">3</span>
-                            </button>
+                            {/* Notifications Dropdown */}
+                            <div className="dropdown-wrapper" ref={notificationRef}>
+                                <button
+                                    className={`header-action-btn notification-btn ${isNotificationOpen ? 'active' : ''}`}
+                                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                                >
+                                    <FiBell />
+                                    <span className="notification-badge">{notifications.length}</span>
+                                </button>
 
-                            {/* Profile Icon */}
-                            <button
-                                className="header-action-btn profile-icon-btn"
-                                onClick={() => navigate('/accountant/wages')}
-                                title="Dashboard"
-                            >
-                                <FiUser />
-                            </button>
+                                {isNotificationOpen && (
+                                    <div className="dropdown-menu notification-dropdown">
+                                        <div className="dropdown-header">
+                                            <h4>Notifications</h4>
+                                            <button onClick={() => navigate('/accountant/alerts')}>View All</button>
+                                        </div>
+                                        <div className="dropdown-list">
+                                            {notifications.map(n => (
+                                                <div key={n.id} className="dropdown-item">
+                                                    <div className={`item-icon ${n.type}`}>
+                                                        {n.type === 'success' && <FiCheckCircle />}
+                                                        {n.type === 'pending' && <FiClock />}
+                                                        {n.type === 'alert' && <FiAlertCircle />}
+                                                    </div>
+                                                    <div className="item-content">
+                                                        <p className="item-title">{n.title}</p>
+                                                        <span className="item-time">{n.time}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Profile Dropdown */}
+                            <div className="dropdown-wrapper" ref={profileRef}>
+                                <button
+                                    className={`header-action-btn profile-icon-btn ${isProfileOpen ? 'active' : ''}`}
+                                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                >
+                                    <FiUser />
+                                </button>
+
+                                {isProfileOpen && (
+                                    <div className="dropdown-menu profile-dropdown">
+                                        <div className="profile-info">
+                                            <div className="profile-avatar">
+                                                <FiUser />
+                                            </div>
+                                            <div className="profile-details">
+                                                <p className="profile-name">{user?.name || 'Jeffin'}</p>
+                                                <p className="profile-role">Accountant</p>
+                                            </div>
+                                        </div>
+                                        <div className="dropdown-divider"></div>
+                                        <button className="dropdown-item" onClick={() => setIsEditProfileOpen(true)}>
+                                            <FiSettings /> <span>Edit Profile</span>
+                                        </button>
+                                        <button className="dropdown-item" onClick={handleLogout}>
+                                            <FiLogOut /> <span>Logout</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </header>
 
-                {/* Content Area */}
                 <main className="main-content">
                     {children}
                 </main>

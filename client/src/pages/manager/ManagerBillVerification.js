@@ -80,26 +80,29 @@ const ManagerBillVerification = () => {
         }
     };
 
-    const handleVerifyBill = async (billId) => {
+    const handleApproveAndPayBill = async (billId) => {
         try {
             const token = localStorage.getItem('token');
             const response = await fetch(
-                `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/bills/${billId}/verify`,
+                `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/bills/${billId}/approve-pay`,
                 {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ managerNotes })
+                    body: JSON.stringify({ 
+                        managerNotes,
+                        paymentMethod: 'Bank Transfer'
+                    })
                 }
             );
 
             if (!response.ok) {
-                throw new Error('Failed to verify bill');
+                throw new Error('Failed to approve and pay bill');
             }
 
-            setSuccess('Bill verified successfully!');
+            setSuccess('Bill approved and marked as paid successfully!');
             setTimeout(() => setSuccess(''), 3000);
             setShowBillModal(false);
             setManagerNotes('');
@@ -109,8 +112,8 @@ const ManagerBillVerification = () => {
                 fetchAllBills();
             }
         } catch (err) {
-            console.error('Error verifying bill:', err);
-            setError('Failed to verify bill');
+            console.error('Error approving bill:', err);
+            setError('Failed to approve and pay bill');
             setTimeout(() => setError(''), 3000);
         }
     };
@@ -516,9 +519,9 @@ const ManagerBillVerification = () => {
                                     </button>
                                     <button 
                                         className="verify-btn"
-                                        onClick={() => handleVerifyBill(selectedBill._id)}
+                                        onClick={() => handleApproveAndPayBill(selectedBill._id)}
                                     >
-                                        <FiCheck /> Verify & Send to Customer
+                                        <FiCheck /> Approve & Mark Paid
                                     </button>
                                 </>
                             ) : (

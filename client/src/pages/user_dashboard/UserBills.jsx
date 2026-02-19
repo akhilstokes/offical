@@ -83,7 +83,7 @@ const UserBills = () => {
   };
 
   return (
-    <div className="transactions-page">
+    <div className="transactions-page" style={{ paddingLeft: '20px', paddingRight: '20px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header Section */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 0.5rem 0' }}>
@@ -174,10 +174,10 @@ const UserBills = () => {
                           setSelectedBill(bill);
                           setShowBillModal(true);
                         }}
-                        style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                        style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
                       >
-                        <i className="fas fa-eye" style={{ marginRight: '6px' }}></i>
-                        View
+                        <i className="fas fa-file-pdf" style={{ marginRight: '6px', color: '#ef4444' }}></i>
+                        Download as PDF
                       </button>
                     </td>
                   </tr>
@@ -336,8 +336,8 @@ const UserBills = () => {
                 className="btn"
                 onClick={handlePrintBill}
               >
-                <i className="fas fa-print" style={{ marginRight: '8px' }}></i>
-                Print Bill
+                <i className="fas fa-file-pdf" style={{ marginRight: '8px' }}></i>
+                Download PDF
               </button>
             </div>
           </div>

@@ -11,7 +11,13 @@ const DashboardLayout = ({ children }) => {
   const { logout, user } = useAuth();
   const [notificationCount] = useState(1);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const menuRef = useRef(null);
+
+  const contactNumbers = [
+    { name: 'Customer Care', number: '+91 98765 43210' },
+    { name: 'Technical Support', number: '+91 98765 43211' }
+  ];
 
   const getPageTitle = () => {
     const path = location.pathname;
@@ -80,6 +86,11 @@ const DashboardLayout = ({ children }) => {
         </div>
         
         <div className="header-actions">
+          <button className="support-btn" onClick={() => setShowSupportModal(true)} title="View Support Contacts">
+            <i className="fas fa-headset"></i>
+            <span className="support-text">Support</span>
+          </button>
+
           <button className="notification-btn" onClick={() => navigate('/user/notifications')}>
             <i className="fas fa-bell"></i>
             {notificationCount > 0 && (
@@ -102,20 +113,10 @@ const DashboardLayout = ({ children }) => {
             <h4 className="section-title">DASHBOARD</h4>
             <div className="nav-items">
               <NavLink to="/user" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <div className="nav-icon-wrapper">
-                  <div className="nav-icon">
-                    <i className="fas fa-home"></i>
-                  </div>
-                </div>
                 <span className="nav-label">Overview</span>
               </NavLink>
 
               <NavLink to="/user/notifications" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <div className="nav-icon-wrapper">
-                  <div className="nav-icon">
-                    <i className="fas fa-bell"></i>
-                  </div>
-                </div>
                 <span className="nav-label">Notifications</span>
               </NavLink>
             </div>
@@ -125,47 +126,22 @@ const DashboardLayout = ({ children }) => {
             <h4 className="section-title">ACTIONS</h4>
             <div className="nav-items">
               <NavLink to="/user/sell-barrels" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <div className="nav-icon-wrapper">
-                  <div className="nav-icon">
-                    <i className="fas fa-truck-loading"></i>
-                  </div>
-                </div>
                 <span className="nav-label">Sell Barrels</span>
               </NavLink>
 
               <NavLink to="/user/requests" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <div className="nav-icon-wrapper">
-                  <div className="nav-icon">
-                    <i className="fas fa-box-open"></i>
-                  </div>
-                </div>
                 <span className="nav-label">Request Barrels</span>
               </NavLink>
 
               <NavLink to="/user/my-barrels" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <div className="nav-icon-wrapper">
-                  <div className="nav-icon">
-                    <i className="fas fa-box"></i>
-                  </div>
-                </div>
                 <span className="nav-label">My Barrels</span>
               </NavLink>
 
               <NavLink to="/user/live-rate" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <div className="nav-icon-wrapper">
-                  <div className="nav-icon">
-                    <i className="fas fa-chart-line"></i>
-                  </div>
-                </div>
                 <span className="nav-label">View Live Rate</span>
               </NavLink>
 
               <NavLink to="/user/transactions" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <div className="nav-icon-wrapper">
-                  <div className="nav-icon">
-                    <i className="fas fa-file-invoice-dollar"></i>
-                  </div>
-                </div>
                 <span className="nav-label">Bills</span>
               </NavLink>
             </div>
@@ -175,9 +151,6 @@ const DashboardLayout = ({ children }) => {
         {/* Sign Out Button */}
         <div className="sidebar-footer">
           <button onClick={handleLogout} className="sign-out-btn">
-            <div className="sign-out-icon">
-              <i className="fas fa-sign-out-alt"></i>
-            </div>
             <span>Sign Out</span>
           </button>
         </div>
@@ -187,6 +160,39 @@ const DashboardLayout = ({ children }) => {
       <div className="main-content">
         {children}
       </div>
+
+      {/* Support Modal */}
+      {showSupportModal && (
+        <div className="support-modal-overlay" onClick={() => setShowSupportModal(false)}>
+          <div className="support-modal" onClick={e => e.stopPropagation()}>
+            <div className="support-modal-header">
+              <h3>Customer Support</h3>
+              <button className="close-modal" onClick={() => setShowSupportModal(false)}>&times;</button>
+            </div>
+            <div className="support-modal-body">
+              <p>For any queries or assistance, please contact us:</p>
+              <div className="contact-list">
+                {contactNumbers.map((contact, index) => (
+                  <div key={index} className="contact-item">
+                    <div className="contact-info">
+                      <span className="contact-name">{contact.name}</span>
+                      <a href={`tel:${contact.number.replace(/\s+/g, '')}`} className="contact-number">
+                        {contact.number}
+                      </a>
+                    </div>
+                    <a href={`tel:${contact.number.replace(/\s+/g, '')}`} className="call-btn">
+                      <i className="fas fa-phone-alt"></i>
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="support-modal-footer">
+              <p>Available Mon-Sat: 9:00 AM - 6:00 PM</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

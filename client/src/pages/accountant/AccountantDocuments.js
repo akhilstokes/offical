@@ -122,10 +122,10 @@ const AccountantDocuments = () => {
     }
   };
 
-  const handleDownload = async (document) => {
+  const handleDownload = async (doc) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${base}/api/accountant/documents/${document._id}/download`, {
+      const response = await fetch(`${base}/api/accountant/documents/${doc._id}/download`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -134,8 +134,9 @@ const AccountantDocuments = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = document.fileName || 'document';
+        a.download = doc.fileName || 'document';
         a.click();
+        window.URL.revokeObjectURL(url);
       }
     } catch (error) {
       console.error('Error downloading document:', error);

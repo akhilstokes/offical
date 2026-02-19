@@ -9,11 +9,12 @@ const HomePage = () => {
             
             {/* Hero Section */}
             <section className="hero-section">
-                <div className="hero-background">
+                {/* REMOVED ANIMATED BACKGROUND - CAUSING BLACK AREA WITH BUBBLES */}
+                {/* <div className="hero-background">
                     <div className="hero-shape hero-shape-1"></div>
                     <div className="hero-shape hero-shape-2"></div>
                     <div className="hero-shape hero-shape-3"></div>
-                </div>
+                </div> */}
                 <div className="container">
                     <div className="hero-content">
                         <div className="hero-text">
@@ -220,8 +221,8 @@ const HomePage = () => {
                 </div>
             </section>
 
-            {/* Quick Navigation Section */}
-            <section className="quick-nav-section">
+            {/* Quick Navigation Section - COMMENTED OUT TO REMOVE WHITE SPACE */}
+            {/* <section className="quick-nav-section">
                 <div className="container">
                     <div className="section-header">
                         <span className="section-tag">Explore</span>
@@ -273,10 +274,10 @@ const HomePage = () => {
                         </Link>
                     </div>
                 </div>
-            </section>
+            </section> */}
 
-            {/* CTA Section */}
-            <section className="cta-section">
+            {/* CTA Section - COMMENTED OUT TO REMOVE BLACK SPACE */}
+            {/* <section className="cta-section">
                 <div className="container">
                     <div className="cta-content">
                         <h2>Ready to Transform Your Operations?</h2>
@@ -296,7 +297,7 @@ const HomePage = () => {
                         </div>
                     </div>
                 </div>
-            </section>
+            </section> */}
 
             {/* Footer */}
             <footer className="modern-footer">

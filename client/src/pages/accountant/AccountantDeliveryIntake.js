@@ -7,7 +7,11 @@ const AccountantDeliveryIntake = () => {
     const [deliveries, setDeliveries] = useState([]);
     const [showAddIntakeModal, setShowAddIntakeModal] = useState(false);
     const [showBillModal, setShowBillModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showReceiptModal, setShowReceiptModal] = useState(false);
+    const [userBankDetails, setUserBankDetails] = useState(null);
     const [selectedBill, setSelectedBill] = useState(null);
+    const [selectedReceipt, setSelectedReceipt] = useState(null);
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
     const [editingRow, setEditingRow] = useState(null);
@@ -25,7 +29,8 @@ const AccountantDeliveryIntake = () => {
         dryKg: '',
         marketRate: '',
         amount: '',
-        perBarrel: ''
+        perBarrel: '',
+        paymentMethod: 'Bank Transfer'
     });
 
     // Admin-approved company rate
@@ -400,6 +405,7 @@ const AccountantDeliveryIntake = () => {
                 barrelCount: parseInt(intakeForm.barrels),
                 latexVolume: parseFloat(intakeForm.totalKg),
                 marketRate: parseFloat(intakeForm.marketRate),
+                paymentMethod: intakeForm.paymentMethod,
                 accountantNotes: intakeForm.notes || '',
                 userId: userId // Link bill to user
             };
@@ -560,6 +566,165 @@ const AccountantDeliveryIntake = () => {
         window.print();
     };
 
+    const handleViewReceipt = async (billId) => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+                `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/bills/${billId}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                setSelectedReceipt(data.bill);
+                setShowReceiptModal(true);
+            }
+        } catch (err) {
+            console.error('❌ Error fetching receipt:', err);
+            setError('Failed to load receipt details');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePayment = async (delivery) => {
+        try {
+            setLoading(true);
+            setSelectedBill(delivery);
+            setError(''); // Clear previous errors
+            
+            // Fetch User Bank Details
+            const token = localStorage.getItem('token');
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+            
+            let user = null;
+
+            // 1. Try fetching by userId if available
+            if (delivery.userId && delivery.userId.match(/^[0-9a-fA-F]{24}$/)) {
+                console.log('🔍 Fetching bank details by User ID:', delivery.userId);
+                try {
+                    const response = await fetch(`${API_URL}/api/users/${delivery.userId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        user = data.user;
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Failed to fetch by ID, falling back to phone:', e.message);
+                }
+            }
+
+            // 2. Try fetching by phone if userId failed or not available
+            if (!user && delivery.phone && delivery.phone !== '-' && delivery.phone !== 'N/A') {
+                console.log('🔍 Fetching bank details by phone:', delivery.phone);
+                try {
+                    const response = await fetch(
+                        `${API_URL}/api/users/find-by-phone?phone=${encodeURIComponent(delivery.phone)}`,
+                        { headers: { 'Authorization': `Bearer ${token}` } }
+                    );
+                    if (response.ok) {
+                        const data = await response.json();
+                        user = data.user;
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Failed to fetch by phone:', e.message);
+                }
+            }
+
+            if (user) {
+                console.log('✅ Found user bank details:', user.name);
+                setUserBankDetails({
+                    accountHolderName: user.accountHolderName || user.name,
+                    accountNumber: user.accountNumber || 'Not Provided',
+                    ifscCode: user.ifscCode || 'Not Provided',
+                    bankName: user.bankName || 'Not Provided',
+                    branchName: user.branchName || 'Not Provided'
+                });
+            } else {
+                console.log('⚠️ No bank details found for this user');
+                setUserBankDetails(null);
+            }
+            
+            setShowPaymentModal(true);
+        } catch (err) {
+            console.error('❌ Error in handlePayment:', err);
+            setError('Failed to load bank details: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const processFinalPayment = async () => {
+        if (!selectedBill) return;
+
+        try {
+            setLoading(true);
+            setError('');
+            const token = localStorage.getItem('token');
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+            
+            if (!selectedBill.billId) {
+                throw new Error('Missing Bill ID. Please ensure the bill is correctly calculated and saved.');
+            }
+
+            console.log(`💸 Processing payment for bill: ${selectedBill.billId}`);
+            
+            const response = await fetch(
+                `${API_URL}/api/bills/${selectedBill.billId}/approve-pay`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ 
+                        managerNotes: 'Paid by Accountant',
+                        paymentMethod: selectedBill.paymentMethod || 'Bank Transfer',
+                        bankDetails: userBankDetails
+                    })
+                }
+            );
+
+            // Handle non-JSON responses (like HTML error pages)
+            const contentType = response.headers.get("content-type");
+            if (!response.ok) {
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Payment failed');
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ Server returned non-JSON error:', errorText.substring(0, 100));
+                    throw new Error(`Server error (${response.status}). Please check if the bill ID is valid.`);
+                }
+            }
+
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const result = await response.json();
+                console.log('✅ Payment result:', result);
+                
+                setSuccess(`✅ Payment processed successfully for ${selectedBill.buyer}!`);
+                setTimeout(() => setSuccess(''), 3000);
+                
+                setShowPaymentModal(false);
+                setUserBankDetails(null);
+                
+                // Refresh list
+                fetchDeliveries();
+            } else {
+                throw new Error('Invalid response from server. Expected JSON but received something else.');
+            }
+        } catch (err) {
+            console.error('❌ Payment error:', err);
+            setError('Payment failed: ' + err.message);
+            // Don't auto-clear error immediately so user can read it
+            setTimeout(() => setError(''), 10000);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Handle inline field changes (without auto-calculation)
     const handleFieldChange = (deliveryId, field, value) => {
         setDeliveries(prev => 
@@ -691,7 +856,18 @@ const AccountantDeliveryIntake = () => {
                                         ) : '-'}
                                     </td>
                                     <td>
-                                        {delivery.status === 'verified' ? (
+                                        {delivery.status === 'paid' ? (
+                                            <span style={{
+                                                display: 'inline-block',
+                                                padding: '4px 10px',
+                                                backgroundColor: '#dcfce7',
+                                                color: '#166534',
+                                                borderRadius: '4px',
+                                                fontSize: '11px',
+                                                fontWeight: '700',
+                                                border: '1px solid #86efac'
+                                            }}>✓ Paid</span>
+                                        ) : delivery.status === 'verified' ? (
                                             <span className="verified-badge">✓ Verified</span>
                                         ) : delivery.status === 'calculated' ? (
                                             <span className="calculated-badge">✓ Calculated</span>
@@ -710,21 +886,90 @@ const AccountantDeliveryIntake = () => {
                                         )}
                                     </td>
                                     <td>
-                                        {delivery.status === 'verified' || delivery.status === 'calculated' ? (
-                                            <button
-                                                className="view-bill-btn"
-                                                onClick={() => {
-                                                    setSelectedBill(delivery);
-                                                    setShowBillModal(true);
-                                                }}
-                                                title="View Bill"
-                                            >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                                    <circle cx="12" cy="12" r="3"></circle>
-                                                </svg>
-                                                View Bill
-                                            </button>
+                                        {delivery.status === 'paid' ? (
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    className="view-bill-btn"
+                                                    onClick={() => {
+                                                        setSelectedBill(delivery);
+                                                        setShowBillModal(true);
+                                                    }}
+                                                    title="View Bill"
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                        <circle cx="12" cy="12" r="3"></circle>
+                                                    </svg>
+                                                    Bill
+                                                </button>
+                                                <button
+                                                    onClick={() => handleViewReceipt(delivery.billId)}
+                                                    style={{
+                                                        backgroundColor: '#059669',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        padding: '6px 12px',
+                                                        borderRadius: '6px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer',
+                                                        fontSize: '13px'
+                                                    }}
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                                        <polyline points="10 9 9 9 8 9"></polyline>
+                                                    </svg>
+                                                    Receipt
+                                                </button>
+                                            </div>
+                                        ) : delivery.status === 'verified' || delivery.status === 'calculated' ? (
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    className="view-bill-btn"
+                                                    onClick={() => {
+                                                        setSelectedBill(delivery);
+                                                        setShowBillModal(true);
+                                                    }}
+                                                    title="View Bill"
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                        <circle cx="12" cy="12" r="3"></circle>
+                                                    </svg>
+                                                    View Bill
+                                                </button>
+                                                {delivery.billId && (
+                                                    <button
+                                                        className="payment-btn"
+                                                        onClick={() => handlePayment(delivery)}
+                                                        style={{
+                                                            backgroundColor: '#8b5cf6',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            padding: '6px 12px',
+                                                            borderRadius: '6px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            fontSize: '13px'
+                                                        }}
+                                                    >
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                                                            <line x1="2" y1="10" x2="22" y2="10"></line>
+                                                        </svg>
+                                                        Payment
+                                                    </button>
+                                                )}
+                                            </div>
                                         ) : (
                                             <button
                                                 className="process-btn"
@@ -851,168 +1096,73 @@ const AccountantDeliveryIntake = () => {
                                     />
                                 </div>
 
-                                {/* DRC Values - Show individual per barrel if available */}
-                                {intakeForm.barrelDetails && intakeForm.barrelDetails.length > 0 ? (
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <label className="form-label" style={{ marginBottom: '12px' }}>
-                                            DRC Values (Individual per Barrel)
-                                            <span style={{
-                                                marginLeft: '8px',
-                                                fontSize: '11px',
-                                                color: '#059669',
-                                                fontWeight: '600',
-                                                backgroundColor: '#d1fae5',
-                                                padding: '2px 6px',
-                                                borderRadius: '3px'
-                                            }}>From Lab</span>
-                                        </label>
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                                            gap: '12px',
-                                            padding: '16px',
+                                {/* DRC % - Simple single field */}
+                                <div className="form-group">
+                                    <label className="form-label">
+                                        DRC %
+                                        <span style={{
+                                            marginLeft: '8px',
+                                            fontSize: '11px',
+                                            color: '#059669',
+                                            fontWeight: '600',
+                                            backgroundColor: '#d1fae5',
+                                            padding: '2px 6px',
+                                            borderRadius: '3px'
+                                        }}>From Lab</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={`${intakeForm.drcPercent}%`}
+                                        readOnly
+                                        style={{
                                             backgroundColor: '#f0fdf4',
-                                            borderRadius: '8px',
+                                            color: '#059669',
+                                            fontWeight: '600',
+                                            cursor: 'not-allowed',
                                             border: '2px solid #86efac'
-                                        }}>
-                                            {intakeForm.barrelDetails.map((barrel, index) => (
-                                                <div key={index} style={{
-                                                    padding: '12px',
-                                                    backgroundColor: '#ffffff',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid #bbf7d0'
-                                                }}>
-                                                    <div style={{
-                                                        fontSize: '12px',
-                                                        color: '#059669',
-                                                        fontWeight: '600',
-                                                        marginBottom: '6px'
-                                                    }}>
-                                                        Barrel {barrel.barrelNumber || index + 1}
-                                                    </div>
-                                                    <div style={{
-                                                        fontSize: '20px',
-                                                        color: '#166534',
-                                                        fontWeight: '700'
-                                                    }}>
-                                                        {barrel.drc}%
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <small style={{ 
-                                            color: '#059669', 
-                                            fontSize: 12, 
-                                            marginTop: 8, 
-                                            display: 'block',
-                                            fontStyle: 'italic'
-                                        }}>
-                                            ℹ️ Average DRC: {intakeForm.drcPercent}% (used for calculation)
-                                        </small>
-                                    </div>
-                                ) : (
-                                    <div className="form-group">
-                                        <label className="form-label">DRC %</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={`${intakeForm.drcPercent}%`}
-                                            readOnly
-                                            style={{
-                                                backgroundColor: '#f3f4f6',
-                                                cursor: 'not-allowed'
-                                            }}
-                                        />
-                                    </div>
-                                )}
+                                        }}
+                                    />
+                                </div>
 
-                                {/* Latex Volume - Separate input per barrel if barrel details available */}
-                                {intakeForm.barrelDetails && intakeForm.barrelDetails.length > 0 ? (
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <label className="form-label" style={{ marginBottom: '12px' }}>
-                                            Latex Volume per Barrel (Liters) *
-                                            <span style={{
-                                                marginLeft: '8px',
-                                                fontSize: '11px',
-                                                color: '#dc2626',
-                                                fontWeight: '600',
-                                                backgroundColor: '#fee2e2',
-                                                padding: '2px 6px',
-                                                borderRadius: '3px'
-                                            }}>Required</span>
-                                        </label>
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                                            gap: '12px',
-                                            padding: '16px',
-                                            backgroundColor: '#fef3c7',
-                                            borderRadius: '8px',
-                                            border: '2px solid #fbbf24'
-                                        }}>
-                                            {intakeForm.barrelDetails.map((barrel, index) => (
-                                                <div key={index} style={{
-                                                    padding: '12px',
-                                                    backgroundColor: '#ffffff',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid #fde68a'
-                                                }}>
-                                                    <label style={{
-                                                        fontSize: '12px',
-                                                        color: '#92400e',
-                                                        fontWeight: '600',
-                                                        marginBottom: '6px',
-                                                        display: 'block'
-                                                    }}>
-                                                        Barrel {barrel.barrelNumber || index + 1} (DRC: {barrel.drc}%)
-                                                    </label>
-                                                    <input
-                                                        type="number"
-                                                        className="form-input"
-                                                        value={intakeForm.barrelVolumes[index] || ''}
-                                                        onChange={(e) => handleBarrelVolumeChange(index, e.target.value)}
-                                                        placeholder="Enter liters (max 300)"
-                                                        min="0"
-                                                        max="300"
-                                                        step="0.01"
-                                                        required
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '8px',
-                                                            fontSize: '14px',
-                                                            border: '2px solid #fbbf24',
-                                                            borderRadius: '4px'
-                                                        }}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <small style={{ 
-                                            color: '#92400e', 
-                                            fontSize: 12, 
-                                            marginTop: 8, 
-                                            display: 'block',
-                                            fontWeight: '600'
-                                        }}>
-                                            ℹ️ Total Volume: {intakeForm.totalKg || 0} liters (Max 300 liters per barrel)
-                                        </small>
-                                    </div>
-                                ) : (
-                                    <div className="form-group">
-                                        <label className="form-label">Latex Volume (Liters)</label>
-                                        <input
-                                            type="number"
-                                            name="totalKg"
-                                            className="form-input"
-                                            value={intakeForm.totalKg}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter latex volume"
-                                            min="0"
-                                            step="0.01"
-                                            required
-                                        />
-                                    </div>
-                                )}
+                                {/* Latex Volume - Simple single field */}
+                                <div className="form-group">
+                                    <label className="form-label">
+                                        Latex Volume (Liters) *
+                                        <span style={{
+                                            marginLeft: '8px',
+                                            fontSize: '11px',
+                                            color: '#dc2626',
+                                            fontWeight: '600',
+                                            backgroundColor: '#fee2e2',
+                                            padding: '2px 6px',
+                                            borderRadius: '3px'
+                                        }}>Required</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="totalKg"
+                                        className="form-input"
+                                        value={intakeForm.totalKg}
+                                        onChange={handleInputChange}
+                                        placeholder="Enter total latex volume"
+                                        min="0"
+                                        step="0.01"
+                                        required
+                                        style={{
+                                            border: '2px solid #fbbf24',
+                                            backgroundColor: '#fffbeb'
+                                        }}
+                                    />
+                                    <small style={{ 
+                                        color: '#92400e', 
+                                        fontSize: 11, 
+                                        marginTop: 4, 
+                                        display: 'block'
+                                    }}>
+                                        Enter total latex volume for all {intakeForm.barrels} barrels
+                                    </small>
+                                </div>
 
                                 <div className="form-group">
                                     <label className="form-label">
@@ -1099,6 +1249,26 @@ const AccountantDeliveryIntake = () => {
                                         placeholder="Auto-calculated"
                                     />
                                 </div>
+
+                                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                    <label className="form-label">Payment Method</label>
+                                    <select
+                                        name="paymentMethod"
+                                        className="form-input"
+                                        value={intakeForm.paymentMethod}
+                                        onChange={handleInputChange}
+                                        style={{
+                                            border: '2px solid #8b5cf6',
+                                            backgroundColor: '#f5f3ff',
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        <option value="Bank Transfer">Bank Transfer (IMPS/NEFT)</option>
+                                        <option value="UPI">UPI (Google Pay/PhonePe)</option>
+                                        <option value="Cash">Cash</option>
+                                        <option value="Cheque">Cheque</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -1133,8 +1303,26 @@ const AccountantDeliveryIntake = () => {
                         <div className="bill-content" id="printable-bill">
                             {/* Company Header */}
                             <div className="bill-header">
-                                <h1 className="company-name">HOLY FAMILY POLYMERS</h1>
-                                <p className="company-location">Koorppada, Kottayam</p>
+                                {selectedBill.companyLogoUrl && (
+                                    <div className="company-logo">
+                                        <img src={selectedBill.companyLogoUrl} alt="Company Logo" />
+                                    </div>
+                                )}
+                                <h1 className="company-name">
+                                    {selectedBill.companyName || 'HOLY FAMILY POLYMERS'}
+                                </h1>
+                                <p className="company-location">
+                                    {selectedBill.companyAddress || 'Koorppada, Kottayam'}
+                                </p>
+                                {selectedBill.companyGST && (
+                                    <p className="company-gst">GST No: {selectedBill.companyGST}</p>
+                                )}
+                                {selectedBill.companyPhone && (
+                                    <p className="company-contact">Phone: {selectedBill.companyPhone}</p>
+                                )}
+                                {selectedBill.companyEmail && (
+                                    <p className="company-contact">Email: {selectedBill.companyEmail}</p>
+                                )}
                                 <div className="bill-divider"></div>
                             </div>
 
@@ -1196,12 +1384,40 @@ const AccountantDeliveryIntake = () => {
                             <div className="bill-verification">
                                 <div className="verification-box">
                                     <p className="verification-label">Verified By:</p>
-                                    <div className="signature-line"></div>
+                                    {selectedBill.accountantSignature ? (
+                                        <>
+                                            {selectedBill.accountantSignatureUrl ? (
+                                                <img 
+                                                    src={selectedBill.accountantSignatureUrl} 
+                                                    alt="Accountant Signature" 
+                                                    className="signature-image"
+                                                />
+                                            ) : (
+                                                <div className="signature-text">{selectedBill.accountantSignature}</div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="signature-line"></div>
+                                    )}
                                     <p className="verification-sublabel">Accountant Signature</p>
                                 </div>
                                 <div className="verification-box">
                                     <p className="verification-label">Approved By:</p>
-                                    <div className="signature-line"></div>
+                                    {selectedBill.managerSignature ? (
+                                        <>
+                                            {selectedBill.managerSignatureUrl ? (
+                                                <img 
+                                                    src={selectedBill.managerSignatureUrl} 
+                                                    alt="Manager Signature" 
+                                                    className="signature-image"
+                                                />
+                                            ) : (
+                                                <div className="signature-text">{selectedBill.managerSignature}</div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="signature-line"></div>
+                                    )}
                                     <p className="verification-sublabel">Manager Signature</p>
                                 </div>
                             </div>
@@ -1235,7 +1451,8 @@ const AccountantDeliveryIntake = () => {
                                         dryKg: '',
                                         marketRate: '',
                                         amount: '',
-                                        perBarrel: ''
+                                        perBarrel: '',
+                                        paymentMethod: 'Bank Transfer'
                                     });
                                     
                                     setShowBillModal(false);
@@ -1250,6 +1467,200 @@ const AccountantDeliveryIntake = () => {
                                 onClick={handlePrintBill}
                             >
                                 Print Bill
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Payment Confirmation Modal */}
+            {showPaymentModal && selectedBill && (
+                <div className="modal-overlay">
+                    <div className="payment-modal" style={{
+                        backgroundColor: 'white',
+                        padding: '24px',
+                        borderRadius: '12px',
+                        maxWidth: '500px',
+                        width: '90%',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #f3f4f6', paddingBottom: '12px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#111827', margin: 0 }}>Confirm Payment</h2>
+                            <button onClick={() => setShowPaymentModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#9ca3af' }}>×</button>
+                        </div>
+
+                        <div style={{ marginBottom: '24px' }}>
+                            <div style={{ backgroundColor: '#fef3c7', padding: '12px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <p style={{ margin: 0, color: '#92400e', fontSize: '14px', fontWeight: '600' }}>
+                                    Please verify banking details before processing the payment of <strong>₹{selectedBill.amount}</strong>.
+                                </p>
+                            </div>
+
+                            <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Beneficiary Banking Details</h3>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#64748b', fontSize: '14px' }}>Account Holder:</span>
+                                    <span style={{ color: '#1e293b', fontWeight: '600', fontSize: '14px' }}>{userBankDetails?.accountHolderName || 'Not Set'}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#64748b', fontSize: '14px' }}>Account Number:</span>
+                                    <span style={{ color: '#1e293b', fontWeight: '600', fontSize: '14px', letterSpacing: '0.05em' }}>{userBankDetails?.accountNumber || 'Not Set'}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#64748b', fontSize: '14px' }}>IFSC Code:</span>
+                                    <span style={{ color: '#1e293b', fontWeight: '600', fontSize: '14px', letterSpacing: '0.05em' }}>{userBankDetails?.ifscCode || 'Not Set'}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#64748b', fontSize: '14px' }}>Bank Name:</span>
+                                    <span style={{ color: '#1e293b', fontWeight: '600', fontSize: '14px' }}>{userBankDetails?.bankName || 'Not Set'}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#64748b', fontSize: '14px' }}>Payment Method:</span>
+                                    <span style={{ color: '#8b5cf6', fontWeight: '700', fontSize: '14px' }}>{selectedBill.paymentMethod}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                                onClick={() => setShowPaymentModal(false)}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #d1d5db',
+                                    backgroundColor: 'white',
+                                    color: '#374151',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={processFinalPayment}
+                                disabled={loading}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    backgroundColor: '#8b5cf6',
+                                    color: 'white',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    opacity: loading ? 0.7 : 1
+                                }}
+                            >
+                                {loading ? 'Processing...' : 'Confirm & Pay'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Receipt Modal */}
+            {showReceiptModal && selectedReceipt && (
+                <div className="modal-overlay">
+                    <div className="receipt-modal" style={{
+                        backgroundColor: 'white',
+                        padding: '32px',
+                        borderRadius: '16px',
+                        maxWidth: '550px',
+                        width: '90%',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        position: 'relative'
+                    }}>
+                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                            <div style={{ 
+                                width: '64px', 
+                                height: '64px', 
+                                backgroundColor: '#dcfce7', 
+                                borderRadius: '50%', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                margin: '0 auto 16px auto'
+                            }}>
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="3">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#111827', margin: '0 0 4px 0' }}>Payment Successful</h2>
+                            <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Transaction Reference: {selectedReceipt.paymentReference}</p>
+                        </div>
+
+                        <div style={{ borderTop: '1px dashed #e2e8f0', borderBottom: '1px dashed #e2e8f0', padding: '20px 0', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <span style={{ color: '#64748b' }}>Amount Paid</span>
+                                <span style={{ fontWeight: '700', color: '#111827', fontSize: '18px' }}>₹{selectedReceipt.totalAmount.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <span style={{ color: '#64748b' }}>Date & Time</span>
+                                <span style={{ fontWeight: '600', color: '#111827' }}>{new Date(selectedReceipt.paymentDate).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <span style={{ color: '#64748b' }}>Payment Method</span>
+                                <span style={{ fontWeight: '600', color: '#111827' }}>{selectedReceipt.paymentMethod}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: '#64748b' }}>Paid To</span>
+                                <span style={{ fontWeight: '600', color: '#111827' }}>{selectedReceipt.customerName}</span>
+                            </div>
+                        </div>
+
+                        <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
+                            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>Bank Details</h4>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <span style={{ color: '#64748b', fontSize: '13px' }}>Bank Name</span>
+                                <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{selectedReceipt.paymentBankName || 'N/A'}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <span style={{ color: '#64748b', fontSize: '13px' }}>Account Number</span>
+                                <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{selectedReceipt.paymentAccountNumber || 'N/A'}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: '#64748b', fontSize: '13px' }}>IFSC Code</span>
+                                <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{selectedReceipt.paymentIfscCode || 'N/A'}</span>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                                onClick={() => setShowReceiptModal(false)}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #d1d5db',
+                                    backgroundColor: 'white',
+                                    color: '#374151',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Close
+                            </button>
+                            <button 
+                                onClick={() => window.print()}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    backgroundColor: '#059669',
+                                    color: 'white',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Print Receipt
                             </button>
                         </div>
                     </div>

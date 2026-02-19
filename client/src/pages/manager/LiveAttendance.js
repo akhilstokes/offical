@@ -142,28 +142,65 @@ const LiveAttendance = () => {
       {error && <div className="error-message">{error}</div>}
 
       <div className="stats-grid">
-        <div className="stat-card total"><div className="stat-value">{stats.total}</div><div>Total</div></div>
-        <div className="stat-card present"><div className="stat-value">{stats.present}</div><div>Present</div></div>
-        <div className="stat-card completed"><div className="stat-value">{stats.completed}</div><div>Completed</div></div>
-        <div className="stat-card late"><div className="stat-value">{stats.late}</div><div>Late</div></div>
-        <div className="stat-card absent"><div className="stat-value">{stats.absent}</div><div>Absent</div></div>
+        <div className="stat-card total">
+          <div className="stat-icon"><i className="fas fa-users"></i></div>
+          <div className="stat-content">
+            <div className="stat-value">{stats.total}</div>
+            <div className="stat-label">Total Staff</div>
+          </div>
+        </div>
+        <div className="stat-card present">
+          <div className="stat-icon"><i className="fas fa-user-check"></i></div>
+          <div className="stat-content">
+            <div className="stat-value">{stats.present}</div>
+            <div className="stat-label">Present</div>
+          </div>
+        </div>
+        <div className="stat-card completed">
+          <div className="stat-icon"><i className="fas fa-check-double"></i></div>
+          <div className="stat-content">
+            <div className="stat-value">{stats.completed}</div>
+            <div className="stat-label">Completed</div>
+          </div>
+        </div>
+        <div className="stat-card late">
+          <div className="stat-icon"><i className="fas fa-clock"></i></div>
+          <div className="stat-content">
+            <div className="stat-value">{stats.late}</div>
+            <div className="stat-label">Late</div>
+          </div>
+        </div>
+        <div className="stat-card absent">
+          <div className="stat-icon"><i className="fas fa-user-times"></i></div>
+          <div className="stat-content">
+            <div className="stat-value">{stats.absent}</div>
+            <div className="stat-label">Absent</div>
+          </div>
+        </div>
       </div>
 
       <div className="controls-bar">
-        <input
-          type="text"
-          placeholder="Search staff..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="all">All</option>
-          <option value="present">Present</option>
-          <option value="completed">Completed</option>
-          <option value="late">Late</option>
-          <option value="absent">Absent</option>
-        </select>
-        <button onClick={fetchAttendance}>Refresh</button>
+        <div className="search-box">
+          <i className="fas fa-search"></i>
+          <input
+            type="text"
+            placeholder="Search staff by name or ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="filter-buttons">
+          <select value={filter} onChange={(e) => setFilter(e.target.value)} className="filter-select">
+            <option value="all">All Records</option>
+            <option value="present">Present Only</option>
+            <option value="completed">Completed Shifts</option>
+            <option value="late">Late Arrivals</option>
+            <option value="absent">Absent</option>
+          </select>
+          <button onClick={fetchAttendance} className="btn-refresh">
+            <i className="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
       </div>
 
       <div className="attendance-table-container">
@@ -201,16 +238,7 @@ const LiveAttendance = () => {
                       </span>
                     </td>
                   </tr>
-
-
-
-
-
-
-
-
-
-);
+                );
               })
             )}
           </tbody>

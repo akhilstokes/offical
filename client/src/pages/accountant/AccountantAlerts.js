@@ -171,32 +171,9 @@ const AccountantAlerts = () => {
 
   return (
     <div className="alerts-container">
-      {/* Header */}
+      {/* Header - Simplified as layout already has greeting */}
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Alerts & Reminders</h1>
-          <p className="page-subtitle">Manage your pending tasks and notifications.</p>
-        </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => setShowNotifyModal(true)}
-            className="btn-primary"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: '#0ea5e9',
-              color: 'white',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
-          >
-            <FiSend /> Send Message
-          </button>
-
+        <div className="header-actions-left">
           <div className="filter-group">
             <button
               onClick={() => setFilter('all')}
@@ -218,6 +195,14 @@ const AccountantAlerts = () => {
             </button>
           </div>
         </div>
+        <div className="header-actions-right">
+          <button
+            onClick={() => setShowNotifyModal(true)}
+            className="btn-send-message"
+          >
+            <FiSend /> Send Message
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -226,33 +211,33 @@ const AccountantAlerts = () => {
         </div>
       ) : (
         <>
-          {/* Stats Overview */}
+          {/* Stats Overview - Grid layout for better organization */}
           <div className="stats-grid">
-            <div className="stat-card">
+            <div className="stat-card blue">
               <div className="stat-info">
-                <div className="stat-label">Total Active</div>
+                <div className="stat-label">TOTAL ACTIVE</div>
                 <div className="stat-value">{stats.total}</div>
               </div>
               <div className="stat-icon blue"><FiBell /></div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card red">
               <div className="stat-info">
-                <div className="stat-label">Overdue</div>
-                <div className="stat-value" style={{ color: '#ef4444' }}>{stats.overdue}</div>
+                <div className="stat-label">OVERDUE</div>
+                <div className="stat-value">{stats.overdue}</div>
               </div>
               <div className="stat-icon red"><FiAlertCircle /></div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card orange">
               <div className="stat-info">
-                <div className="stat-label">High Priority</div>
-                <div className="stat-value" style={{ color: '#f97316' }}>{stats.highPriority}</div>
+                <div className="stat-label">HIGH PRIORITY</div>
+                <div className="stat-value">{stats.highPriority}</div>
               </div>
               <div className="stat-icon orange"><FiClock /></div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card green">
               <div className="stat-info">
-                <div className="stat-label">Completed</div>
-                <div className="stat-value" style={{ color: '#22c55e' }}>{stats.completed}</div>
+                <div className="stat-label">COMPLETED</div>
+                <div className="stat-value">{stats.completed}</div>
               </div>
               <div className="stat-icon green"><FiCheckCircle /></div>
             </div>
@@ -262,7 +247,7 @@ const AccountantAlerts = () => {
           <div className="alerts-section">
             <h3 className="section-title">
               {filter === 'all' ? <FiBell /> : filter === 'overdue' ? <FiAlertCircle /> : <FiClock />}
-              {filter.charAt(0).toUpperCase() + filter.slice(1)} Notifications
+              {filter === 'all' ? 'ALL' : filter.toUpperCase()} NOTIFICATIONS
             </h3>
 
             {filteredAlerts.length > 0 ? (
@@ -335,26 +320,22 @@ const AccountantAlerts = () => {
 
       {/* Send Notification Modal */}
       {showNotifyModal && (
-        <div className="modal-overlay" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
-          <div className="modal-content" style={{
-            background: 'white', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '500px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#0f172a' }}>Send Notification</h3>
-              <button onClick={() => setShowNotifyModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><FiX size={24} /></button>
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">Send Notification</h3>
+              <button className="modal-close" onClick={() => setShowNotifyModal(false)}>
+                <FiX size={20} />
+              </button>
             </div>
 
             <form onSubmit={handleSendNotification}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#475569' }}>Recipient Group</label>
+              <div className="form-group">
+                <label className="form-label">Recipient Group</label>
                 <select
                   value={notifyForm.target}
                   onChange={e => setNotifyForm({ ...notifyForm, target: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px' }}
+                  className="form-select"
                 >
                   <option value="all">All Staff & Managers</option>
                   <option value="manager">Managers Only</option>
@@ -364,49 +345,50 @@ const AccountantAlerts = () => {
                 </select>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#475569' }}>Subject / Title</label>
+              <div className="form-group">
+                <label className="form-label">Subject / Title</label>
                 <input
                   type="text"
                   value={notifyForm.title}
                   onChange={e => setNotifyForm({ ...notifyForm, title: e.target.value })}
                   placeholder="e.g., Important Meeting"
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px' }}
+                  className="form-input"
                   required
                 />
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#475569' }}>Message</label>
+              <div className="form-group">
+                <label className="form-label">Message</label>
                 <textarea
                   rows="4"
                   value={notifyForm.message}
                   onChange={e => setNotifyForm({ ...notifyForm, message: e.target.value })}
                   placeholder="Type your message here..."
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', resize: 'vertical' }}
+                  className="form-textarea"
                   required
                 ></textarea>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={() => setShowNotifyModal(false)}
-                  style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', color: '#64748b', fontWeight: '500' }}
+                  className="btn-cancel"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={sending}
-                  style={{
-                    padding: '10px 24px', borderRadius: '8px', border: 'none',
-                    background: sending ? '#94a3b8' : '#0ea5e9',
-                    color: 'white', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: '600',
-                    display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
+                  className="btn-submit"
                 >
-                  {sending ? 'Sending...' : <><FiSend /> Send</>}
+                  {sending ? (
+                    <>Sending...</>
+                  ) : (
+                    <>
+                      <FiSend /> Send
+                    </>
+                  )}
                 </button>
               </div>
             </form>

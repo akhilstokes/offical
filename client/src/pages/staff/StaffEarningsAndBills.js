@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
+import jsPDF from 'jspdf';
 import './StaffEarningsAndBills.css';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -20,6 +21,7 @@ const StaffEarningsAndBills = () => {
   const [salaries, setSalaries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('earnings');
+  const [workerInfo, setWorkerInfo] = useState(null);
 
   useEffect(() => {
     loadAllData();
@@ -47,9 +49,13 @@ const StaffEarningsAndBills = () => {
         headers: authHeaders()
       });
 
+      let salaryData = null;
       if (salaryRes.ok) {
-        const salaryData = await salaryRes.json();
-        setDailyRate(salaryData.dailyRate || 0);
+        const resJson = await salaryRes.json();
+        // Assuming the endpoint returns { success: true, worker: ..., data: [...] }
+        salaryData = resJson;
+        setWorkerInfo(resJson.worker || null);
+        setDailyRate(resJson.worker?.dailyWage || 0);
       }
 
       // Get attendance for earnings calculation
@@ -74,7 +80,7 @@ const StaffEarningsAndBills = () => {
         setAttendance(monthRecords);
 
         // Calculate earnings
-        const rate = salaryData?.dailyRate || 0;
+        const rate = salaryData?.worker?.dailyWage || 0;
         
         // Today's earnings
         const todayRecord = monthRecords.find(r => {
@@ -115,6 +121,84 @@ const StaffEarningsAndBills = () => {
     }
   };
 
+  const downloadPayslip = (salary) => {
+    const doc = new jsPDF();
+    const monthName = getMonthName(salary.month);
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(40, 44, 52);
+    doc.text('HOLY FAMILY POLYMERS', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.text(`PAYSLIP - ${monthName.toUpperCase()} ${salary.year}`, 105, 30, { align: 'center' });
+    
+    // Line separator
+    doc.setLineWidth(0.5);
+    doc.line(20, 35, 190, 35);
+    
+    // Employee Info
+    doc.setFontSize(12);
+    doc.text(`Employee Name: ${workerInfo?.name || 'Staff Member'}`, 20, 45);
+    doc.text(`Staff ID: ${workerInfo?.staffId || 'N/A'}`, 20, 52);
+    doc.text(`Period: ${monthName} ${salary.year}`, 140, 45);
+    doc.text(`Status: ${salary.status?.toUpperCase()}`, 140, 52);
+    
+    // Table Header
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, 65, 170, 10, 'F');
+    doc.text('Description', 25, 72);
+    doc.text('Amount (INR)', 150, 72);
+    
+    // Salary Breakdown
+    let y = 85;
+    const addRow = (label, value, isDeduction = false) => {
+      doc.text(label, 25, y);
+      const amountStr = isDeduction ? `-${value.toFixed(2)}` : value.toFixed(2);
+      doc.text(amountStr, 150, y);
+      y += 10;
+    };
+    
+    addRow('Basic Salary (Based on Attendance)', salary.basicSalary || 0);
+    addRow('Medical Allowance', salary.medicalAllowance || 0);
+    addRow('Transportation Allowance', salary.transportationAllowance || 0);
+    addRow('Overtime Pay', salary.overtime || 0);
+    addRow('Bonus', salary.bonus || 0);
+    
+    doc.setFont(undefined, 'bold');
+    addRow('Gross Salary', salary.grossSalary || 0);
+    doc.setFont(undefined, 'normal');
+    
+    y += 5;
+    doc.text('Deductions:', 25, y);
+    y += 10;
+    
+    addRow('Income Tax', salary.deductions?.tax || 0, true);
+    addRow('Provident Fund', salary.deductions?.providentFund || 0, true);
+    addRow('Professional Tax', salary.deductions?.professionalTax || 0, true);
+    addRow('Other Deductions', salary.deductions?.other || 0, true);
+    
+    y += 5;
+    doc.setLineWidth(0.5);
+    doc.line(20, y, 190, y);
+    y += 10;
+    
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('NET PAYABLE', 25, y);
+    doc.text(`INR ${salary.netSalary?.toFixed(2)}`, 150, y);
+    
+    // Footer
+    y = 250;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text('This is a computer generated payslip and does not require a signature.', 105, y, { align: 'center' });
+    doc.text('Holy Family Polymers - Industrial Estate, Kerala', 105, y + 7, { align: 'center' });
+    
+    doc.save(`Payslip_${monthName}_${salary.year}.pdf`);
+    toast.success('Payslip downloaded successfully');
+  };
+
   const getMonthName = (monthNum) => {
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 
                     'July', 'August', 'September', 'October', 'November', 'December'];
@@ -151,6 +235,12 @@ const StaffEarningsAndBills = () => {
           onClick={() => setActiveTab('bills')}
         >
           <i className="fas fa-file-invoice-dollar"></i> Salary Bills
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'banking' ? 'active' : ''}`}
+          onClick={() => setActiveTab('banking')}
+        >
+          <i className="fas fa-university"></i> Banking Details
         </button>
       </div>
 
@@ -199,7 +289,7 @@ const StaffEarningsAndBills = () => {
                     <h4>This Week</h4>
                     <p className="earning-amount">₹{weekEarnings.toFixed(2)}</p>
                     <span className="earning-label">
-                      {Math.floor(weekEarnings / dailyRate)} days worked
+                      {dailyRate > 0 ? `${Math.floor(weekEarnings / dailyRate)} days worked` : '0 days'}
                     </span>
                   </div>
                 </div>
@@ -212,7 +302,7 @@ const StaffEarningsAndBills = () => {
                     <h4>This Month</h4>
                     <p className="earning-amount">₹{monthEarnings.toFixed(2)}</p>
                     <span className="earning-label">
-                      {Math.floor(monthEarnings / dailyRate)} days worked
+                      {dailyRate > 0 ? `${Math.floor(monthEarnings / dailyRate)} days worked` : '0 days'}
                     </span>
                   </div>
                 </div>
@@ -268,6 +358,13 @@ const StaffEarningsAndBills = () => {
                   </div>
                 )}
               </div>
+
+              {/* Payment Summary - Navigation Button Only */}
+              <div className="history-action-container">
+                <button className="full-history-btn" onClick={() => setActiveTab('bills')}>
+                  <i className="fas fa-history"></i> View Full Payment History
+                </button>
+              </div>
             </div>
           )}
 
@@ -293,7 +390,7 @@ const StaffEarningsAndBills = () => {
                           <th>DEDUCTIONS</th>
                           <th>NET PAY</th>
                           <th>STATUS</th>
-                          <th>PAYMENT DATE</th>
+                          <th>ACTION</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -323,14 +420,14 @@ const StaffEarningsAndBills = () => {
                                 {salary.status?.toUpperCase() || 'PENDING'}
                               </span>
                             </td>
-                            <td className="date-cell">
-                              {salary.paymentDate 
-                                ? new Date(salary.paymentDate).toLocaleDateString('en-IN', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric'
-                                  })
-                                : '-'}
+                            <td>
+                              <button 
+                                className="download-payslip-btn"
+                                onClick={() => downloadPayslip(salary)}
+                                title="Download PDF Payslip"
+                              >
+                                <i className="fas fa-download"></i> Payslip
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -345,37 +442,72 @@ const StaffEarningsAndBills = () => {
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* Summary Card */}
-              {salaries.length > 0 && (
-                <div className="summary-card">
-                  <h3>💼 Payment Summary</h3>
-                  <div className="summary-grid">
-                    <div className="summary-item">
-                      <span className="summary-label">Total Paid</span>
-                      <span className="summary-value paid">
-                        ₹{salaries
-                          .filter(s => s.status === 'paid')
-                          .reduce((sum, s) => sum + (s.netSalary || 0), 0)
-                          .toFixed(2)}
-                      </span>
+          {/* BANKING DETAILS TAB */}
+          {activeTab === 'banking' && (
+            <div className="banking-section">
+              <div className="banking-card">
+                <div className="card-header">
+                  <h2>🏦 Banking Information</h2>
+                  <p className="banking-subtitle">Your registered bank account for salary payments</p>
+                </div>
+                
+                <div className="banking-content">
+                  <div className="bank-info-grid">
+                    <div className="bank-info-item">
+                      <span className="info-label">Bank Name</span>
+                      <span className="info-value">State Bank of India</span>
                     </div>
-                    <div className="summary-item">
-                      <span className="summary-label">Pending</span>
-                      <span className="summary-value pending">
-                        ₹{salaries
-                          .filter(s => s.status === 'pending' || s.status === 'approved')
-                          .reduce((sum, s) => sum + (s.netSalary || 0), 0)
-                          .toFixed(2)}
-                      </span>
+                    <div className="bank-info-item">
+                      <span className="info-label">Account Holder</span>
+                      <span className="info-value">{workerInfo?.name || 'Morni Bagama'}</span>
                     </div>
-                    <div className="summary-item">
-                      <span className="summary-label">Total Bills</span>
-                      <span className="summary-value">{salaries.length}</span>
+                    <div className="bank-info-item">
+                      <span className="info-label">Account Number</span>
+                      <span className="info-value">XXXX-XXXX-4582</span>
+                    </div>
+                    <div className="bank-info-item">
+                      <span className="info-label">IFSC Code</span>
+                      <span className="info-value">SBIN0001234</span>
+                    </div>
+                    <div className="bank-info-item">
+                      <span className="info-label">Branch</span>
+                      <span className="info-value">Industrial Estate, Palakkad</span>
+                    </div>
+                    <div className="bank-info-item">
+                      <span className="info-label">Payment Status</span>
+                      <span className="info-value verified">
+                        <i className="fas fa-check-circle"></i> Verified for NEFT/UPI
+                      </span>
                     </div>
                   </div>
+                  
+                  <div className="banking-notice">
+                    <i className="fas fa-info-circle"></i>
+                    <p>To change your banking details, please contact the HR or Accountant office with your original passbook and ID proof.</p>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              <div className="payout-preferences">
+                <h3>🔔 Payout Preferences</h3>
+                <div className="preference-item">
+                  <div className="pref-label">
+                    <span>SMS Notifications</span>
+                    <p>Get alerted when salary is credited</p>
+                  </div>
+                  <div className="pref-toggle active">Enabled</div>
+                </div>
+                <div className="preference-item">
+                  <div className="pref-label">
+                    <span>Email Payslip</span>
+                    <p>Receive PDF payslip on registered email</p>
+                  </div>
+                  <div className="pref-toggle active">Enabled</div>
+                </div>
+              </div>
             </div>
           )}
         </>

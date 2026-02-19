@@ -589,7 +589,12 @@ exports.validateToken = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                isPhoneVerified: user.isPhoneVerified
+                isPhoneVerified: user.isPhoneVerified,
+                accountHolderName: user.accountHolderName,
+                accountNumber: user.accountNumber,
+                ifscCode: user.ifscCode,
+                bankName: user.bankName,
+                branchName: user.branchName
             }
         });
     } catch (error) {
@@ -624,7 +629,12 @@ exports.checkRegistrationStatus = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 isPhoneVerified: user.isPhoneVerified,
-                hasPhone: !!user.phoneNumber
+                hasPhone: !!user.phoneNumber,
+                accountHolderName: user.accountHolderName,
+                accountNumber: user.accountNumber,
+                ifscCode: user.ifscCode,
+                bankName: user.bankName,
+                branchName: user.branchName
             }
         });
     } catch (error) {

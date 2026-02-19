@@ -7,7 +7,7 @@ const User = require('../models/userModel');
  */
 exports.listUsers = async (req, res) => {
     try {
-        const users = await User.find({}, 'name email role').sort({ name: 1 });
+        const users = await User.find({}, 'name email role phoneNumber accountHolderName accountNumber ifscCode bankName branchName dailySalary baseSalary salaryType').sort({ name: 1 });
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -30,7 +30,7 @@ exports.listFarmers = async (req, res) => {
                 { phoneNumber: { $regex: regex } },
             ];
         }
-        const farmers = await User.find(query, 'name email phoneNumber role').sort({ name: 1 }).limit(500);
+        const farmers = await User.find(query, 'name email phoneNumber role accountHolderName accountNumber ifscCode bankName branchName').sort({ name: 1 }).limit(500);
         res.json(farmers);
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -91,7 +91,7 @@ exports.getUserProfile = (req, res) => {
 exports.updateUserProfile = async (req, res) => {
     try {
         const updates = {};
-        const allowed = ['name', 'phoneNumber', 'location', 'address'];
+        const allowed = ['name', 'phoneNumber', 'location', 'address', 'accountHolderName', 'accountNumber', 'ifscCode', 'bankName', 'branchName'];
         for (const key of allowed) {
             if (typeof req.body[key] === 'string') {
                 // Only add address if it's not empty or if user is explicitly updating it
@@ -132,6 +132,11 @@ exports.updateUserProfile = async (req, res) => {
             address: user.address,
             role: user.role,
             isPhoneVerified: user.isPhoneVerified,
+            accountHolderName: user.accountHolderName,
+            accountNumber: user.accountNumber,
+            ifscCode: user.ifscCode,
+            bankName: user.bankName,
+            branchName: user.branchName,
         };
 
         return res.json({ message: 'Profile updated', user: safe });

@@ -1,6 +1,8 @@
 const User = require('../models/userModel');
 const TaxRecord = require('../models/TaxRecord');
 const { logAudit } = require('../services/auditService');
+const path = require('path');
+const fs = require('fs');
 
 // Get time tracking data
 exports.getTimeTracking = async (req, res) => {
@@ -537,6 +539,75 @@ exports.getDocuments = async (req, res) => {
   }
 };
 
+exports.uploadDocument = async (req, res) => {
+  try {
+    console.log('Upload Request Received:');
+    console.log('File:', req.file ? req.file.originalname : 'No file');
+    console.log('Body:', req.body);
+
+    if (!req.file) {
+      console.error('Upload failed: No file provided in request');
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const { category, description, reference, date } = req.body;
+    
+    // Normalize category to lowercase and validate against allowed enum values
+    const allowedCategories = ['invoice', 'bill', 'receipt', 'contract', 'tax', 'bank', 'other'];
+    const normalizedCategory = (category || 'other').toLowerCase();
+    const finalCategory = allowedCategories.includes(normalizedCategory) ? normalizedCategory : 'other';
+
+    const document = await AccountantDocument.create({
+      title: req.file.originalname,
+      category: finalCategory,
+      description,
+      reference,
+      date: date ? new Date(date) : undefined,
+      fileUrl: `/uploads/${req.file.filename}`,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      mimetype: req.file.mimetype,
+      uploadedBy: req.user._id
+    });
+
+    await logAudit({
+      action: 'document_uploaded',
+      actor: req.user._id,
+      description: `Uploaded document: ${req.file.originalname}`,
+      target: document._id,
+      targetType: 'accountant_document'
+    });
+
+    res.status(201).json({ 
+      success: true,
+      message: 'Document uploaded successfully',
+      data: document 
+    });
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+exports.downloadDocument = async (req, res) => {
+  try {
+    const document = await AccountantDocument.findById(req.params.id);
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    const filePath = path.join(__dirname, '..', document.fileUrl);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File not found on server' });
+    }
+
+    res.download(filePath, document.fileName);
+  } catch (error) {
+    console.error('Error downloading document:', error);
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
 exports.addDocument = async (req, res) => {
   try {
     const { title, category, description, fileUrl, fileName } = req.body;
@@ -578,8 +649,15 @@ exports.updateDocument = async (req, res) => {
 
 exports.deleteDocument = async (req, res) => {
   try {
+    const document = await AccountantDocument.findById(req.params.id);
+    if (document && document.fileUrl) {
+      const filePath = path.join(__dirname, '..', document.fileUrl);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    
     await AccountantDocument.findByIdAndDelete(req.params.id);
-    // Optional: Delete file from filesystem if needed (requires fs and path)
     res.json({ message: 'Document deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });

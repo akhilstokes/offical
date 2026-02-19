@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
-import './AuthStyles.css';
-
-import './ButtonFix.css';
+import './RegisterPage.css';
 import {
   cleanPhoneNumber,
-  validateUserRegistration,
   validateName,
   validateEmail,
   validatePhoneNumber,
-  validatePassword
+  validatePassword,
+  validateUserRegistration
 } from '../../utils/validation';
 
 const RegisterPage = () => {
@@ -25,7 +23,6 @@ const RegisterPage = () => {
   });
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
-  const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -122,50 +119,39 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="modern-auth-wrapper">
-      <div className="auth-container">
-        {/* Background Elements */}
-        <div className="bg-shapes">
-          <div className="shape shape-1"></div>
-          <div className="shape shape-2"></div>
-          <div className="shape shape-3"></div>
+    <div className="register-page-split">
+      {/* Left Side - Branding */}
+      <div className="register-brand-side">
+        <div className="brand-decoration">
+          <div className="decoration-circle decoration-1"></div>
+          <div className="decoration-circle decoration-2"></div>
+          <div className="decoration-circle decoration-3"></div>
         </div>
 
-        {/* Main Content */}
-        <div className="auth-card">
-          {/* Header */}
-          <div className="auth-header">
-            <div className="logo-section">
-              <div className="logo-icon">
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                  <rect width="40" height="40" rx="12" fill="url(#logoGradient)"/>
-                  <path d="M12 20L18 14L28 24L22 30L12 20Z" fill="white" fillOpacity="0.9"/>
-                  <defs>
-                    <linearGradient id="logoGradient" x1="0" y1="0" x2="40" y2="40">
-                      <stop stopColor="#3B82F6"/>
-                      <stop offset="1" stopColor="#1D4ED8"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-              <div className="logo-text">
-                <h1>Holy Family Polymers</h1>
-                <p>Smart Manufacturing Solutions</p>
-              </div>
-            </div>
-            
-            <Link to="/" className="back-home">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Home
-            </Link>
-          </div>
+        <Link to="/" className="back-home">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Home
+        </Link>
 
-          {/* Welcome Section */}
-          <div className="welcome-section">
-            <h2>Create Your Account</h2>
-            <p>Join Holy Family Polymers and start managing your operations efficiently</p>
+        <div className="brand-logo">
+          <div className="brand-logo-img">HFP</div>
+        </div>
+
+        <div className="brand-text">
+          <h1>Join us</h1>
+          <p>Smart Manufacturing Solutions</p>
+        </div>
+      </div>
+
+      {/* Right Side - Form */}
+      <div className="register-form-side">
+        <div className="register-form-container">
+          {/* Header */}
+          <div className="form-header">
+            <h2>Create Account</h2>
+            <p>Enter your details to get started</p>
           </div>
 
           {/* Google Sign Up */}
@@ -182,18 +168,6 @@ const RegisterPage = () => {
 
           <div className="divider">
             <span>or sign up with email</span>
-          </div>
-
-          {/* Progress Steps */}
-          <div className="progress-steps">
-            <div className={`step ${step >= 1 ? 'active' : ''}`}>
-              <div className="step-number">1</div>
-              <span>Personal Info</span>
-            </div>
-            <div className={`step ${step >= 2 ? 'active' : ''}`}>
-              <div className="step-number">2</div>
-              <span>Security</span>
-            </div>
           </div>
 
           {/* Messages */}
@@ -217,180 +191,146 @@ const RegisterPage = () => {
             </div>
           )}
 
-          {/* Registration Form */}
-          <form onSubmit={onSubmit} className="auth-form">
-            {step === 1 && (
-              <>
-                <div className={`form-field ${errors.name ? 'error' : ''} ${isValidName(name) ? 'valid' : ''}`}>
-                  <label htmlFor="name">Full Name</label>
-                  <input
-                    id="name"
-                    type="text"
-                    name="name"
-                    value={name}
-                    onChange={onChange}
-                    placeholder="Enter your full name"
-                    maxLength={50}
-                  />
-                  {errors.name && <span className="field-error">{errors.name}</span>}
-                  {isValidName(name) && (
-                    <span className="field-success">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </span>
-                  )}
-                </div>
-
-                <div className={`form-field ${errors.email ? 'error' : ''} ${isValidEmail(email) ? 'valid' : ''}`}>
-                  <label htmlFor="email">Email Address</label>
-                  <input
-                    id="email"
-                    type="email"
-                    name="email"
-                    value={email}
-                    onChange={onChange}
-                    placeholder="Enter your email address"
-                  />
-                  {errors.email && <span className="field-error">{errors.email}</span>}
-                  {isValidEmail(email) && (
-                    <span className="field-success">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </span>
-                  )}
-                </div>
-
-                <div className={`form-field ${errors.phoneNumber ? 'error' : ''} ${isValidPhone(phoneNumber) ? 'valid' : ''}`}>
-                  <label htmlFor="phoneNumber">Phone Number</label>
-                  <input
-                    id="phoneNumber"
-                    type="text"
-                    name="phoneNumber"
-                    value={phoneNumber}
-                    onChange={onChange}
-                    placeholder="Enter your phone number"
-                    maxLength={15}
-                  />
-                  {errors.phoneNumber && <span className="field-error">{errors.phoneNumber}</span>}
-                  {isValidPhone(phoneNumber) && (
-                    <span className="field-success">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </span>
-                  )}
-                </div>
-
-                <div className={`form-field ${errors.address ? 'error' : ''} ${isValidAddress(address) ? 'valid' : ''}`}>
-                  <label htmlFor="address">Complete Address *</label>
-                  <textarea
-                    id="address"
-                    name="address"
-                    value={address}
-                    onChange={onChange}
-                    placeholder="Enter your complete address (house/building, street, area, city, pincode)"
-                    rows="3"
-                    maxLength={500}
-                    style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: '14px' }}
-                  />
-                  {errors.address && <span className="field-error">{errors.address}</span>}
-                  {isValidAddress(address) && (
-                    <span className="field-success">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </span>
-                  )}
-                  <small style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>
-                    Required for barrel delivery. Minimum 10 characters.
-                  </small>
-                </div>
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                <div className={`form-field ${errors.password ? 'error' : ''} ${isValidPassword(password) ? 'valid' : ''}`}>
-                  <label htmlFor="password">Password</label>
-                  <input
-                    id="password"
-                    type="password"
-                    name="password"
-                    value={password}
-                    onChange={onChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Create a strong password"
-                  />
-                  {errors.password && <span className="field-error">{errors.password}</span>}
-                  {isValidPassword(password) && (
-                    <span className="field-success">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </span>
-                  )}
-                </div>
-
-                <div className={`form-field ${errors.confirmPassword ? 'error' : ''} ${isPasswordMatch(password, confirmPassword) ? 'valid' : ''}`}>
-                  <label htmlFor="confirmPassword">Confirm Password</label>
-                  <input
-                    id="confirmPassword"
-                    type="password"
-                    name="confirmPassword"
-                    value={confirmPassword}
-                    onChange={onChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Confirm your password"
-                  />
-                  {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
-                  {isPasswordMatch(password, confirmPassword) && (
-                    <span className="field-success">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </span>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Form Actions */}
-            <div className="form-actions">
-              {step > 1 && (
-                <button type="button" className="btn-secondary" onClick={() => setStep(step - 1)}>
+          {/* Registration Form - All Fields */}
+          <form onSubmit={onSubmit} className="register-form">
+            <div className={`form-field ${errors.name ? 'error' : ''} ${isValidName(name) ? 'valid' : ''}`}>
+              <label htmlFor="name">Name</label>
+              <input
+                id="name"
+                type="text"
+                name="name"
+                value={name}
+                onChange={onChange}
+                placeholder="John Doe"
+                maxLength={50}
+              />
+              {errors.name && <span className="field-error">{errors.name}</span>}
+              {isValidName(name) && (
+                <span className="field-success">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  Previous
-                </button>
-              )}
-              
-              {step < 2 ? (
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => {
-                    if (!isValidName(name)) return setErrors({ name: 'Please enter a valid name' });
-                    if (!isValidEmail(email)) return setErrors({ email: 'Please enter a valid email address' });
-                    if (!isValidPhone(phoneNumber)) return setErrors({ phoneNumber: 'Please enter a valid phone number' });
-                    if (!isValidAddress(address)) return setErrors({ address: 'Please enter your complete address (minimum 10 characters)' });
-                    setStep(2);
-                  }}
-                >
-                  Continue
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              ) : (
-                <button className="btn-primary" type="submit" disabled={isLoading}>
-                  {isLoading && <div className="spinner"></div>}
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
-                </button>
+                </span>
               )}
             </div>
+
+            <div className={`form-field ${errors.email ? 'error' : ''} ${isValidEmail(email) ? 'valid' : ''}`}>
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                value={email}
+                onChange={onChange}
+                placeholder="hello@example.com"
+              />
+              {errors.email && <span className="field-error">{errors.email}</span>}
+              {isValidEmail(email) && (
+                <span className="field-success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              )}
+            </div>
+
+            <div className={`form-field ${errors.phoneNumber ? 'error' : ''} ${isValidPhone(phoneNumber) ? 'valid' : ''}`}>
+              <label htmlFor="phoneNumber">Phone Number</label>
+              <input
+                id="phoneNumber"
+                type="text"
+                name="phoneNumber"
+                value={phoneNumber}
+                onChange={onChange}
+                placeholder="+1 (555) 000-0000"
+                maxLength={15}
+              />
+              {errors.phoneNumber && <span className="field-error">{errors.phoneNumber}</span>}
+              {isValidPhone(phoneNumber) && (
+                <span className="field-success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              )}
+            </div>
+
+            <div className={`form-field ${errors.address ? 'error' : ''} ${isValidAddress(address) ? 'valid' : ''}`}>
+              <label htmlFor="address">Address</label>
+              <textarea
+                id="address"
+                name="address"
+                value={address}
+                onChange={onChange}
+                placeholder="123 Main St, City, Country"
+                rows="2"
+                maxLength={500}
+              />
+              {errors.address && <span className="field-error">{errors.address}</span>}
+              {isValidAddress(address) && (
+                <span className="field-success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              )}
+              <small style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '4px', display: 'block' }}>
+                Required for barrel delivery. Minimum 10 characters.
+              </small>
+            </div>
+
+            <div className={`form-field ${errors.password ? 'error' : ''} ${isValidPassword(password) ? 'valid' : ''}`}>
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                name="password"
+                value={password}
+                onChange={onChange}
+                onKeyDown={handleKeyDown}
+                placeholder="••••••••"
+              />
+              {errors.password && <span className="field-error">{errors.password}</span>}
+              {isValidPassword(password) && (
+                <span className="field-success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              )}
+            </div>
+
+            <div className={`form-field ${errors.confirmPassword ? 'error' : ''} ${isPasswordMatch(password, confirmPassword) ? 'valid' : ''}`}>
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                name="confirmPassword"
+                value={confirmPassword}
+                onChange={onChange}
+                onKeyDown={handleKeyDown}
+                placeholder="••••••••"
+              />
+              {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
+              {isPasswordMatch(password, confirmPassword) && (
+                <span className="field-success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <button className="btn-primary" type="submit" disabled={isLoading}>
+              {isLoading && <div className="spinner"></div>}
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {!isLoading && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
           </form>
 
           {/* Footer Links */}
@@ -398,7 +338,7 @@ const RegisterPage = () => {
             <div className="signup-prompt">
               Already have an account? 
               <Link to="/login" state={returnTo ? { from: returnTo } : undefined} className="link-primary">
-                Sign In
+                Sign in
               </Link>
             </div>
           </div>

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { getTransactions, updateTransaction, publishTransaction } from '../../services/customerService';
+import { getTransactions, downloadBillPdf } from '../../services/customerService';
 import './userDashboardTheme.css';
 
 const UserTransactions = () => {
@@ -11,19 +10,28 @@ const UserTransactions = () => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editData, setEditData] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-
-
-  // Stats for the top cards (calculated from current rows for demo, ideal would be API)
-  const totalAmount = rows.reduce((sum, r) => sum + (parseFloat(r.finalAmount) || 0), 0);
-  const pendingCount = rows.filter(r => !r.isVerified).length; // Assuming logical property
-
-
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
+
+  const handleDownloadPdf = async (id) => {
+    setDownloadingId(id);
+    try {
+      const blob = await downloadBillPdf(id);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `bill-${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(e.message || 'Download failed');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -41,60 +49,6 @@ const UserTransactions = () => {
 
 
   useEffect(() => { load(); }, [page, pageSize]);
-
-
-  const beginEdit = (tx) => {
-    const ok = window.confirm('Are you sure you want to edit this transaction?');
-    if (!ok) return;
-    setEditingId(tx.id || tx._id);
-    setEditData({
-      weightKg: tx.weightKg ?? tx.weight ?? '',
-      drcPercent: tx.drcPercent ?? '',
-      finalAmount: tx.finalAmount ?? '',
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditData({});
-  };
-
-  const saveEdit = async (id) => {
-    setSaving(true);
-    try {
-      await updateTransaction(id, editData);
-
-
-      // reflect changes locally to keep UX snappy
-
-      setRows(prev => prev.map(r => (r._id === id || r.id === id) ? { ...r, ...editData } : r));
-      setEditingId(null);
-      setEditData({});
-    } catch (e) {
-      alert(e?.message || 'Failed to save changes');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const doPublish = async (id) => {
-    const ok = window.confirm('Publish changes? This will finalize the transaction.');
-    if (!ok) return;
-    setPublishing(true);
-    try {
-      await publishTransaction(id);
-
-
-      // Optionally reload to ensure server state
-
-      await load();
-      alert('Published successfully');
-    } catch (e) {
-      alert(e?.message || 'Failed to publish');
-    } finally {
-      setPublishing(false);
-    }
-  };
 
   return (
 
@@ -181,20 +135,25 @@ const UserTransactions = () => {
             <table className="table">
               <thead>
                 <tr>
+                  <th>Invoice ID</th>
                   <th>Date</th>
-                  <th>Batch ID</th>
-                  <th>Weight (kg)</th>
-                  <th>DRC (%)</th>
+                  <th>Barrels</th>
+                  <th>DRC %</th>
                   <th>Amount (₹)</th>
+                  <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map(tx => {
                   const id = tx.id || tx._id;
-                  const isEditing = editingId === id;
                   return (
                     <tr key={id}>
+                      <td>
+                        <span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>
+                          {tx.batchId || tx.invoiceId || id.slice(-8).toUpperCase()}
+                        </span>
+                      </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <div style={{ width: '32px', height: '32px', background: '#f8fafc', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
@@ -206,60 +165,32 @@ const UserTransactions = () => {
                         </div>
                       </td>
                       <td>
-                        <span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>
-                          {tx.batchId || '#N/A'}
+                        <span style={{ fontWeight: '600' }}>{tx.barrelCount ?? tx.quantity ?? tx.weightKg ?? tx.weight ?? '-'}</span>
+                      </td>
+                      <td>
+                        <span>{tx.drcPercent ? `${tx.drcPercent}%` : '-'}</span>
+                      </td>
+                      <td>
+                        <span style={{ color: '#16a34a', fontWeight: '700' }}>
+                          {tx.finalAmount ? `₹${parseFloat(tx.finalAmount).toLocaleString('en-IN')}` : '-'}
                         </span>
                       </td>
                       <td>
-                        {isEditing ? (
-                          <input type="number" step="0.01" value={editData.weightKg}
-                            onChange={e => setEditData(d => ({ ...d, weightKg: e.target.value }))} style={{ width: '100px' }} />
-                        ) : (
-                          <span style={{ fontWeight: '600' }}>{tx.weightKg ?? tx.weight ?? '-'}</span>
-                        )}
-                      </td>
-                      <td>
-                        {isEditing ? (
-                          <input type="number" step="0.01" value={editData.drcPercent}
-                            onChange={e => setEditData(d => ({ ...d, drcPercent: e.target.value }))} style={{ width: '80px' }} />
-                        ) : (
-                          <span>{tx.drcPercent ? `${tx.drcPercent}%` : '-'}</span>
-                        )}
-                      </td>
-                      <td>
-                        {isEditing ? (
-                          <input type="number" step="0.01" value={editData.finalAmount}
-                            onChange={e => setEditData(d => ({ ...d, finalAmount: e.target.value }))} style={{ width: '100px' }} />
-                        ) : (
-                          <span style={{ color: '#16a34a', fontWeight: '700' }}>
-                            {tx.finalAmount ? `₹${parseFloat(tx.finalAmount).toLocaleString('en-IN')}` : '-'}
-                          </span>
-                        )}
+                        <span className={`badge status-${(tx.status || (tx.isVerified ? 'verified' : 'pending')).toLowerCase()}`}>
+                          {tx.status || (tx.isVerified ? 'Verified' : 'Pending')}
+                        </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                          {!isEditing ? (
-                            <>
-                              <Link to={`/user/transactions/${id}`} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
-                                View
-                              </Link>
-                              <button className="btn-secondary" onClick={() => beginEdit(tx)} style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
-                                Edit
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button className="btn" disabled={saving} onClick={() => saveEdit(id)} style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
-                                {saving ? '...' : 'Save'}
-                              </button>
-                              <button className="btn-secondary" onClick={cancelEdit} style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
-                                Cancel
-                              </button>
-                              <button className="btn" style={{ background: '#ef4444', borderColor: '#ef4444' }} disabled={publishing} onClick={() => doPublish(id)}>
-                                {publishing ? '...' : 'Publish'}
-                              </button>
-                            </>
-                          )}
+                          <button
+                            className="btn-secondary"
+                            disabled={downloadingId === id}
+                            onClick={() => handleDownloadPdf(id)}
+                            style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                          >
+                            <i className={downloadingId === id ? "fas fa-spinner fa-spin" : "fas fa-file-pdf"} style={{ color: downloadingId === id ? '#64748b' : '#ef4444' }}></i>
+                            {downloadingId === id ? '...' : 'Download PDF'}
+                          </button>
                         </div>
                       </td>
                     </tr>

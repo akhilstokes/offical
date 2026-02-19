@@ -36,6 +36,9 @@ router.patch('/:id/approve', protect, authorize('admin', 'manager'), salaryContr
 // Mark as paid
 router.patch('/:id/pay', protect, authorize('admin', 'accountant'), salaryController.markAsPaid);
 
+// Mark payslip as sent to staff
+router.post('/mark-sent', protect, authorize('admin', 'accountant'), salaryController.markPayslipAsSent);
+
 // Delete salary record
 router.delete('/:id', protect, authorize('admin'), salaryController.deleteSalaryRecord);
 

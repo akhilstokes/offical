@@ -118,6 +118,23 @@ const LabCheckIn = () => {
     });
   };
 
+  // Copy DRC from first barrel to all others
+  const copyDrcToAll = () => {
+    if (barrels.length === 0 || !barrels[0].drc) {
+      alert('Please enter DRC value for Barrel 1 first');
+      return;
+    }
+    
+    const firstDrc = barrels[0].drc;
+    setBarrels(prev => prev.map((barrel, idx) => ({
+      ...barrel,
+      drc: idx === 0 ? barrel.drc : firstDrc
+    })));
+    
+    setMessage(`DRC value ${firstDrc}% copied to all ${barrels.length} barrels`);
+    setTimeout(() => setMessage(''), 3000);
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setMessage(''); setError(''); setValidation({});
@@ -429,9 +446,35 @@ const LabCheckIn = () => {
         {/* DRC inputs for each barrel */}
         {form.barrelCount > 0 && (
           <div style={{ gridColumn: '1 / -1', marginTop: 16 }}>
-            <h4 style={{ marginBottom: 12, color: '#1e293b', fontSize: '16px' }}>
-              DRC Values for Each Barrel <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
-            </h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h4 style={{ margin: 0, color: '#1e293b', fontSize: '16px' }}>
+                DRC Values for Each Barrel <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
+              </h4>
+              {form.barrelCount > 1 && (
+                <button
+                  type="button"
+                  onClick={copyDrcToAll}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
+                >
+                  <span>📋</span> Copy Barrel 1 DRC to All
+                </button>
+              )}
+            </div>
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
@@ -444,18 +487,23 @@ const LabCheckIn = () => {
               {barrels.map((barrel, idx) => (
                 <div key={idx} style={{
                   padding: 12,
-                  backgroundColor: 'white',
+                  backgroundColor: idx === 0 ? '#fef3c7' : 'white',
                   borderRadius: '6px',
-                  border: '1px solid #e2e8f0'
+                  border: idx === 0 ? '2px solid #f59e0b' : '1px solid #e2e8f0'
                 }}>
                   <label style={{ marginBottom: 0 }}>
                     <div style={{
                       fontWeight: '600',
-                      color: '#475569',
+                      color: idx === 0 ? '#92400e' : '#475569',
                       marginBottom: 6,
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
                     }}>
+                      {idx === 0 && <span>🔬</span>}
                       Barrel {idx + 1} DRC (%)
+                      {idx === 0 && <span style={{ fontSize: '11px', color: '#92400e' }}>(Test First)</span>}
                     </div>
                     <input 
                       type="number" 
@@ -468,7 +516,8 @@ const LabCheckIn = () => {
                       required
                       style={{
                         width: '100%',
-                        borderColor: validation[`barrel_${idx}_drc`] ? '#ef4444' : undefined
+                        borderColor: validation[`barrel_${idx}_drc`] ? '#ef4444' : undefined,
+                        fontWeight: idx === 0 ? '600' : 'normal'
                       }}
                     />
                     {validation[`barrel_${idx}_drc`] && (
@@ -494,7 +543,7 @@ const LabCheckIn = () => {
               fontSize: '14px',
               color: '#1e40af'
             }}>
-              <strong>ℹ️ Note:</strong> Enter the DRC percentage for each barrel separately. The average will be calculated automatically.
+              <strong>💡 Quick Workflow:</strong> Test Barrel 1 first, then click "Copy Barrel 1 DRC to All" if all barrels are from the same batch. The average will be calculated automatically.
             </div>
           </div>
         )}

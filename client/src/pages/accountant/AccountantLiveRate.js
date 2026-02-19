@@ -285,10 +285,14 @@ const AccountantLiveRate = () => {
 
   return (
     <div className="accountant-live-rate">
-      {/* Header */}
+      {/* Header - Consistent with web design model */}
       <div className="page-header">
-        <h1 className="page-title">Live Rate Management - Latex 60%</h1>
-        <p className="page-subtitle">Submit daily latex rates for admin approval</p>
+        <div className="header-actions-left">
+          <h1 className="page-title">Live Rate Management</h1>
+        </div>
+        <div className="header-actions-right">
+          <p className="page-subtitle">Submit daily latex rates for admin approval</p>
+        </div>
       </div>
 
       {/* Alerts */}

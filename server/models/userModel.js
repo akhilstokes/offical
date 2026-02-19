@@ -224,7 +224,18 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
         min: 0
-    }
+    },
+    
+    // Bank Details for Payments
+    accountHolderName: { type: String, trim: true },
+    accountNumber: { type: String, trim: true },
+    ifscCode: { type: String, trim: true, uppercase: true },
+    bankName: { type: String, trim: true },
+    branchName: { type: String, trim: true },
+    
+    // Digital Signature (for bills and documents)
+    signatureUrl: { type: String }, // URL to uploaded signature image
+    signatureUploadedAt: { type: Date }
 
 }, { timestamps: true });
 

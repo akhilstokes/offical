@@ -35,7 +35,6 @@ const AccountantDashboardLayout = ({ children }) => {
         <div className="sidebar-header">Accountant</div>
         <ul className="sidebar-nav">
           <li className="nav-item"><NavLink to="/accountant">Dashboard</NavLink></li>
-          <li className="nav-item"><NavLink to="/accountant/wages">Auto Wages</NavLink></li>
           <li className="nav-item"><NavLink to="/accountant/rates">Set Live Rate</NavLink></li>
           <li className="nav-item"><NavLink to="/accountant/stock">Stock Monitor</NavLink></li>
           <li className="nav-item"><NavLink to="/accountant/my-attendance">My Attendance</NavLink></li>

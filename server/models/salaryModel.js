@@ -111,6 +111,18 @@ const salaryRecordSchema = new mongoose.Schema({
   paidBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  // Payslip Notification Status
+  payslipSent: {
+    type: Boolean,
+    default: false
+  },
+  payslipSentAt: {
+    type: Date
+  },
+  payslipSentBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, {
   timestamps: true

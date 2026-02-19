@@ -32,10 +32,11 @@ router.post('/tax/record', protect, adminManagerAccountant, accountantController
 router.put('/tax/record/:id', protect, adminManagerAccountant, accountantController.updateTaxRecord);
 router.delete('/tax/record/:id', protect, adminManagerAccountant, accountantController.deleteTaxRecord);
 
-// Document Management CRUD
+// Document Management
 router.get('/documents', protect, adminManagerAccountant, accountantController.getDocuments);
-router.post('/document', protect, adminManagerAccountant, accountantController.addDocument);
-router.put('/document/:id', protect, adminManagerAccountant, accountantController.updateDocument);
-router.delete('/document/:id', protect, adminManagerAccountant, accountantController.deleteDocument);
+const upload = require('../middleware/uploadMiddleware');
+router.post('/documents/upload', protect, adminManagerAccountant, upload.single('file'), accountantController.uploadDocument);
+router.get('/documents/:id/download', protect, adminManagerAccountant, accountantController.downloadDocument);
+router.delete('/documents/:id', protect, adminManagerAccountant, accountantController.deleteDocument);
 
 module.exports = router;

@@ -51,12 +51,14 @@ const SellBarrels = () => {
 
   const loadData = async () => {
     setLoading(true);
+    setError(''); // Clear errors when loading
     try {
       const data = await getMySellBarrelIntakes();
       setSellRequests(Array.isArray(data) ? data : (data.items || []));
     } catch (err) {
       console.error('Error loading sell requests:', err);
       setSellRequests([]);
+      // Don't show error to user for initial load failure
     } finally {
       setLoading(false);
     }
@@ -66,8 +68,11 @@ const SellBarrels = () => {
     try {
       const count = await getMyCompanyBarrelsCount();
       setMyCompanyBarrels(Number(count) || 0);
-    } catch {
+      setError(''); // Clear any previous errors
+    } catch (err) {
+      console.error('Error loading barrel count:', err);
       setMyCompanyBarrels(0);
+      // Don't show error to user - just default to 0 barrels
     }
   };
 

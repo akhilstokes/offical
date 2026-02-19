@@ -63,7 +63,6 @@ import LabShiftSchedule from "./pages/lab/LabShiftSchedule";
 import AccountantProtectedRoute from "./components/common/AccountantProtectedRoute";
 import AccountantLayoutAntigravity from "./layouts/AccountantLayoutAntigravity";
 import AccountantDashboard from "./pages/accountant/AccountantDashboard";
-import AccountantWages from "./pages/accountant/AccountantWages";
 import AccountantLatexVerify from "./pages/accountant/AccountantLatexVerify";
 import AccountantExpenseTracker from "./pages/accountant/AccountantExpenseTracker";
 import AccountantStockMonitor from "./pages/accountant/AccountantStockMonitor";
@@ -124,6 +123,8 @@ import FieldStaffRoutes from "./pages/field-staff/FieldStaffRoutes";
 import FieldStaffReports from "./pages/field-staff/FieldStaffReports";
 import FieldStaffProfile from "./pages/field-staff/FieldStaffProfile";
 import FieldStaffDashboard from "./components/dashboards/FieldStaffDashboard";
+import FieldStaffDashboardPage from "./pages/field-staff/FieldStaffDashboardPage";
+import FieldStaffSalary from "./pages/field-staff/FieldStaffSalary";
 
 // Delivery Staff
 import DeliveryProtectedRoute from "./components/common/DeliveryProtectedRoute";
@@ -158,6 +159,11 @@ import AdminExpenses from "./pages/admin/AdminExpenses";
 import AdminChemicalRequests from "./pages/admin/AdminChemicalRequests";
 import AdminRateVerification from "./pages/admin/AdminRateVerification";
 import AdminRateApproval from "./pages/admin/AdminRateApproval";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminReports from "./pages/admin/AdminReports";
+import AdminPerformance from "./pages/admin/AdminPerformance";
+import AdminHealth from "./pages/admin/AdminHealth";
+import AdminOverview from "./pages/admin/AdminOverview";
 
 function App() {
   return (
@@ -419,38 +425,6 @@ function App() {
             <StaffProtectedRoute>
               <StaffDashboardLayout>
                 <div style={{padding: '20px'}}><h2>Settings</h2><p>This page is under development.</p></div>
-              </StaffDashboardLayout>
-            </StaffProtectedRoute>
-          }
-        />
-
-        {/* Field Staff Routes */}
-        <Route
-          path="/field-staff/dashboard"
-          element={
-            <StaffProtectedRoute>
-              <StaffDashboardLayout>
-                <FieldStaffDashboard />
-              </StaffDashboardLayout>
-            </StaffProtectedRoute>
-          }
-        />
-        <Route
-          path="/field-staff/routes"
-          element={
-            <StaffProtectedRoute>
-              <StaffDashboardLayout>
-                <FieldStaffRoutes />
-              </StaffDashboardLayout>
-            </StaffProtectedRoute>
-          }
-        />
-        <Route
-          path="/field-staff/reports"
-          element={
-            <StaffProtectedRoute>
-              <StaffDashboardLayout>
-                <FieldStaffReports />
               </StaffDashboardLayout>
             </StaffProtectedRoute>
           }
@@ -1074,6 +1048,66 @@ function App() {
           }
         />
         <Route
+          path="/admin/barrel-management"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <BarrelManagement />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminStaffManagement />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminReports />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/performance"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminPerformance />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/health"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminHealth />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/overview"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminOverview />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/expenses"
           element={
             <AdminProtectedRoute>
@@ -1128,7 +1162,7 @@ function App() {
           element={
             <AdminProtectedRoute>
               <AdminDashboardLayout>
-                <div style={{padding: '20px'}}><h2>Admin Settings</h2><p>This page is under development.</p></div>
+                <AdminSettings />
               </AdminDashboardLayout>
             </AdminProtectedRoute>
           }
@@ -1141,16 +1175,6 @@ function App() {
             <AccountantProtectedRoute>
               <AccountantLayoutAntigravity>
                 <AccountantDashboard />
-              </AccountantLayoutAntigravity>
-            </AccountantProtectedRoute>
-          }
-        />
-        <Route
-          path="/accountant/wages"
-          element={
-            <AccountantProtectedRoute>
-              <AccountantLayoutAntigravity>
-                <AccountantWages />
               </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }

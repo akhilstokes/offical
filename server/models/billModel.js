@@ -1,6 +1,14 @@
 const mongoose = require('mongoose');
 
 const billSchema = new mongoose.Schema({
+  // Company Information (snapshot at time of bill creation)
+  companyName: { type: String, default: 'Holy Family Polymers' },
+  companyAddress: { type: String, default: 'Kooroppada, P.O. - 686 502' },
+  companyGST: { type: String, default: '32AAHFH5388M1ZX' },
+  companyPhone: { type: String },
+  companyEmail: { type: String },
+  companyLogoUrl: { type: String },
+  
   // Bill Information
   billNumber: { 
     type: String, 
@@ -60,10 +68,21 @@ const billSchema = new mongoose.Schema({
   paymentMethod: { type: String },
   paymentReference: { type: String },
   
+  // Bank Details Used for this specific payment (snapshot)
+  paymentBankName: { type: String },
+  paymentAccountNumber: { type: String },
+  paymentIfscCode: { type: String },
+  
   // Notes
   accountantNotes: { type: String },
   managerNotes: { type: String },
   rejectionReason: { type: String },
+  
+  // Signatures (auto-captured when bill is created/verified)
+  accountantSignature: { type: String }, // Accountant's name (auto-filled from createdBy)
+  accountantSignatureUrl: { type: String }, // Optional: URL to signature image
+  managerSignature: { type: String }, // Manager's name (auto-filled from verifiedBy)
+  managerSignatureUrl: { type: String }, // Optional: URL to signature image
   
   // Link to user (customer)
   userId: { 

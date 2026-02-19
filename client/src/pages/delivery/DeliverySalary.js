@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
+import '../staff/MySalary.css'; // Reuse the same CSS
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -10,59 +12,33 @@ function authHeaders() {
 
 const DeliverySalary = () => {
   const { user } = useAuth();
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [salaries, setSalaries] = useState([]);
+  const [dailyRate, setDailyRate] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  const parseList = async (res) => {
-    const ct = res.headers.get('content-type') || '';
-    const isJson = ct.includes('application/json');
-    const body = isJson ? await res.json() : { error: await res.text() };
-    const list = Array.isArray(body?.data) ? body.data
-              : Array.isArray(body?.payslips) ? body.payslips
-              : Array.isArray(body) ? body
-              : [];
-    return { list, body };
-  };
+  const [showPayslip, setShowPayslip] = useState(false);
+  const [selectedPayslip, setSelectedPayslip] = useState(null);
 
   const load = async () => {
     if (!user?._id) return;
-    setLoading(true); setError(''); setRows([]);
+    setLoading(true);
     try {
-      // Try primary endpoint
-      let res = await fetch(`${API}/api/salary/history/${user._id}`, { headers: authHeaders(), credentials: 'include' });
+      const res = await fetch(`${API}/api/salary/my-salary`, {
+        headers: authHeaders()
+      });
+
       if (!res.ok) {
-        // Fallback 1: unified wages payslips with userId + group
-        res = await fetch(`${API}/api/wages/payslips?userId=${encodeURIComponent(user._id)}&group=delivery`, { headers: authHeaders(), credentials: 'include' });
+        throw new Error('Failed to load salary data');
       }
-      if (!res.ok) {
-        // Fallback 2: wages payslips by token + group
-        res = await fetch(`${API}/api/wages/payslips?group=delivery`, { headers: authHeaders(), credentials: 'include' });
-      }
-      if (!res.ok) {
-        // Fallback 3: wages payslips by role key
-        res = await fetch(`${API}/api/wages/payslips?role=delivery_staff`, { headers: authHeaders(), credentials: 'include' });
-      }
-      if (!res.ok) {
-        // Fallback 4: salary history by query param staffId
-        res = await fetch(`${API}/api/salary/history?staffId=${encodeURIComponent(user._id)}`, { headers: authHeaders(), credentials: 'include' });
-      }
-      if (!res.ok) {
-        const text = await res.text();
-        if (res.status === 404) {
-          // Endpoint not available yet – show a concise hint and return empty list
-          setError('Salary history is not available yet.');
-          setRows([]);
-          return;
-        }
-        throw new Error(`Failed to load (${res.status})`);
-      }
-      const { list } = await parseList(res);
-      setRows(list);
-    } catch (e) {
-      // Remove any potential HTML from error text
-      const msg = (e?.message || 'Failed to load salary').replace(/<[^>]*>/g, '');
-      setError(msg);
+
+      const response = await res.json();
+      setSalaries(response.data || []);
+      const rate = response.dailyRate || 500; // Default 500 for delivery staff
+      console.log('Delivery Daily Rate loaded:', rate); // Debug log
+      setDailyRate(rate);
+    } catch (err) {
+      setError(err.message || 'Failed to load salary');
+      toast.error('Failed to load salary data');
     } finally {
       setLoading(false);
     }
@@ -70,46 +46,420 @@ const DeliverySalary = () => {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?._id]);
 
+  const getMonthName = (monthNum) => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[monthNum - 1] || 'Unknown';
+  };
+
+  const getStatusBadge = (status) => {
+    const statusColors = {
+      pending: 'status-pending',
+      approved: 'status-approved',
+      paid: 'status-paid',
+      rejected: 'status-rejected'
+    };
+    return statusColors[status] || 'status-pending';
+  };
+
+  const viewPayslip = (salary) => {
+    const payslip = {
+      staff: {
+        name: user?.name || 'Delivery Staff',
+        email: user?.email || '',
+        role: user?.role || 'delivery_staff'
+      },
+      monthName: getMonthName(salary.month),
+      month: salary.month,
+      year: salary.year,
+      period: salary.period || `${getMonthName(salary.month)} ${salary.year}`,
+      wageType: salary.wageType || 'Weekly',
+      workingDays: salary.presentDays || salary.totalDays || salary.workingDays || 0,
+      numberOfWeeks: salary.numberOfWeeks || 1,
+      dailyRate: salary.dailyRate || dailyRate,
+      basicSalary: salary.basicSalary || 0,
+      medicalAllowance: salary.medicalAllowance || 0,
+      transportationAllowance: salary.transportationAllowance || 0,
+      overtime: salary.overtime || 0,
+      bonus: salary.bonus || 0,
+      grossSalary: salary.grossSalary || 0,
+      deductions: {
+        providentFund: salary.deductions?.providentFund || 0,
+        professionalTax: salary.deductions?.professionalTax || 0,
+        incomeTax: salary.deductions?.tax || salary.deductions?.incomeTax || 0,
+        otherDeductions: salary.deductions?.other || salary.deductions?.otherDeductions || 0
+      },
+      totalDeductions: salary.totalDeductions || 0,
+      netSalary: salary.netSalary || 0,
+      status: salary.status || 'pending',
+      paymentDate: salary.paymentDate,
+      generatedAt: salary.createdAt,
+      generatedDate: new Date(salary.createdAt || Date.now()).toLocaleDateString('en-IN', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+      })
+    };
+
+    setSelectedPayslip(payslip);
+    setShowPayslip(true);
+  };
+
+  // Helper function to convert number to words (for Indian numbering system)
+  const convertToWords = (amount) => {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    
+    if (amount === 0) return 'Zero';
+    
+    const num = Math.floor(amount);
+    let words = '';
+    
+    // Lakhs
+    if (num >= 100000) {
+      words += convertToWords(Math.floor(num / 100000)) + ' Lakh ';
+      amount = num % 100000;
+    }
+    
+    // Thousands
+    if (num >= 1000) {
+      words += convertToWords(Math.floor(num / 1000)) + ' Thousand ';
+      amount = num % 1000;
+    }
+    
+    // Hundreds
+    if (num >= 100) {
+      words += ones[Math.floor(num / 100)] + ' Hundred ';
+      amount = num % 100;
+    }
+    
+    // Tens and Ones
+    if (num >= 20) {
+      words += tens[Math.floor(num / 10)] + ' ';
+      words += ones[num % 10];
+    } else if (num >= 10) {
+      words += teens[num - 10];
+    } else if (num > 0) {
+      words += ones[num];
+    }
+    
+    return words.trim();
+  };
+
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <h2>My Salary</h2>
-        <button onClick={load} disabled={loading}>{loading ? 'Refreshing...' : 'Refresh'}</button>
+    <div className="my-salary-page">
+      <div className="salary-header">
+        <h1>My Salary</h1>
+        <p>View your salary information and payment history</p>
       </div>
-      {error && <div style={{ color:'tomato', marginTop:8 }}>{error}</div>}
-      <div style={{ marginTop: 12, overflowX: 'auto' }}>
-        <table className="dashboard-table" style={{ minWidth: 780 }}>
-          <thead>
-            <tr>
-              <th>Month</th>
-              <th>Year</th>
-              <th>Gross</th>
-              <th>Deductions</th>
-              <th>Net Pay</th>
-              <th>Status</th>
-              <th>Approved At</th>
-              <th>Paid At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, idx) => (
-              <tr key={r._id || idx}>
-                <td>{r.month ?? r.period?.month ?? '-'}</td>
-                <td>{r.year ?? r.period?.year ?? '-'}</td>
-                <td>{r.grossAmount ?? r.grossSalary ?? r.amount?.gross ?? '-'}</td>
-                <td>{r.totalDeductions ?? r.deductions ?? r.amount?.deductions ?? '-'}</td>
-                <td>{r.netPay ?? r.amount?.net ?? '-'}</td>
-                <td>{r.status || r.state || '-'}</td>
-                <td>{r.approvedAt ? new Date(r.approvedAt).toLocaleString() : (r.approved_at ? new Date(r.approved_at).toLocaleString() : '-')}</td>
-                <td>{r.paidAt ? new Date(r.paidAt).toLocaleString() : (r.paid_at ? new Date(r.paid_at).toLocaleString() : '-')}</td>
-              </tr>
-            ))}
-            {rows.length === 0 && !loading && (
-              <tr><td colSpan={8} style={{ textAlign:'center', color:'#6b7280' }}>No salary records.</td></tr>
-            )}
-          </tbody>
-        </table>
+
+      {/* Daily Rate Card */}
+      <div style={{
+        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+        color: '#ffffff',
+        padding: '30px',
+        borderRadius: '12px',
+        margin: '0 40px 30px 40px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '24px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+      }}>
+        <div style={{
+          width: '80px',
+          height: '80px',
+          background: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '32px',
+          flexShrink: '0',
+          color: '#ffffff'
+        }}>
+          <i className="fas fa-rupee-sign" style={{color: '#ffffff !important'}}></i>
+        </div>
+        <div style={{flex: '1', color: '#ffffff'}}>
+          <h3 style={{
+            color: '#ffffff !important',
+            fontSize: '16px !important',
+            fontWeight: '600 !important',
+            margin: '0 0 8px 0 !important',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Daily Rate
+          </h3>
+          <p style={{
+            color: '#ffffff !important',
+            fontSize: '36px !important',
+            fontWeight: '700 !important',
+            margin: '0 0 4px 0 !important',
+            lineHeight: '1 !important'
+          }}>
+            ₹{dailyRate.toFixed(2)}
+          </p>
+          <span style={{
+            color: '#ffffff !important',
+            fontSize: '14px !important',
+            display: 'block !important',
+            fontWeight: '400 !important'
+          }}>
+            Per Day
+          </span>
+        </div>
       </div>
+
+      {error && <div className="error-alert">{error}</div>}
+
+      {/* Salary Records */}
+      <div className="salary-records-card">
+        <div className="card-header">
+          <h2>Salary History</h2>
+          <button onClick={load} className="refresh-btn" disabled={loading}>
+            <i className="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <p>Loading salary records...</p>
+          </div>
+        ) : salaries.length > 0 ? (
+          <div className="salary-table-wrapper">
+            <table className="salary-table">
+              <thead>
+                <tr>
+                  <th>MONTH</th>
+                  <th>YEAR</th>
+                  <th>GROSS</th>
+                  <th>DEDUCTIONS</th>
+                  <th>NET PAY</th>
+                  <th>STATUS</th>
+                  <th>ACTION</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salaries.map((salary) => (
+                  <tr key={salary._id}>
+                    <td>
+                      <span className="month-badge">{getMonthName(salary.month)}</span>
+                    </td>
+                    <td>{salary.year}</td>
+                    <td className="amount-cell">₹{salary.grossSalary.toFixed(2)}</td>
+                    <td className="amount-cell deduction">₹{salary.totalDeductions.toFixed(2)}</td>
+                    <td className="amount-cell net">₹{salary.netSalary.toFixed(2)}</td>
+                    <td>
+                      <span className={`status-badge ${getStatusBadge(salary.status)}`}>
+                        {salary.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <button 
+                        className="view-payslip-btn"
+                        onClick={() => viewPayslip(salary)}
+                      >
+                        <i className="fas fa-file-invoice"></i> View Payslip
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <i className="fas fa-file-invoice-dollar"></i>
+            <p>No salary records found</p>
+            <span>Your salary records will appear here once generated</span>
+          </div>
+        )}
+      </div>
+
+      {/* Payslip Modal */}
+      {showPayslip && selectedPayslip && (
+        <div className="modal-overlay" onClick={() => setShowPayslip(false)}>
+          <div className="modal-content payslip-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Salary Payslip</h3>
+              <button className="close-btn" onClick={() => setShowPayslip(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="payslip-content">
+              {/* Company Header */}
+              <div className="payslip-header">
+                <h2>Holy Family Polymers</h2>
+                <h3>Salary Slip</h3>
+                <p className="payslip-month">{selectedPayslip.monthName} {selectedPayslip.year}</p>
+                <p className="generated-date">Generated on: {selectedPayslip.generatedDate}</p>
+              </div>
+
+              {/* Employee Details */}
+              <div className="payslip-section">
+                <h4>Employee Details</h4>
+                <div className="detail-grid">
+                  <div className="detail-row">
+                    <span className="detail-label">Name:</span>
+                    <span className="detail-value">{selectedPayslip.staff.name}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Email:</span>
+                    <span className="detail-value">{selectedPayslip.staff.email}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Role:</span>
+                    <span className="detail-value">{selectedPayslip.staff.role?.replace('_', ' ').toUpperCase()}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Wage Type:</span>
+                    <span className="detail-value">{selectedPayslip.wageType}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Salary Period */}
+              <div className="payslip-section">
+                <h4>Salary Period</h4>
+                <div className="detail-grid">
+                  <div className="detail-row">
+                    <span className="detail-label">Period:</span>
+                    <span className="detail-value">{selectedPayslip.period}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Working Days:</span>
+                    <span className="detail-value">
+                      {selectedPayslip.workingDays} {selectedPayslip.wageType === 'Weekly' ? `days/week × ${selectedPayslip.numberOfWeeks} weeks` : 'days'}
+                    </span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Daily Rate:</span>
+                    <span className="detail-value">₹{(selectedPayslip.dailyRate || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Earnings Breakdown */}
+              <div className="payslip-section">
+                <h4>Earnings</h4>
+                <div className="breakdown-table">
+                  <div className="breakdown-row">
+                    <span>Base Salary</span>
+                    <span>₹{(selectedPayslip.basicSalary || 0).toFixed(2)}</span>
+                  </div>
+                  {(selectedPayslip.medicalAllowance || 0) > 0 && (
+                    <div className="breakdown-row">
+                      <span>Medical Allowance</span>
+                      <span>₹{(selectedPayslip.medicalAllowance || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {(selectedPayslip.transportationAllowance || 0) > 0 && (
+                    <div className="breakdown-row">
+                      <span>Transportation Allowance</span>
+                      <span>₹{(selectedPayslip.transportationAllowance || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {(selectedPayslip.overtime || 0) > 0 && (
+                    <div className="breakdown-row">
+                      <span>Overtime</span>
+                      <span>₹{(selectedPayslip.overtime || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {(selectedPayslip.bonus || 0) > 0 && (
+                    <div className="breakdown-row">
+                      <span>Bonus</span>
+                      <span>₹{(selectedPayslip.bonus || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="breakdown-row total">
+                    <span>Gross Salary</span>
+                    <span>₹{(selectedPayslip.grossSalary || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Deductions Breakdown */}
+              <div className="payslip-section">
+                <h4>Deductions</h4>
+                <div className="breakdown-table">
+                  {(selectedPayslip.deductions?.providentFund || 0) > 0 && (
+                    <div className="breakdown-row deduction">
+                      <span>Provident Fund</span>
+                      <span>₹{(selectedPayslip.deductions?.providentFund || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {(selectedPayslip.deductions?.professionalTax || 0) > 0 && (
+                    <div className="breakdown-row deduction">
+                      <span>Professional Tax</span>
+                      <span>₹{(selectedPayslip.deductions?.professionalTax || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {(selectedPayslip.deductions?.incomeTax || 0) > 0 && (
+                    <div className="breakdown-row deduction">
+                      <span>Income Tax</span>
+                      <span>₹{(selectedPayslip.deductions?.incomeTax || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {(selectedPayslip.deductions?.otherDeductions || 0) > 0 && (
+                    <div className="breakdown-row deduction">
+                      <span>Other Deductions</span>
+                      <span>₹{(selectedPayslip.deductions?.otherDeductions || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {(selectedPayslip.totalDeductions || 0) === 0 && (
+                    <div className="breakdown-row">
+                      <span>No Deductions</span>
+                      <span>₹0.00</span>
+                    </div>
+                  )}
+                  {(selectedPayslip.totalDeductions || 0) > 0 && (
+                    <div className="breakdown-row total deduction">
+                      <span>Total Deductions</span>
+                      <span>₹{(selectedPayslip.totalDeductions || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Net Salary */}
+              <div className="payslip-net-salary">
+                <div className="net-salary-row">
+                  <span>Net Salary</span>
+                  <span className="net-amount">₹{(selectedPayslip.netSalary || 0).toFixed(2)}</span>
+                </div>
+                <p className="net-salary-words">
+                  (Amount in words: {convertToWords(selectedPayslip.netSalary || 0)} Rupees Only)
+                </p>
+              </div>
+
+              {/* Footer Note */}
+              <div className="payslip-footer">
+                <p>This is a computer-generated payslip and does not require a signature.</p>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                type="button" 
+                onClick={() => window.print()} 
+                className="btn-secondary"
+              >
+                <i className="fas fa-print"></i> Print
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setShowPayslip(false)} 
+                className="btn-primary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

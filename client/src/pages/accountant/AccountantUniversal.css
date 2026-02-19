@@ -1,0 +1,598 @@
+/* Universal Full-Width Design for ALL Accountant Pages */
+/* Apply this to every accountant page for consistent modern design */
+
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Full-Width Container */
+.accountant-page,
+.accountant-container,
+.stock-monitor-container,
+.latex-verify-container,
+.verify-latex-container,
+.accountant-salaries,
+.accountant-attendance,
+.accountant-live-rate,
+.accountant-delivery-intake,
+.accountant-reports,
+.accountant-documents,
+.accountant-expenses,
+.accountant-vendor-ledger,
+.accountant-alerts,
+.bill-generation-container {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Page Header - Full Width */
+.page-header,
+.salaries-header,
+.attendance-header,
+.stock-header,
+.latex-header,
+.verify-header,
+.reports-header,
+.documents-header,
+.expenses-header,
+.vendor-header,
+.alerts-header,
+.bill-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 60px 80px !important;
+  margin: 0 !important;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header::before,
+.salaries-header::before,
+.attendance-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: headerPulse 8s ease-in-out infinite;
+}
+
+@keyframes headerPulse {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.1); opacity: 0.5; }
+}
+
+.page-header h1,
+.salaries-header h1,
+.attendance-header h1,
+.stock-header h1,
+.latex-header h2,
+.verify-header h2 {
+  font-size: 3.5em !important;
+  color: white !important;
+  margin-bottom: 15px !important;
+  font-weight: 800 !important;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
+  letter-spacing: -1px;
+}
+
+.page-header p,
+.salaries-header p,
+.attendance-header p {
+  font-size: 1.3em !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  font-weight: 400;
+  position: relative;
+  z-index: 1;
+}
+
+/* Content Area - Full Width */
+.page-content,
+.content-area,
+.main-content,
+.staff-table-card,
+.table-container,
+.attendance-container,
+.stock-content,
+.latex-content,
+.reports-content,
+.documents-content,
+.expenses-content {
+  padding: 60px 80px !important;
+  width: 100%;
+  max-width: none !important;
+  background: transparent;
+}
+
+/* Cards and Panels - Full Width */
+.card,
+.panel,
+.data-card,
+.info-card,
+.stat-card,
+.summary-card,
+.kpi-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: none;
+  margin-bottom: 30px;
+  transition: all 0.3s ease;
+}
+
+.card:hover,
+.panel:hover,
+.data-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Tables - Full Width */
+.table-wrapper,
+.table-responsive,
+.data-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 0;
+}
+
+table,
+.staff-table,
+.data-table,
+.attendance-table {
+  width: 100% !important;
+  border-collapse: collapse;
+  background: white;
+}
+
+table thead,
+.staff-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+table th,
+.staff-table th {
+  padding: 20px !important;
+  text-align: left;
+  font-weight: 700 !important;
+  color: white !important;
+  font-size: 0.95em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none !important;
+}
+
+table td,
+.staff-table td {
+  padding: 18px 20px !important;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  font-size: 0.95em;
+}
+
+table tbody tr:hover,
+.staff-table tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  transform: scale(1.01);
+  transition: all 0.2s ease;
+}
+
+/* Buttons - Modern Style */
+.btn,
+.action-btn,
+.primary-btn,
+.secondary-btn,
+button:not(.close-btn):not(.logout-btn) {
+  padding: 14px 32px !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  font-size: 0.95em !important;
+  cursor: pointer;
+  transition: all 0.3s ease !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary,
+.primary-btn,
+.action-btn.calculator-btn:not(.disabled) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+}
+
+.btn-primary:hover,
+.primary-btn:hover,
+.action-btn:hover:not(.disabled) {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+.btn-secondary,
+.secondary-btn {
+  background: white !important;
+  color: #667eea !important;
+  border: 2px solid #667eea !important;
+}
+
+.btn-secondary:hover {
+  background: #667eea !important;
+  color: white !important;
+}
+
+/* Grid Layouts - Full Width */
+.grid,
+.summary-grid,
+.stats-grid,
+.kpi-grid,
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+/* Summary Cards */
+.summary-card,
+.stat-card,
+.kpi-card {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-left: 5px solid #667eea;
+  transition: all 0.3s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.summary-card .label,
+.stat-card .label {
+  font-size: 0.85em;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.summary-card .value,
+.stat-card .value {
+  font-size: 2.5em;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 10px 0;
+}
+
+/* Filters and Controls - Full Width */
+.filter-section,
+.controls-toolbar,
+.search-container,
+.filter-bar {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 25px 30px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+  width: 100%;
+}
+
+.filter-select,
+.search-input,
+input[type="text"],
+input[type="date"],
+input[type="number"],
+select {
+  padding: 12px 20px !important;
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  font-size: 0.95em !important;
+  transition: all 0.3s ease !important;
+  background: white;
+}
+
+.filter-select:focus,
+.search-input:focus,
+input:focus,
+select:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+  outline: none !important;
+}
+
+/* Status Badges */
+.status-badge,
+.badge,
+.role-badge,
+.wage-type-badge {
+  padding: 8px 16px !important;
+  border-radius: 20px !important;
+  font-size: 0.85em !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+}
+
+.badge-present,
+.status-badge.badge-present {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #065f46;
+}
+
+.badge-absent,
+.status-badge.badge-absent {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+}
+
+.badge-pending {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+}
+
+.badge-approved {
+  background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%);
+  color: #1e40af;
+}
+
+/* Modals - Full Width */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content,
+.modal,
+.calculator-modal {
+  background: white;
+  border-radius: 24px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  padding: 30px;
+  border-bottom: 2px solid #f1f5f9;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 24px 24px 0 0;
+}
+
+.modal-header h2,
+.modal-header h3 {
+  font-size: 1.8em;
+  color: #1e293b;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-body {
+  padding: 30px;
+}
+
+.modal-footer {
+  padding: 25px 30px;
+  border-top: 2px solid #f1f5f9;
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  background: #f8fafc;
+  border-radius: 0 0 24px 24px;
+}
+
+/* Loading States */
+.loading-state,
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  width: 100%;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid #f1f5f9;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty States */
+.empty-state,
+.no-data {
+  text-align: center;
+  padding: 80px 40px;
+  color: #64748b;
+  font-size: 1.1em;
+}
+
+.empty-state i,
+.no-data i {
+  font-size: 4em;
+  color: #cbd5e1;
+  margin-bottom: 20px;
+  display: block;
+}
+
+/* Responsive Design */
+@media (max-width: 1600px) {
+  .page-header,
+  .salaries-header,
+  .attendance-header {
+    padding: 50px 60px !important;
+  }
+  
+  .page-content,
+  .content-area {
+    padding: 50px 60px !important;
+  }
+  
+  .page-header h1,
+  .salaries-header h1 {
+    font-size: 3em !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .page-header,
+  .salaries-header {
+    padding: 40px 50px !important;
+  }
+  
+  .page-content,
+  .content-area {
+    padding: 40px 50px !important;
+  }
+  
+  .grid,
+  .summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header,
+  .salaries-header,
+  .attendance-header {
+    padding: 30px 20px !important;
+  }
+  
+  .page-header h1,
+  .salaries-header h1 {
+    font-size: 2em !important;
+  }
+  
+  .page-content,
+  .content-area {
+    padding: 30px 20px !important;
+  }
+  
+  .grid,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-section,
+  .controls-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  table,
+  .staff-table {
+    font-size: 0.85em;
+  }
+  
+  table th,
+  table td {
+    padding: 12px 10px !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .page-header,
+  .salaries-header {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+  
+  .page-header h1 {
+    color: black !important;
+    text-shadow: none !important;
+  }
+  
+  .btn,
+  .action-btn,
+  button {
+    display: none !important;
+  }
+  
+  .card,
+  .panel {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+}
+
+/* Accessibility */
+*:focus {
+  outline: 3px solid #667eea;
+  outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection Color */
+::selection {
+  background: #667eea;
+  color: white;
+}
+
+::-moz-selection {
+  background: #667eea;
+  color: white;
+}

@@ -485,9 +485,8 @@ const ManagerSellRequests = () => {
       return; // User cancelled
     }
     
-    // Disable button after clicking
+    // Disable approve button while processing
     setApprovingId(id);
-    setApprovedRequests(prev => new Set([...prev, id]));
     setError('');
     
     try {
@@ -511,6 +510,9 @@ const ManagerSellRequests = () => {
         console.log('Approval response:', responseData);
       }
       
+      // Update approved requests Set AFTER successful API call
+      setApprovedRequests(prev => new Set([...prev, id]));
+      
       // Reflect approved status immediately in the table
       setRows(prev => prev.map(x => x._id === id ? { 
         ...x, 
@@ -523,13 +525,6 @@ const ManagerSellRequests = () => {
       setInfo(`✅ Request approved successfully! You can now assign delivery staff to ${customerName}.`);
       
     } catch (error) {
-      // If approval fails, remove from approved set
-      setApprovedRequests(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-      
       // Better error message
       let errorMsg = 'Failed to approve request';
       if (error.message) {
@@ -545,6 +540,75 @@ const ManagerSellRequests = () => {
       console.error('Request data:', r);
     } finally {
       setApprovingId('');
+    }
+  };
+
+  // Delete request function
+  const deleteRequest = async (id) => {
+    const r = rows.find(x => x._id === id) || {};
+    const customerName = displayFarmer(r);
+    const barrelCount = r.barrelCount || r.quantity || 'N/A';
+    
+    // Show confirmation dialog
+    const confirmMessage = `⚠️ DELETE REQUEST - This action CANNOT be undone!\n\n` +
+      `Customer: ${customerName}\n` +
+      `Barrels: ${barrelCount}\n` +
+      `Type: ${r._type || 'SELL'}\n\n` +
+      `Are you absolutely sure you want to delete this request?`;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
+    setError('');
+    setInfo('');
+    
+    try {
+      let endpoint = '';
+      
+      // Determine the correct endpoint based on request type
+      if (String(r._source || '').includes('/delivery/barrels/intake')) {
+        endpoint = `${API}/api/delivery/barrels/intake/${id}`;
+      } else if (r._type === 'SELL') {
+        endpoint = `${API}/api/sell-requests/${id}`;
+      } else if (r._type === 'SELL_BARRELS') {
+        endpoint = `${API}/api/delivery/barrels/intake/${id}`;
+      } else {
+        throw new Error('Unknown request type');
+      }
+      
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to delete (${res.status})`);
+      }
+      
+      // Remove from local state immediately
+      setRows(prev => prev.filter(x => x._id !== id));
+      setApprovedRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      setAssignedRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      
+      setInfo(`✅ Request from ${customerName} deleted successfully`);
+      
+    } catch (error) {
+      let errorMsg = 'Failed to delete request';
+      if (error.message) {
+        errorMsg += `: ${error.message}`;
+      }
+      setError(errorMsg);
+      console.error('Delete error:', error);
     }
   };
 
@@ -964,11 +1028,11 @@ const ManagerSellRequests = () => {
                       <>
                         <button
                           onClick={() => approve(r._id)}
-                          disabled={approvedRequests.has(r._id) || approvingId === r._id}
+                          disabled={approvedRequests.has(r._id) || approvingId === r._id || r._statusUpper === 'APPROVED'}
                           className="action-btn action-btn-approve"
                         >
                           <i className={approvingId === r._id ? "fas fa-spinner fa-spin" : "fas fa-thumbs-up"} />
-                          {approvingId === r._id ? 'Approving...' : (approvedRequests.has(r._id) ? 'Approved ✓' : 'Approve')}
+                          {approvingId === r._id ? 'Approving...' : (approvedRequests.has(r._id) || r._statusUpper === 'APPROVED' ? 'Approved ✓' : 'Approve')}
                         </button>
                         <button
                           onClick={() => openAssignDelivery(r._id)}
@@ -989,6 +1053,18 @@ const ManagerSellRequests = () => {
                           {assignedRequests.has(r._id) ? 'Assigned ✓' : 
                            (!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED') ? '🔒 Assign Staff' : 
                            'Assign Staff'}
+                        </button>
+                        <button
+                          onClick={() => deleteRequest(r._id)}
+                          className="action-btn action-btn-delete"
+                          title="Delete this request permanently"
+                          style={{
+                            backgroundColor: '#dc2626',
+                            color: 'white'
+                          }}
+                        >
+                          <i className="fas fa-trash" />
+                          Delete
                         </button>
                       </>
                     )}
@@ -1190,11 +1266,11 @@ const ManagerSellRequests = () => {
                           <>
                             <button
                               onClick={() => approve(r._id)}
-                              disabled={approvedRequests.has(r._id) || approvingId === r._id}
+                              disabled={approvedRequests.has(r._id) || approvingId === r._id || r._statusUpper === 'APPROVED'}
                               className="action-btn action-btn-approve"
                             >
                               <i className={approvingId === r._id ? "fas fa-spinner fa-spin" : "fas fa-thumbs-up"} />
-                              {approvingId === r._id ? 'Approving...' : (approvedRequests.has(r._id) ? 'Approved ✓' : 'Approve')}
+                              {approvingId === r._id ? 'Approving...' : (approvedRequests.has(r._id) || r._statusUpper === 'APPROVED' ? 'Approved ✓' : 'Approve')}
                             </button>
                             <button
                               onClick={() => openAssignDelivery(r._id)}
@@ -1203,7 +1279,21 @@ const ManagerSellRequests = () => {
                               title={(!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED') ? 'Approve first before assigning' : ''}
                             >
                               <i className="fas fa-truck" />
-                              {assignedRequests.has(r._id) ? 'Assigned' : 'Assign Staff'}
+                              {assignedRequests.has(r._id) ? 'Assigned ✓' : 'Assign Staff'}
+                            </button>
+                            <button
+                              onClick={() => deleteRequest(r._id)}
+                              className="action-btn action-btn-delete"
+                              title="Delete this request permanently"
+                              style={{
+                                backgroundColor: '#dc2626',
+                                color: 'white',
+                                fontSize: '0.875rem',
+                                padding: '6px 12px'
+                              }}
+                            >
+                              <i className="fas fa-trash" />
+                              Delete
                             </button>
                           </>
                         )}

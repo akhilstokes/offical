@@ -446,49 +446,38 @@
   color: #742a2a;
 }
 
-/* Summary Card */
-.summary-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  padding: 24px;
-  margin-top: 24px;
-  color: white;
-}
-
-.summary-card h3 {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 20px 0;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-}
-
-.summary-item {
+/* History Action Button */
+.history-action-container {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  justify-content: center;
+  margin-top: 30px;
+  padding: 20px;
 }
 
-.summary-label {
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-.summary-value {
-  font-size: 28px;
+.full-history-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 16px 40px;
+  border-radius: 50px;
+  font-size: 16px;
   font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
 }
 
-.summary-value.paid {
-  color: #9ae6b4;
+.full-history-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
 }
 
-.summary-value.pending {
-  color: #fbd38d;
+.full-history-btn i {
+  font-size: 18px;
 }
 
 /* Empty State */
@@ -514,6 +503,152 @@
 .empty-state span {
   font-size: 14px;
   color: #a0aec0;
+}
+
+/* Banking Section Styles */
+.banking-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.banking-card {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.banking-subtitle {
+  color: #718096;
+  font-size: 14px;
+  margin-top: -15px;
+  margin-bottom: 20px;
+}
+
+.bank-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.bank-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: #a0aec0;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 16px;
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.info-value.verified {
+  color: #38a169;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.banking-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: #ebf8ff;
+  border-radius: 8px;
+  color: #2b6cb0;
+  font-size: 14px;
+}
+
+.banking-notice i {
+  margin-top: 3px;
+}
+
+.payout-preferences {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.payout-preferences h3 {
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: #2d3748;
+}
+
+.preference-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.preference-item:last-child {
+  border-bottom: none;
+}
+
+.pref-label span {
+  display: block;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.pref-label p {
+  font-size: 12px;
+  color: #718096;
+  margin: 2px 0 0 0;
+}
+
+.pref-toggle {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pref-toggle.active {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+/* Download Payslip Button */
+.download-payslip-btn {
+  background: #f0f7ff;
+  color: #3182ce;
+  border: 1px solid #bee3f8;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.download-payslip-btn:hover {
+  background: #3182ce;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(49, 130, 206, 0.2);
+}
+
+.download-payslip-btn i {
+  font-size: 14px;
 }
 
 /* Responsive */

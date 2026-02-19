@@ -13,8 +13,6 @@ const Navbar = () => {
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
     const [scrolled, setScrolled] = useState(false);
-    const [aboutDropdown, setAboutDropdown] = useState(false);
-
 
     const isHome = location.pathname === '/';
 
@@ -67,32 +65,20 @@ const Navbar = () => {
                         Home
                     </NavLink>
                     
-                    {/* About Us Dropdown */}
-                    <div className="nav-dropdown" 
-                         onMouseEnter={() => setAboutDropdown(true)}
-                         onMouseLeave={() => setAboutDropdown(false)}>
-                        <button className="nav-link dropdown-trigger">
-                            About Us
-                        </button>
-                        {aboutDropdown && (
-                            <div className="dropdown-menu">
-                                <NavLink to="/about" className="dropdown-link">Company Profile</NavLink>
-                                <NavLink to="/history" className="dropdown-link">Our History</NavLink>
-                                <NavLink to="/about#team" className="dropdown-link">Our Team</NavLink>
-                            </div>
-                        )}
-                    </div>
-
-                    <NavLink to="/gallery" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                        Gallery
+                    <NavLink to="/about" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                        About Us
                     </NavLink>
 
-                    <NavLink to="/award" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                        Award
+                    <NavLink to="/awards" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                        Awards
                     </NavLink>
 
                     <NavLink to="/contact" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                        Contact Me
+                        Contact
+                    </NavLink>
+
+                    <NavLink to="/gallery" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                        Gallery
                     </NavLink>
                 </div>
 
@@ -100,11 +86,11 @@ const Navbar = () => {
                 <div className="navbar-auth">
                     {!isAuthenticated ? (
                         <div className="auth-buttons">
-                            <Link to="/login" className="auth-btn login-btn">
-                                Login
-                            </Link>
                             <Link to="/register" className="auth-btn signup-btn">
                                 Sign Up
+                            </Link>
+                            <Link to="/login" className="auth-btn login-btn">
+                                Sign In
                             </Link>
                         </div>
                     ) : (

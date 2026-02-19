@@ -113,156 +113,157 @@ export default function UserLiveRate() {
   };
 
   return (
-    <div className="user-rate-history">
-      <div className="header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>Live Rates</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="user-dashboard">
+      <div className="userdash-header">
+        <div className="userdash-title">
+          <h2>Market Live Rates</h2>
+          <p>Stay updated with the latest market trends and company buying rates.</p>
+        </div>
+        <div className="userdash-header-actions">
           {rate && (
-            <span style={{ color: '#64748b', fontSize: 12 }}>
-              Last updated: {rate.effectiveDate ? new Date(rate.effectiveDate).toLocaleString('en-IN') : '—'}
-            </span>
+            <div className="last-updated-badge">
+              <i className="fas fa-clock"></i>
+              <span>Updated: {rate.effectiveDate ? new Date(rate.effectiveDate).toLocaleString('en-IN') : '—'}</span>
+            </div>
           )}
           <button type="button" className="btn-secondary" onClick={() => { reloadLatest(); reloadHistory(); }} disabled={loadingLatest || loadingHist}>
-            {loadingLatest || loadingHist ? 'Refreshing…' : 'Refresh'}
+            <i className={`fas fa-sync-alt ${loadingLatest || loadingHist ? 'fa-spin' : ''}`}></i>
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      <div className="dash-card" style={{ maxWidth: 720 }}>
-        <div style={{ marginBottom: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <div>Category: LATEX60</div>
-
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-              <span style={{ color: '#334155', fontWeight: 600 }}>Effective Price Calculator (DRC %)</span>
-            </label>
+      <div className="userdash-stats-row">
+        <div className="userdash-stat-card">
+          <div className="userdash-stat-content">
+            <div className="userdash-stat-icon-wrapper wallet">
+              <i className="fas fa-chart-line"></i>
+            </div>
+            <div className="userdash-stat-info">
+              <span className="userdash-stat-label">Market Official Rate</span>
+              <h3 className="userdash-stat-value">₹ {normalize(rate).official ?? '--'}</h3>
+            </div>
           </div>
-
-          {/* Optional DRC input (calculator buttons removed) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-              <span style={{ color: '#334155', fontWeight: 600 }}>DRC (%)</span>
-
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step="0.01"
-                value={drc}
-                onChange={(e) => setDrc(e.target.value)}
-
-                placeholder="Enter DRC"
-                style={{ width: 100, padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-              />
-            </label>
-
-            {effective && (
-              <div className="effective-rate-box">
-                <div className="rate-item">
-                  <span className="label">Rate / Kg</span>
-                  <span className="value">₹{effective.perKg.toFixed(2)}</span>
-                </div>
-                <div className="rate-item separator">|</div>
-                <div className="rate-item">
-                  <span className="label">Rate / Quintal</span>
-                  <span className="value">₹{effective.perQuintal.toFixed(0)}</span>
-                </div>
-              </div>
-            )}
-
+          <div className="userdash-stat-link">
+            <span>Per 100KG (Quintal)</span>
           </div>
         </div>
 
-        {rate ? (
-          <table className="rates-table" style={{ maxWidth: 680 }}>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Official Market Rate (INR)</th>
-                <th>Company Buying Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{new Date((normalize(rate).date) || Date.now()).toLocaleDateString('en-IN')}</td>
-                <td>{normalize(rate).official ?? '-'}</td>
-                <td>{normalize(rate).company ?? '-'}</td>
-              </tr>
-            </tbody>
-          </table>
-        ) : (
-          <div className="no-data">No data</div>
-        )}
+        <div className="userdash-stat-card">
+          <div className="userdash-stat-content">
+            <div className="userdash-stat-icon-wrapper rate">
+              <i className="fas fa-building"></i>
+            </div>
+            <div className="userdash-stat-info">
+              <span className="userdash-stat-label">Company Buying Rate</span>
+              <h3 className="userdash-stat-value">₹ {normalize(rate).company ?? '--'}</h3>
+            </div>
+          </div>
+          <div className="userdash-stat-link">
+            <span>Our Current Purchase Rate</span>
+          </div>
+        </div>
+
+        <div className="userdash-stat-card calculator-card">
+          <div className="userdash-stat-content">
+            <div className="userdash-stat-icon-wrapper alert">
+              <i className="fas fa-calculator"></i>
+            </div>
+            <div className="userdash-stat-info" style={{ flex: 1 }}>
+              <span className="userdash-stat-label">Price Calculator</span>
+              <div style={{ marginTop: '8px' }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  value={drc}
+                  onChange={(e) => setDrc(e.target.value)}
+                  placeholder="Enter DRC %"
+                  className="calculator-input"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="userdash-stat-link">
+            <span>{effective ? `₹ ${effective.perKg.toFixed(2)} / KG` : 'Enter DRC for KG Rate'}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Recent History */}
-      <div className="dash-card" style={{ marginTop: 16, maxWidth: 1000 }}>
-        <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <h3 style={{ marginTop: 0 }}>Recent History</h3>
-          <div style={{ display: 'flex', alignItems: 'end', gap: 8, flexWrap: 'wrap' }}>
+      {effective && (
+        <div className="effective-price-banner">
+          <div className="banner-content">
+            <i className="fas fa-info-circle"></i>
+            <span>Estimated Price for <strong>{drc}% DRC</strong>:</span>
+            <span className="price-tag">₹ {effective.perKg.toFixed(2)} per KG</span>
+            <span className="price-tag quintal">₹ {effective.perQuintal.toFixed(0)} per Quintal</span>
+          </div>
+        </div>
+      )}
+
+      <div className="userdash-section-label">
+        <h3>Rate History</h3>
+        <div className="section-divider"></div>
+      </div>
+
+      <div className="dash-card history-card" style={{ padding: '24px' }}>
+        <div className="history-filters">
+          <div className="date-inputs">
             <label>
               From
-              <input
-                type="date"
-                value={from}
-                max={todayStr}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (to && to < v) setTo(v);
-                  setFrom(v);
-                }}
-              />
+              <input type="date" value={from} max={todayStr} onChange={(e) => setFrom(e.target.value)} />
             </label>
             <label>
               To
-              <input
-                type="date"
-                value={to}
-                min={from}
-                max={todayStr}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setTo(from && v < from ? from : v);
-                }}
-              />
+              <input type="date" value={to} min={from} max={todayStr} onChange={(e) => setTo(e.target.value)} />
             </label>
-            <button type="button" className="btn" onClick={(e) => { e.preventDefault(); reloadHistory(); }} disabled={loadingHist}>
-              {loadingHist ? 'Loading...' : 'Filter'}
+          </div>
+          <div className="filter-actions">
+            <button type="button" className="btn" onClick={reloadHistory} disabled={loadingHist}>
+              <i className="fas fa-filter"></i> Filter
             </button>
-            <button type="button" className="btn-secondary" onClick={handleExportCsv}>Export CSV</button>
-            <button type="button" className="btn-secondary" onClick={handleExportPdf}>Export PDF</button>
+            <button type="button" className="btn-secondary" onClick={handleExportCsv}>
+              <i className="fas fa-file-csv"></i> CSV
+            </button>
+            <button type="button" className="btn-secondary" onClick={handleExportPdf}>
+              <i className="fas fa-file-pdf"></i> PDF
+            </button>
           </div>
         </div>
+
         {loadingHist ? (
-          <p>Loading...</p>
+          <div className="no-data"><i className="fas fa-spinner fa-spin"></i> Loading History...</div>
         ) : history && history.length > 0 ? (
-          <table className="rates-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Category</th>
-                <th>Official Market Rate (INR)</th>
-                <th>Company Buying Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((row) => {
-                const dateStr = new Date(row.effectiveDate).toLocaleDateString('en-IN');
-                const n = normalize(row);
-                return (
-                  <tr key={row._id}>
-                    <td>{dateStr}</td>
-                    <td>{row.category}</td>
-                    <td>{n.official ?? '-'}</td>
-                    <td>{n.company ?? '-'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th>Market Rate</th>
+                  <th>Company Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((row) => {
+                  const n = normalize(row);
+                  return (
+                    <tr key={row._id}>
+                      <td style={{ fontWeight: '600', color: '#64748b' }}>
+                        {new Date(n.date || row.effectiveDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td><span className="badge status-in-progress">LATEX 60</span></td>
+                      <td style={{ fontWeight: '700' }}>₹ {n.official ?? '-'}</td>
+                      <td style={{ fontWeight: '800', color: '#10b981' }}>₹ {n.company ?? '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <div className="no-data">No recent history</div>
+          <div className="no-data">No rate history found for the selected range.</div>
         )}
       </div>
     </div>
