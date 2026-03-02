@@ -153,6 +153,9 @@ app.use('/api/daily-wage', require('./routes/dailyWageRoutes'));
 app.use('/api/monthly-wage', require('./routes/monthlyWageRoutes'));
 app.use('/api/unified-salary', require('./routes/unifiedSalaryRoutes'));
 
+// Vehicle Management System
+app.use('/api/vehicles', require('./routes/vehicleRoutes'));
+
 // New dashboard routes
 app.use('/api/staff-dashboard', require('./routes/staffDashboard'));
 app.use('/api/manager-dashboard', require('./routes/managerDashboard'));
@@ -272,8 +275,13 @@ const setupWebSocketServer = require('./websocketServer');
         try {
           rateScheduler.start();
           console.log('Rate scheduler initialized');
+          
+          // Start vehicle expiry check cron job
+          const { startVehicleExpiryCheckJob } = require('./jobs/vehicleExpiryCheck');
+          startVehicleExpiryCheckJob();
+          console.log('Vehicle expiry check cron job initialized');
         } catch (e) {
-          console.warn('Rate scheduler failed to start:', e?.message || e);
+          console.warn('Scheduler failed to start:', e?.message || e);
         }
       }, 2000);
     });

@@ -65,6 +65,28 @@ router.get('/find-by-phone', protect, async (req, res) => {
   }
 });
 
+// Get all staff members (for manager schedule page and vehicle assignment)
+// IMPORTANT: This must come BEFORE the /:id route to avoid matching "all-staff" as an ID
+router.get('/all-staff', protect, async (req, res) => {
+  try {
+    const staff = await User.find({
+      role: { $in: ['field_staff', 'delivery_staff', 'lab_staff', 'staff', 'accountant'] }
+    }).select('name email phoneNumber role accountHolderName accountNumber ifscCode bankName branchName').sort({ name: 1 });
+
+    res.json({
+      success: true,
+      count: staff.length,
+      staff
+    });
+  } catch (error) {
+    console.error('Error fetching staff:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch staff' 
+    });
+  }
+});
+
 // Get user by ID (for billing/payments - restricted to staff)
 router.get('/:id', protect, async (req, res) => {
   try {
@@ -88,27 +110,6 @@ router.get('/:id', protect, async (req, res) => {
   } catch (error) {
     console.error('Error fetching user by ID:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch user details' });
-  }
-});
-
-// Get all staff members (for manager schedule page)
-router.get('/all-staff', protect, async (req, res) => {
-  try {
-    const staff = await User.find({
-      role: { $in: ['field_staff', 'delivery_staff', 'lab_staff', 'staff', 'accountant'] }
-    }).select('name email phoneNumber role accountHolderName accountNumber ifscCode bankName branchName').sort({ name: 1 });
-
-    res.json({
-      success: true,
-      count: staff.length,
-      staff
-    });
-  } catch (error) {
-    console.error('Error fetching staff:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to fetch staff' 
-    });
   }
 });
 

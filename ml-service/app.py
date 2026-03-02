@@ -1,37 +1,30 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import joblib
-import numpy as np
+import pandas as pd
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
-model = joblib.load("latex_stage_model.pkl")
-
-# ✅ Add this
-@app.route("/")
-def home():
-    return "ML Service Running"
+# Load model and encoder
+model = joblib.load("latex_allocation_model.pkl")
+label_encoder = joblib.load("label_encoder.pkl")
 
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.json
 
-    try:
-        features = np.array([[
-            float(data["drc_percent"]),
-            float(data["impurity_percent"]),
-            float(data["pH"]),
-            float(data["storage_days"])
-        ]])
+    input_df = pd.DataFrame([data])
 
-        prediction = model.predict(features)
+    prediction = model.predict(input_df)
+    probabilities = model.predict_proba(input_df)
 
-        return jsonify({
-            "production_stage": prediction[0]
-        })
+    predicted_label = label_encoder.inverse_transform(prediction)
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
+    return jsonify({
+        "recommended_process": predicted_label[0],
+        "confidence": float(probabilities.max())
+    })
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(port=5001)

@@ -53,8 +53,7 @@ import LabLeave from "./pages/lab/LabLeave";
 import LabSalary from "./pages/lab/LabSalary";
 import LabCheckIn from "./pages/lab/LabCheckIn";
 import LabDRCUpdate from "./pages/lab/LabDRCUpdate";
-import LabQualityClassifier from "./pages/lab/LabQualityClassifier";
-import LabQualityComparison from "./pages/lab/LabQualityComparison";
+import AIRubberProcess from "./pages/lab/AIRubberProcess";
 import LabChemicalRequests from "./pages/lab/LabChemicalRequests";
 import LabReports from "./pages/lab/LabReports";
 import LabShiftSchedule from "./pages/lab/LabShiftSchedule";
@@ -164,6 +163,7 @@ import AdminReports from "./pages/admin/AdminReports";
 import AdminPerformance from "./pages/admin/AdminPerformance";
 import AdminHealth from "./pages/admin/AdminHealth";
 import AdminOverview from "./pages/admin/AdminOverview";
+import VehicleManagement from "./pages/admin/VehicleManagement";
 
 function App() {
   return (
@@ -482,6 +482,16 @@ function App() {
           }
         />
         <Route
+          path="/lab/ai-rubber-process"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <AIRubberProcess />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
           path="/lab/drc-update"
           element={
             <LabProtectedRoute>
@@ -491,26 +501,7 @@ function App() {
             </LabProtectedRoute>
           }
         />
-        <Route
-          path="/lab/quality-classifier"
-          element={
-            <LabProtectedRoute>
-              <LabDashboardLayout>
-                <LabQualityClassifier />
-              </LabDashboardLayout>
-            </LabProtectedRoute>
-          }
-        />
-        <Route
-          path="/lab/quality-comparison"
-          element={
-            <LabProtectedRoute>
-              <LabDashboardLayout>
-                <LabQualityComparison />
-              </LabDashboardLayout>
-            </LabProtectedRoute>
-          }
-        />
+
         <Route
           path="/lab/chem-requests"
           element={
@@ -1143,6 +1134,16 @@ function App() {
             <AdminProtectedRoute>
               <AdminDashboardLayout>
                 <AdminRateApproval />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/vehicles"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <VehicleManagement />
               </AdminDashboardLayout>
             </AdminProtectedRoute>
           }

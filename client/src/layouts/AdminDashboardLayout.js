@@ -59,6 +59,7 @@ const AdminDashboardLayout = ({ children }) => {
     if (path.includes('/chem-requests')) return { title: 'Chemical Requests', subtitle: 'Chemical request management', icon: 'fa-flask' };
     if (path.includes('/rates')) return { title: 'Rates', subtitle: 'Rate management', icon: 'fa-chart-line' };
     if (path.includes('/rate-approval')) return { title: 'Rate Approval', subtitle: 'Approve submitted rates', icon: 'fa-check-circle' };
+    if (path.includes('/vehicles')) return { title: 'Vehicle Management', subtitle: 'Manage delivery vehicles', icon: 'fa-truck' };
     return { title: 'Administration', subtitle: 'System administration', icon: 'fa-user-shield' };
   };
 
@@ -104,6 +105,12 @@ const AdminDashboardLayout = ({ children }) => {
         { to: '/admin/chem-requests', icon: 'fa-flask', label: 'Chemical Requests' },
         { to: '/admin/rates', icon: 'fa-chart-line', label: 'Rates' },
         { to: '/admin/rate-approval', icon: 'fa-check-circle', label: 'Rate Approval' },
+      ]
+    },
+    {
+      section: 'Fleet Management',
+      items: [
+        { to: '/admin/vehicles', icon: 'fa-truck', label: 'Vehicles' },
       ]
     }
   ];

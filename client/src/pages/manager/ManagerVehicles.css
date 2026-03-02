@@ -1,0 +1,54 @@
+/* Reuse the same styles as admin vehicle management */
+@import '../admin/VehicleManagement.css';
+
+/* Manager-specific overrides */
+.manager-vehicles {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.vehicle-info {
+  background-color: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.vehicle-info p {
+  margin: 8px 0;
+  color: #374151;
+  font-size: 14px;
+}
+
+.status-info {
+  background-color: #fef3c7;
+  border: 1px solid #fbbf24;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.status-info svg {
+  color: #92400e;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.status-info p {
+  margin: 0;
+  color: #92400e;
+  font-size: 13px;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.modal-body {
+  padding: 24px;
+}

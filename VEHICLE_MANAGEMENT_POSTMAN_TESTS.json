@@ -1,0 +1,361 @@
+{
+  "info": {
+    "name": "Vehicle Management System API",
+    "description": "Complete API test collection for Vehicle Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Admin - Create Vehicle",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"vehicleNumber\": \"KL01AB1234\",\n  \"vehicleType\": \"Truck\",\n  \"insuranceStartDate\": \"2024-01-01\",\n  \"insuranceExpiryDate\": \"2025-01-01\",\n  \"rcNumber\": \"KL01RC1234\",\n  \"pollutionExpiryDate\": \"2024-12-31\",\n  \"status\": \"Active\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/vehicles",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles"]
+        }
+      }
+    },
+    {
+      "name": "Admin - Create Vehicle with Driver",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"vehicleNumber\": \"KL02CD5678\",\n  \"vehicleType\": \"Van\",\n  \"insuranceStartDate\": \"2024-02-01\",\n  \"insuranceExpiryDate\": \"2025-02-01\",\n  \"rcNumber\": \"KL02RC5678\",\n  \"pollutionExpiryDate\": \"2024-11-30\",\n  \"status\": \"Active\",\n  \"assignedDriver\": \"{{delivery_staff_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/vehicles",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles"]
+        }
+      }
+    },
+    {
+      "name": "Admin - Get All Vehicles",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles?page=1&limit=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin - Get Vehicles by Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles?status=Active",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles"],
+          "query": [
+            {
+              "key": "status",
+              "value": "Active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin - Search Vehicles",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles?search=KL01",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles"],
+          "query": [
+            {
+              "key": "search",
+              "value": "KL01"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin - Get Vehicle by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/{{vehicle_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "{{vehicle_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin - Update Vehicle",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Maintenance\",\n  \"pollutionExpiryDate\": \"2025-01-31\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/{{vehicle_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "{{vehicle_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin - Delete Vehicle",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/{{vehicle_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "{{vehicle_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin - Check Vehicle Eligibility",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/{{vehicle_id}}/eligibility",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "{{vehicle_id}}", "eligibility"]
+        }
+      }
+    },
+    {
+      "name": "Manager - Get All Vehicles",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{manager_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles"]
+        }
+      }
+    },
+    {
+      "name": "Manager - Update Vehicle Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{manager_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Maintenance\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/{{vehicle_id}}/status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "{{vehicle_id}}", "status"]
+        }
+      }
+    },
+    {
+      "name": "Delivery - Get My Assigned Vehicle",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{delivery_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/assigned/me",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "assigned", "me"]
+        }
+      }
+    },
+    {
+      "name": "Delivery - Get My Alerts",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{delivery_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/alerts/me?isRead=false",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "alerts", "me"],
+          "query": [
+            {
+              "key": "isRead",
+              "value": "false"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Delivery - Mark Alert as Read",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{delivery_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/alerts/{{alert_id}}/read",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "alerts", "{{alert_id}}", "read"]
+        }
+      }
+    },
+    {
+      "name": "Delivery - Mark All Alerts as Read",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{delivery_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/alerts/read-all",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "alerts", "read-all"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "your_admin_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "manager_token",
+      "value": "your_manager_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "delivery_token",
+      "value": "your_delivery_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "vehicle_id",
+      "value": "vehicle_object_id_here",
+      "type": "string"
+    },
+    {
+      "key": "alert_id",
+      "value": "alert_object_id_here",
+      "type": "string"
+    },
+    {
+      "key": "delivery_staff_id",
+      "value": "delivery_staff_user_id_here",
+      "type": "string"
+    }
+  ]
+}

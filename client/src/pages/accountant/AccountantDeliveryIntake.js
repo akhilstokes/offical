@@ -37,37 +37,7 @@ const AccountantDeliveryIntake = () => {
     const [approvedCompanyRate, setApprovedCompanyRate] = useState(null);
     const [loadingRate, setLoadingRate] = useState(false);
 
-    // Sample delivery data
-    const [sampleDeliveries] = useState([
-        {
-            id: 1,
-            date: '2026-01-03',
-            buyer: 'Sanjay Trading Co',
-            phone: '+91 9876543210',
-            barrels: 25,
-            drcPercent: 12,
-            totalKg: 1200,
-            dryKg: 1056,
-            marketRate: 110,
-            amount: 116160,
-            perBarrel: 4646.4,
-            status: 'verified'
-        },
-        {
-            id: 2,
-            date: '2026-01-02',
-            buyer: 'ABC Suppliers',
-            phone: '+91 9876543211',
-            barrels: 30,
-            drcPercent: 15,
-            totalKg: 1500,
-            dryKg: 1275,
-            marketRate: 108,
-            amount: 137700,
-            perBarrel: 4590,
-            status: 'pending'
-        }
-    ]);
+    
 
     useEffect(() => {
         fetchDeliveries();
@@ -128,39 +98,48 @@ const AccountantDeliveryIntake = () => {
             const labPendingSamples = JSON.parse(localStorage.getItem('accountant_pending_samples') || '[]');
             
             // Transform lab data to delivery format - Auto-fill: buyer, phone, barrels, DRC
-            const transformedDeliveries = labPendingSamples.map((sample, index) => ({
-                id: `lab-${index}`,
-                date: sample.receivedAt ? new Date(sample.receivedAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-                buyer: sample.customerName || 'N/A',
-                phone: sample.phone || '-',
-                barrels: sample.barrelCount || 0,
-                drcPercent: sample.drc || 0, // Average DRC for display
-                barrelDetails: sample.barrels || [], // Individual barrel DRC values
-                // These fields are MANUAL ENTRY ONLY
-                totalKg: sample.totalKg || 0,
-                dryKg: sample.dryKg || 0,
-                marketRate: sample.marketRate || 0,
-                amount: sample.totalAmount || 0,
-                perBarrel: sample.perBarrel || 0,
-                // PRESERVE STATUS - If bill was already calculated, keep it as 'calculated'
-                status: sample.status || 'pending',
-                billId: sample.billId,
-                billNumber: sample.billNumber,
-                sampleId: sample.sampleId,
-                labStaff: sample.labStaff,
-                notes: sample.notes
-            }));
-            
-            // Combine with sample deliveries if needed
-            const allDeliveries = [...transformedDeliveries, ...sampleDeliveries];
+            const transformedDeliveries = labPendingSamples.map((sample, index) => {
+                // Use DRC from first barrel only (no need to check all barrels)
+                let drcValue = 0;
+                if (sample.barrels && sample.barrels.length > 0) {
+                    // Get DRC from first barrel
+                    drcValue = sample.barrels[0].drc?.value || 0;
+                } else if (sample.drc) {
+                    // Fallback to old single DRC value if exists
+                    drcValue = sample.drc;
+                }
+                
+                return {
+                    id: `lab-${index}`,
+                    date: sample.receivedAt ? new Date(sample.receivedAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+                    buyer: sample.customerName || 'N/A',
+                    phone: sample.phone || '-',
+                    barrels: sample.barrelCount || sample.barrels?.length || 0,
+                    drcPercent: typeof drcValue === 'number' ? drcValue.toFixed(2) : drcValue, // DRC from first barrel
+                    barrelDetails: sample.barrels || [], // Individual barrel DRC values
+                    // These fields are MANUAL ENTRY ONLY
+                    totalKg: sample.totalKg || 0,
+                    dryKg: sample.dryKg || 0,
+                    marketRate: sample.marketRate || 0,
+                    amount: sample.totalAmount || 0,
+                    perBarrel: sample.perBarrel || 0,
+                    // PRESERVE STATUS - If bill was already calculated, keep it as 'calculated'
+                    status: sample.status || 'pending',
+                    billId: sample.billId,
+                    billNumber: sample.billNumber,
+                    sampleId: sample.sampleId,
+                    labStaff: sample.labStaff,
+                    notes: sample.notes
+                };
+            });
             
             setTimeout(() => {
-                setDeliveries(allDeliveries);
+                setDeliveries(transformedDeliveries);
                 setLoading(false);
             }, 500);
         } catch (err) {
             console.error('Error fetching deliveries:', err);
-            setDeliveries(sampleDeliveries);
+            setDeliveries([]);
             setLoading(false);
         }
     };
@@ -745,9 +724,6 @@ const AccountantDeliveryIntake = () => {
                     <h1 className="page-title">
                         <FiTruck /> Delivery Intake / Verify
                     </h1>
-                    <p className="page-description">
-                        Lab check-ins auto-fill: Buyer Name, Phone, Barrels, DRC%. Enter Latex Volume (Liters) and Market Rate (₹/100KG), then click Calculate to compute Dry Rubber and Billing Amount.
-                    </p>
                 </div>
                 <div className="header-right">
                     <button 
@@ -798,16 +774,7 @@ const AccountantDeliveryIntake = () => {
                                     <td>{new Date(delivery.date).toLocaleDateString()}</td>
                                     <td>
                                         {delivery.sampleId ? (
-                                            <span style={{
-                                                display: 'inline-block',
-                                                padding: '4px 8px',
-                                                backgroundColor: '#f3e8ff',
-                                                color: '#7c3aed',
-                                                borderRadius: '4px',
-                                                fontFamily: 'monospace',
-                                                fontSize: '11px',
-                                                fontWeight: '600'
-                                            }}>
+                                            <span className="sample-id-badge">
                                                 {delivery.sampleId}
                                             </span>
                                         ) : '-'}
@@ -815,58 +782,25 @@ const AccountantDeliveryIntake = () => {
                                     <td><strong>{delivery.buyer}</strong></td>
                                     <td>{delivery.phone}</td>
                                     <td>
-                                        <span style={{
-                                            display: 'inline-block',
-                                            padding: '4px 10px',
-                                            backgroundColor: '#dbeafe',
-                                            color: '#1e40af',
-                                            borderRadius: '4px',
-                                            fontWeight: '600',
-                                            fontSize: '13px'
-                                        }}>
+                                        <span className="barrel-badge">
                                             {delivery.barrels}
                                         </span>
                                     </td>
                                     <td>
-                                        <span style={{
-                                            display: 'inline-block',
-                                            padding: '4px 10px',
-                                            backgroundColor: '#dcfce7',
-                                            color: '#166534',
-                                            borderRadius: '4px',
-                                            fontWeight: '600',
-                                            fontSize: '13px'
-                                        }}>
+                                        <span className="drc-badge">
                                             {delivery.drcPercent}%
                                         </span>
                                     </td>
                                     <td>
                                         {delivery.labStaff ? (
-                                            <span style={{
-                                                display: 'inline-block',
-                                                padding: '4px 8px',
-                                                backgroundColor: '#fef3c7',
-                                                color: '#92400e',
-                                                borderRadius: '4px',
-                                                fontSize: '12px',
-                                                fontWeight: '500'
-                                            }}>
+                                            <span className="lab-staff-badge">
                                                 {delivery.labStaff}
                                             </span>
                                         ) : '-'}
                                     </td>
                                     <td>
                                         {delivery.status === 'paid' ? (
-                                            <span style={{
-                                                display: 'inline-block',
-                                                padding: '4px 10px',
-                                                backgroundColor: '#dcfce7',
-                                                color: '#166534',
-                                                borderRadius: '4px',
-                                                fontSize: '11px',
-                                                fontWeight: '700',
-                                                border: '1px solid #86efac'
-                                            }}>✓ Paid</span>
+                                            <span className="status-paid">✓ Paid</span>
                                         ) : delivery.status === 'verified' ? (
                                             <span className="verified-badge">✓ Verified</span>
                                         ) : delivery.status === 'calculated' ? (
@@ -874,105 +808,73 @@ const AccountantDeliveryIntake = () => {
                                         ) : delivery.amount > 0 ? (
                                             <span className="calculated-badge">Calculated</span>
                                         ) : (
-                                            <span style={{
-                                                display: 'inline-block',
-                                                padding: '4px 10px',
-                                                backgroundColor: '#fef3c7',
-                                                color: '#92400e',
-                                                borderRadius: '4px',
-                                                fontSize: '11px',
-                                                fontWeight: '600'
-                                            }}>Pending</span>
+                                            <span className="status-pending">Pending</span>
                                         )}
                                     </td>
                                     <td>
                                         {delivery.status === 'paid' ? (
-                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                            <div className="action-cell">
                                                 <button
-                                                    className="view-bill-btn"
+                                                    className="action-btn view-bill-btn"
                                                     onClick={() => {
                                                         setSelectedBill(delivery);
                                                         setShowBillModal(true);
                                                     }}
                                                     title="View Bill"
                                                 >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                                         <circle cx="12" cy="12" r="3"></circle>
                                                     </svg>
                                                     Bill
                                                 </button>
                                                 <button
+                                                    className="action-btn receipt-btn"
                                                     onClick={() => handleViewReceipt(delivery.billId)}
-                                                    style={{
-                                                        backgroundColor: '#059669',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        padding: '6px 12px',
-                                                        borderRadius: '6px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '6px',
-                                                        fontWeight: '600',
-                                                        cursor: 'pointer',
-                                                        fontSize: '13px'
-                                                    }}
+                                                    title="View Receipt"
                                                 >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                                         <polyline points="14 2 14 8 20 8"></polyline>
                                                         <line x1="16" y1="13" x2="8" y2="13"></line>
                                                         <line x1="16" y1="17" x2="8" y2="17"></line>
-                                                        <polyline points="10 9 9 9 8 9"></polyline>
                                                     </svg>
                                                     Receipt
                                                 </button>
                                             </div>
                                         ) : delivery.status === 'verified' || delivery.status === 'calculated' ? (
-                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                            <div className="action-cell">
                                                 <button
-                                                    className="view-bill-btn"
+                                                    className="action-btn view-bill-btn"
                                                     onClick={() => {
                                                         setSelectedBill(delivery);
                                                         setShowBillModal(true);
                                                     }}
                                                     title="View Bill"
                                                 >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                                         <circle cx="12" cy="12" r="3"></circle>
                                                     </svg>
-                                                    View Bill
+                                                    Bill
                                                 </button>
                                                 {delivery.billId && (
                                                     <button
-                                                        className="payment-btn"
+                                                        className="action-btn payment-btn"
                                                         onClick={() => handlePayment(delivery)}
-                                                        style={{
-                                                            backgroundColor: '#8b5cf6',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            padding: '6px 12px',
-                                                            borderRadius: '6px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '6px',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer',
-                                                            fontSize: '13px'
-                                                        }}
+                                                        title="Process Payment"
                                                     >
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                             <rect x="2" y="5" width="20" height="14" rx="2"></rect>
                                                             <line x1="2" y1="10" x2="22" y2="10"></line>
                                                         </svg>
-                                                        Payment
+                                                        Pay
                                                     </button>
                                                 )}
                                             </div>
                                         ) : (
                                             <button
-                                                className="process-btn"
+                                                className="action-btn process-btn"
                                                 onClick={() => {
                                                     setSelectedBill(delivery);
                                                     setShowAddIntakeModal(true);
@@ -984,7 +886,7 @@ const AccountantDeliveryIntake = () => {
                                                         barrels: delivery.barrels,
                                                         drcPercent: delivery.drcPercent,
                                                         barrelDetails: delivery.barrelDetails || [],
-                                                        barrelVolumes: {}, // Reset volumes
+                                                        barrelVolumes: {},
                                                         totalKg: delivery.totalKg || '',
                                                         marketRate: delivery.marketRate || '',
                                                         sampleId: delivery.sampleId,
@@ -993,7 +895,7 @@ const AccountantDeliveryIntake = () => {
                                                 }}
                                                 title="Process Bill"
                                             >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                                 </svg>
@@ -1054,15 +956,29 @@ const AccountantDeliveryIntake = () => {
                                 <div className="form-group">
                                     <label className="form-label">
                                         <FiUser /> Buyer Name
+                                        <span style={{
+                                            marginLeft: '8px',
+                                            fontSize: '11px',
+                                            color: '#059669',
+                                            fontWeight: '600',
+                                            backgroundColor: '#d1fae5',
+                                            padding: '2px 6px',
+                                            borderRadius: '3px'
+                                        }}>FROM LAB</span>
                                     </label>
                                     <input
                                         type="text"
                                         name="buyer"
-                                        className="form-input"
+                                        className="form-input readonly-field"
                                         value={intakeForm.buyer}
-                                        onChange={handleInputChange}
-                                        placeholder="Enter buyer name"
-                                        required
+                                        readOnly
+                                        style={{
+                                            backgroundColor: '#f0fdf4',
+                                            color: '#059669',
+                                            fontWeight: '600',
+                                            cursor: 'not-allowed',
+                                            border: '2px solid #86efac'
+                                        }}
                                     />
                                 </div>
 

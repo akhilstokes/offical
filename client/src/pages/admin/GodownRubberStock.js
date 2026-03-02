@@ -8,12 +8,20 @@ const GodownRubberStock = () => {
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
-    setLoading(true); setError('');
-    try { setData(await getStockLevel()); } catch (e) { setError(e?.message || 'Failed to load'); }
-    finally { setLoading(false); }
+    setLoading(true);
+    setError('');
+    try {
+      setData(await getStockLevel());
+    } catch (e) {
+      setError(e?.message || 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-IN', {
@@ -35,43 +43,28 @@ const GodownRubberStock = () => {
     <div className="godown-stock-container">
       <div className="stock-header">
         <div className="header-content">
-          <h1 className="stock-title">
-            <i className="fas fa-warehouse"></i>
-            Godown Rubber Stock
-          </h1>
-          <p className="stock-subtitle">Raw Latex Inventory Management</p>
+          <h1 className="stock-title">Godown Rubber Stock</h1>
+          <p className="stock-subtitle">Rubber stock management</p>
         </div>
         <div className="header-actions">
           <button className="btn-refresh" onClick={load} disabled={loading}>
-            <i className="fas fa-sync-alt"></i>
-            Refresh
+            {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>
 
-      {error && (
-        <div className="error-banner">
-          <i className="fas fa-exclamation-triangle"></i>
-          {error}
-        </div>
-      )}
+      {error && <div className="error-banner">{error}</div>}
 
       {loading ? (
         <div className="loading-container">
-          <div className="loading-spinner">
-            <i className="fas fa-spinner fa-spin"></i>
-            <span>Loading stock data...</span>
-          </div>
+          <div className="loading-spinner">Loading stock data...</div>
         </div>
       ) : data ? (
         <div className="stock-content">
           <div className="stock-cards">
-            <div className="stock-card main-card">
+            <div className="stock-card">
               <div className="card-header">
-                <h3>
-                  <i className="fas fa-boxes"></i>
-                  {data.productName}
-                </h3>
+                <h3>{data.productName}</h3>
                 <div className={`stock-badge ${getStockStatus(data.quantityInLiters).status}`}>
                   {getStockStatus(data.quantityInLiters).text}
                 </div>
@@ -96,29 +89,22 @@ const GodownRubberStock = () => {
 
                 <div className="stock-details">
                   <div className="detail-item">
-                    <i className="fas fa-calendar-alt"></i>
-                    <div>
-                      <span className="detail-label">Last Updated</span>
-                      <span className="detail-value">{formatDate(data.lastUpdated)}</span>
-                    </div>
+                    <span className="detail-label">Last Updated</span>
+                    <span className="detail-value">{formatDate(data.lastUpdated)}</span>
                   </div>
                   
                   <div className="detail-item">
-                    <i className="fas fa-plus-circle"></i>
-                    <div>
-                      <span className="detail-label">Created</span>
-                      <span className="detail-value">{formatDate(data.createdAt)}</span>
-                    </div>
+                    <span className="detail-label">Created</span>
+                    <span className="detail-value">{formatDate(data.createdAt)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="stock-card info-card">
-              <h4>
-                <i className="fas fa-info-circle"></i>
-                Stock Information
-              </h4>
+            <div className="stock-card">
+              <div className="card-header">
+                <h3>Stock Information</h3>
+              </div>
               <div className="info-grid">
                 <div className="info-item">
                   <span className="info-label">Product ID</span>
@@ -137,25 +123,9 @@ const GodownRubberStock = () => {
               </div>
             </div>
           </div>
-
-          <div className="stock-actions">
-            <button className="action-btn primary">
-              <i className="fas fa-edit"></i>
-              Update Stock
-            </button>
-            <button className="action-btn secondary">
-              <i className="fas fa-chart-line"></i>
-              View History
-            </button>
-            <button className="action-btn secondary">
-              <i className="fas fa-download"></i>
-              Export Data
-            </button>
-          </div>
         </div>
       ) : (
         <div className="no-data">
-          <i className="fas fa-inbox"></i>
           <h3>No Stock Data Available</h3>
           <p>No rubber stock information found in the system.</p>
         </div>

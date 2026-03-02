@@ -37,8 +37,10 @@ const AdminHome = () => {
           }
         });
         const data = await response.json();
+        // Handle both array and object responses
+        const requests = Array.isArray(data) ? data : (data.requests || data.data || []);
         // Count pending barrel requests
-        const pending = data.filter(r => r.type === 'BARREL' && r.status === 'pending').length;
+        const pending = requests.filter(r => r.type === 'BARREL' && r.status === 'pending').length;
         setPendingRequests(pending);
       } catch (error) {
         console.error('Error fetching requests:', error);

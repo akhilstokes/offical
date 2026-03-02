@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { listChemicals, chemicalAlerts } from '../../services/adminService';
+import './ChemicalStockHistory.css';
 
 const downloadCSV = (rows, filename = 'chemicals.csv') => {
   const headers = ['name','unit','onHand','lotNo','quantity','unitCost','receivedAt','expiresAt'];
@@ -23,56 +24,68 @@ const ChemicalStockHistory = () => {
   const filtered = useMemo(() => list.filter(c => !filter || c.name.toLowerCase().includes(filter.toLowerCase())), [list, filter]);
 
   const loadAll = async () => {
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
     try {
       setList(await listChemicals());
       setAlerts(await chemicalAlerts());
-    } catch (e) { setError(e?.message || 'Failed to load'); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError(e?.message || 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+  }, []);
 
   return (
-    <div>
-      <h2>Chemical Stock History</h2>
-
-      <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
-        <input placeholder="Filter by name" value={filter} onChange={(e) => setFilter(e.target.value)} />
-        <button onClick={() => downloadCSV(filtered)}>Export CSV</button>
-        <button onClick={loadAll} disabled={loading}>Refresh</button>
+    <div className="chemical-stock-container">
+      <div className="chemical-header">
+        <div>
+          <h1 className="chemical-title">Chemical Stock History</h1>
+          <p className="chemical-subtitle">Chemical inventory history</p>
+        </div>
       </div>
 
-      {error && <div style={{ color: 'tomato' }}>{error}</div>}
-
-      <div style={{ display: 'grid', gap: 12 }}>
-        {alerts?.low?.length > 0 && (
-          <div role="alert" style={{
-            background: '#FEF3C7',
-            border: '1px solid #FDE68A',
-            color: '#111827',
-            padding: 10,
-            borderRadius: 6,
-          }}>
-            <strong style={{ color: '#92400E' }}>Low stock:</strong> {alerts.low.map(l => `${l.name} (${l.onHand})`).join(', ')}
-          </div>
-        )}
-        {alerts?.expiring?.length > 0 && (
-          <div role="alert" style={{
-            background: '#FFE4E6',
-            border: '1px solid #FDA4AF',
-            color: '#111827',
-            padding: 10,
-            borderRadius: 6,
-          }}>
-            <strong style={{ color: '#9D174D' }}>Expiring soon:</strong> {alerts.expiring.map(l => `${l.name} lot ${l.lotNo}`).join(', ')}
-          </div>
-        )}
+      <div className="chemical-controls">
+        <input 
+          className="filter-input"
+          placeholder="Filter by name" 
+          value={filter} 
+          onChange={(e) => setFilter(e.target.value)} 
+        />
+        <button className="btn btn-secondary" onClick={() => downloadCSV(filtered)}>
+          Export CSV
+        </button>
+        <button className="btn" onClick={loadAll} disabled={loading}>
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
 
-      {loading ? 'Loading...' : (
-        <div style={{ overflowX: 'auto', marginTop: 12 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      {error && <div className="error-message">{error}</div>}
+
+      {(alerts?.low?.length > 0 || alerts?.expiring?.length > 0) && (
+        <div className="alerts-container">
+          {alerts?.low?.length > 0 && (
+            <div className="alert alert-warning">
+              <strong>Low stock:</strong> {alerts.low.map(l => `${l.name} (${l.onHand})`).join(', ')}
+            </div>
+          )}
+          {alerts?.expiring?.length > 0 && (
+            <div className="alert alert-danger">
+              <strong>Expiring soon:</strong> {alerts.expiring.map(l => `${l.name} lot ${l.lotNo}`).join(', ')}
+            </div>
+          )}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="loading-state">Loading...</div>
+      ) : (
+        <div className="table-container">
+          <table className="chemical-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -88,19 +101,33 @@ const ChemicalStockHistory = () => {
                   <td>{c.unit}</td>
                   <td>{c.onHand}</td>
                   <td>
-                    {c.lots?.length ? c.lots.map(l => (
-                      <div key={l.lotNo} style={{ display: 'flex', gap: 8 }}>
-                        <span>#{l.lotNo}</span>
-                        <span>Qty: {l.quantity}</span>
-                        <span>Unit Cost: {l.unitCost}</span>
-                        <span>Recv: {l.receivedAt ? new Date(l.receivedAt).toLocaleDateString() : '-'}</span>
-                        <span>Exp: {l.expiresAt ? new Date(l.expiresAt).toLocaleDateString() : '-'}</span>
+                    {c.lots?.length ? (
+                      <div className="lot-details">
+                        {c.lots.map(l => (
+                          <div key={l.lotNo} className="lot-item">
+                            <span>#{l.lotNo}</span>
+                            <span>Qty: {l.quantity}</span>
+                            <span>Unit Cost: {l.unitCost}</span>
+                            <span>Recv: {l.receivedAt ? new Date(l.receivedAt).toLocaleDateString() : '-'}</span>
+                            <span>Exp: {l.expiresAt ? new Date(l.expiresAt).toLocaleDateString() : '-'}</span>
+                          </div>
+                        ))}
                       </div>
-                    )) : '—'}
+                    ) : (
+                      '—'
+                    )}
                   </td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={4} style={{ textAlign: 'center' }}>No chemicals</td></tr>}
+              {!filtered.length && (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="empty-state">
+                      <div className="empty-state-text">No chemicals</div>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -1,0 +1,212 @@
+.chemical-stock-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.chemical-header {
+  margin-bottom: 20px;
+}
+
+.chemical-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 5px 0;
+}
+
+.chemical-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.chemical-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.filter-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.btn {
+  padding: 8px 16px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.btn:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #2196F3;
+}
+
+.btn-secondary:hover {
+  background-color: #0b7dda;
+}
+
+.error-message {
+  padding: 12px;
+  background-color: #fee;
+  color: #c33;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.alerts-container {
+  margin-bottom: 20px;
+}
+
+.alert {
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 14px;
+}
+
+.table-container {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.chemical-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.chemical-table thead {
+  background-color: #f8f9fa;
+}
+
+.chemical-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.chemical-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #333;
+}
+
+.chemical-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.chemical-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.lot-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lot-item {
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.lot-item span {
+  color: #555;
+}
+
+.lot-item span:first-child {
+  font-weight: 600;
+  color: #333;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+}
+
+.empty-state-text {
+  color: #999;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .chemical-stock-container {
+    padding: 15px;
+  }
+
+  .chemical-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-input {
+    width: 100%;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .chemical-table {
+    min-width: 600px;
+  }
+
+  .lot-item {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

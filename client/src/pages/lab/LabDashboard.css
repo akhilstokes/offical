@@ -45,27 +45,30 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-.dashboard-nav button {
-  background: none;
+.lab-dashboard .dashboard-nav button {
+  background: none !important;
   border: none;
   padding: 1rem 1.5rem;
   cursor: pointer;
   font-weight: 600;
-  color: #64748b;
+  font-size: 0.95rem;
+  color: #475569 !important;
   border-bottom: 3px solid transparent;
+  border-radius: 0;
   transition: all 0.3s ease;
   position: relative;
+  white-space: nowrap;
 }
 
-.dashboard-nav button:hover {
-  color: #3b82f6;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+.lab-dashboard .dashboard-nav button:hover {
+  color: #3b82f6 !important;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
 }
 
-.dashboard-nav button.active {
-  color: #3b82f6;
+.lab-dashboard .dashboard-nav button.active {
+  color: #3b82f6 !important;
   border-bottom-color: #3b82f6;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
 }
 
 /* Main Content */

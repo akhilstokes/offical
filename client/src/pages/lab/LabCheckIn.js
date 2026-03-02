@@ -7,8 +7,19 @@ const LabCheckIn = () => {
   const base = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const { user } = useAuth();
-  const [form, setForm] = useState({ sampleId: '', customerName: '', receivedAt: '', notes: '', barrelCount: 0 });
-  const [barrels, setBarrels] = useState([]); // [{barrelId, liters, drc}]
+  
+  // Form state
+  const [form, setForm] = useState({ 
+    sampleId: '', 
+    customerName: '', 
+    receivedAt: '', 
+    notes: '', 
+    barrelCount: 0
+  });
+  
+  // Barrels state - each barrel has separate DRC, TSC, and pH sections
+  const [barrels, setBarrels] = useState([]);
+  
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -22,19 +33,161 @@ const LabCheckIn = () => {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  // Prefill from URL params if present
+  // Initialize barrels array when barrelCount changes
+  useEffect(() => {
+    const n = Number(form.barrelCount) || 0;
+    setBarrels(prev => {
+      const arr = [...prev];
+      if (arr.length > n) return arr.slice(0, n);
+      while (arr.length < n) {
+        arr.push({
+          barrelNumber: arr.length + 1,
+          drc: { w1: '', w2: '', value: '0.00' },
+          tsc: { w1: '', w2: '', value: '0.00' },
+          ph: ''
+        });
+      }
+      return arr;
+    });
+  }, [form.barrelCount]);
+
+  // Calculate DRC and TSC for a specific barrel
+  const calculateBarrelValues = (barrel) => {
+    const drcW1 = parseFloat(barrel.drc.w1) || 0;
+    const drcW2 = parseFloat(barrel.drc.w2) || 0;
+    const tscW1 = parseFloat(barrel.tsc.w1) || 0;
+    const tscW2 = parseFloat(barrel.tsc.w2) || 0;
+    
+    let drcValue = 0;
+    let tscValue = 0;
+    
+    if (drcW2 > 0) {
+      drcValue = (drcW1 / drcW2) * 100;
+    }
+    
+    if (tscW2 > 0) {
+      tscValue = (tscW1 / tscW2) * 100;
+    }
+    
+    return {
+      drc: drcValue.toFixed(2),
+      tsc: tscValue.toFixed(2)
+    };
+  };
+
+  // Update barrel field
+  const onBarrelChange = (index, section, field, value) => {
+    setBarrels(prev => {
+      const updated = [...prev];
+      const currentBarrel = { ...updated[index] };
+      
+      if (section === 'ph') {
+        updated[index] = { ...currentBarrel, ph: value };
+      } else {
+        // Create a new section object with the updated field
+        const updatedSection = {
+          ...currentBarrel[section],
+          [field]: value
+        };
+        
+        // Update the barrel with the new section
+        currentBarrel[section] = updatedSection;
+        
+        // Recalculate the value for this section
+        const calculated = calculateBarrelValues(currentBarrel);
+        
+        // Create final section object with calculated value
+        currentBarrel[section] = {
+          ...updatedSection,
+          value: calculated[section]
+        };
+        
+        updated[index] = currentBarrel;
+      }
+      
+      return updated;
+    });
+    
+    // Clear validation error
+    if (validation[`barrel_${index}_${section}_${field}`]) {
+      setValidation(v => ({ ...v, [`barrel_${index}_${section}_${field}`]: undefined }));
+    }
+  };
+
+  // Validation function
+  const validateForm = () => {
+    const v = {};
+    
+    // Basic validations
+    if (!form.customerName?.trim()) v.customerName = 'Customer name is required';
+    
+    // Validate each barrel
+    barrels.forEach((barrel, idx) => {
+      // DRC validations
+      const drcW1 = parseFloat(barrel.drc.w1);
+      const drcW2 = parseFloat(barrel.drc.w2);
+      
+      if (!barrel.drc.w1 || isNaN(drcW1) || drcW1 <= 0) {
+        v[`barrel_${idx}_drc_w1`] = 'W1_DRC must be a positive number';
+      }
+      
+      if (!barrel.drc.w2 || isNaN(drcW2) || drcW2 <= 0) {
+        v[`barrel_${idx}_drc_w2`] = 'W2_DRC must be a positive number';
+      } else if (drcW2 === 0) {
+        v[`barrel_${idx}_drc_w2`] = 'W2_DRC cannot be zero';
+      }
+      
+      if (drcW1 > 0 && drcW2 > 0 && drcW1 > drcW2) {
+        v[`barrel_${idx}_drc_w1`] = 'W1_DRC must be ≤ W2_DRC';
+      }
+      
+      // TSC validations
+      const tscW1 = parseFloat(barrel.tsc.w1);
+      const tscW2 = parseFloat(barrel.tsc.w2);
+      
+      if (!barrel.tsc.w1 || isNaN(tscW1) || tscW1 <= 0) {
+        v[`barrel_${idx}_tsc_w1`] = 'W1_TSC must be a positive number';
+      }
+      
+      if (!barrel.tsc.w2 || isNaN(tscW2) || tscW2 <= 0) {
+        v[`barrel_${idx}_tsc_w2`] = 'W2_TSC must be a positive number';
+      } else if (tscW2 === 0) {
+        v[`barrel_${idx}_tsc_w2`] = 'W2_TSC cannot be zero';
+      }
+      
+      if (tscW1 > 0 && tscW2 > 0 && tscW1 > tscW2) {
+        v[`barrel_${idx}_tsc_w1`] = 'W1_TSC must be ≤ W2_TSC';
+      }
+      
+      // Scientific validation: TSC >= DRC
+      const calculated = calculateBarrelValues(barrel);
+      const drcValue = parseFloat(calculated.drc);
+      const tscValue = parseFloat(calculated.tsc);
+      
+      if (tscValue < drcValue) {
+        v[`barrel_${idx}_tsc_validation`] = 'Invalid measurement: TSC cannot be less than DRC';
+      }
+      
+      // pH validation
+      const ph = parseFloat(barrel.ph);
+      if (!barrel.ph || isNaN(ph)) {
+        v[`barrel_${idx}_ph`] = 'pH is required';
+      } else if (ph < 0 || ph > 14) {
+        v[`barrel_${idx}_ph`] = 'pH must be between 0 and 14';
+      }
+    });
+    
+    return v;
+  };
+
+  // Prefill from URL params
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      console.log('LabCheckIn URL params:', window.location.search);
-      console.log('All URL params:', Object.fromEntries(params.entries()));
-      
       const sampleId = params.get('sampleId');
       const customerName = params.get('customerName');
       const barrelCount = params.get('barrelCount');
       const receivedAt = params.get('receivedAt');
-      
-      console.log('Parsed params:', { sampleId, customerName, barrelCount, receivedAt });
       
       const patch = {};
       if (sampleId && sampleId.trim()) patch.sampleId = sampleId.trim();
@@ -43,11 +196,10 @@ const LabCheckIn = () => {
         const count = Number(barrelCount) || 0;
         patch.barrelCount = count;
       }
-      // If receivedAt is provided in URL, use it; otherwise set current date/time
+      
       if (receivedAt) {
         patch.receivedAt = receivedAt;
       } else {
-        // Auto-fill with current date and time in local timezone
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -57,26 +209,7 @@ const LabCheckIn = () => {
         patch.receivedAt = `${year}-${month}-${day}T${hours}:${minutes}`;
       }
       
-      console.log('Applying patch to form:', patch);
       if (Object.keys(patch).length) setForm(f => ({ ...f, ...patch }));
-
-      // Handle barrel data from URL params
-      const barrelsData = [];
-      for (let i = 0; params.has(`barrel_${i}`); i++) {
-        const barrelId = params.get(`barrel_${i}`);
-        const liters = params.get(`liters_${i}`);
-        if (barrelId) {
-          barrelsData.push({
-            barrelId,
-            liters: liters ? Number(liters) : ''
-          });
-        }
-      }
-      if (barrelsData.length) {
-        console.log('Setting barrels data:', barrelsData);
-        setBarrels(barrelsData);
-        setForm(f => ({ ...f, barrelCount: barrelsData.length }));
-      }
     } catch (err) { 
       console.error('Error parsing URL params:', err);
     }
@@ -87,8 +220,6 @@ const LabCheckIn = () => {
     const loadHistory = async () => {
       setLoadingHistory(true);
       try {
-        // TODO: Backend endpoint needs to be created at /api/lab/samples/checkin-history
-        // For now, load from localStorage
         const localCheckins = JSON.parse(localStorage.getItem('lab_checkins') || '[]');
         setHistory(localCheckins);
       } catch (err) {
@@ -100,103 +231,82 @@ const LabCheckIn = () => {
     loadHistory();
   }, [base, token]);
 
-  useEffect(() => {
-    const n = Number(form.barrelCount) || 0;
-    setBarrels(prev => {
-      const arr = [...prev];
-      if (arr.length > n) return arr.slice(0, n);
-      while (arr.length < n) arr.push({ barrelId: '', liters: '', drc: '' });
-      return arr;
-    });
-  }, [form.barrelCount]);
-
-  const onBarrelChange = (index, field, value) => {
-    setBarrels(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  };
-
-  // Copy DRC from first barrel to all others
-  const copyDrcToAll = () => {
-    if (barrels.length === 0 || !barrels[0].drc) {
-      alert('Please enter DRC value for Barrel 1 first');
-      return;
-    }
-    
-    const firstDrc = barrels[0].drc;
-    setBarrels(prev => prev.map((barrel, idx) => ({
-      ...barrel,
-      drc: idx === 0 ? barrel.drc : firstDrc
-    })));
-    
-    setMessage(`DRC value ${firstDrc}% copied to all ${barrels.length} barrels`);
-    setTimeout(() => setMessage(''), 3000);
-  };
-
   const onSubmit = async (e) => {
     e.preventDefault();
-    setMessage(''); setError(''); setValidation({});
-    const v = {};
-    if (!form.customerName?.trim()) v.customerName = 'Customer name is required';
+    setMessage(''); 
+    setError(''); 
+    setValidation({});
     
-    // Validate that all barrels have DRC values
-    const barrelCount = Number(form.barrelCount) || 0;
-    if (barrelCount > 0) {
-      for (let i = 0; i < barrelCount; i++) {
-        const barrel = barrels[i];
-        if (!barrel || !barrel.drc || barrel.drc === '' || parseFloat(barrel.drc) <= 0) {
-          v[`barrel_${i}_drc`] = `DRC value for Barrel ${i + 1} is required`;
-        }
-      }
+    // Validate form
+    const v = validateForm();
+    if (Object.keys(v).length) { 
+      setValidation(v); 
+      setError('Please fix the validation errors before submitting');
+      return; 
     }
     
-    if (Object.keys(v).length) { setValidation(v); return; }
     try {
       setLoading(true);
       
-      // Calculate average DRC from all barrels
-      const drcValues = barrels.map(b => parseFloat(b.drc || 0)).filter(d => d > 0);
-      const averageDrc = drcValues.length > 0 
-        ? (drcValues.reduce((sum, val) => sum + val, 0) / drcValues.length).toFixed(2)
-        : 0;
+      // Prepare barrel data with backend recalculation
+      const barrelsData = barrels.map((barrel, idx) => {
+        const drcW1 = parseFloat(barrel.drc.w1);
+        const drcW2 = parseFloat(barrel.drc.w2);
+        const tscW1 = parseFloat(barrel.tsc.w1);
+        const tscW2 = parseFloat(barrel.tsc.w2);
+        const ph = parseFloat(barrel.ph);
+        
+        // Recalculate on backend side
+        const drcValue = (drcW1 / drcW2) * 100;
+        const tscValue = (tscW1 / tscW2) * 100;
+        
+        return {
+          barrelNumber: idx + 1,
+          drc: {
+            w1: drcW1,
+            w2: drcW2,
+            value: Number(drcValue.toFixed(2))
+          },
+          tsc: {
+            w1: tscW1,
+            w2: tscW2,
+            value: Number(tscValue.toFixed(2))
+          },
+          ph: ph
+        };
+      });
       
       // Prepare check-in data
       const checkInData = {
-        sampleId: form.sampleId,
+        sampleId: form.sampleId || `SAMPLE-${Date.now()}`,
         customerName: form.customerName,
         receivedAt: form.receivedAt,
         notes: form.notes,
-        barrelCount: barrelCount,
-        drc: averageDrc, // Average DRC for display
-        barrels: barrels.map((b, idx) => ({
-          barrelNumber: idx + 1,
-          barrelId: b.barrelId || `Barrel-${idx + 1}`,
-          liters: b.liters || 0,
-          drc: parseFloat(b.drc || 0)
-        })),
-        checkedInAt: new Date().toISOString()
+        barrels: barrelsData,
+        checkedInAt: new Date().toISOString(),
+        labStaff: user?.name || 'Lab Staff'
       };
       
       console.log('Sample Check-In Data:', checkInData);
       
-      // TODO: Backend endpoint needs to be created at /api/lab/samples/checkin
-      // For now, we'll store locally and show success
+      // TODO: Replace with actual API call
+      // const response = await fetch(`${base}/api/lab/samples/checkin`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      //   body: JSON.stringify(checkInData)
+      // });
       
       // Store in localStorage as temporary solution
       const existingCheckins = JSON.parse(localStorage.getItem('lab_checkins') || '[]');
       existingCheckins.unshift(checkInData);
-      // Keep only last 10
       if (existingCheckins.length > 10) existingCheckins.pop();
       localStorage.setItem('lab_checkins', JSON.stringify(existingCheckins));
       
-      // Also store for accountant to see
+      // Store for accountant
       const accountantPending = JSON.parse(localStorage.getItem('accountant_pending_samples') || '[]');
       accountantPending.unshift({
         ...checkInData,
-        status: 'pending_billing',
-        labStaff: user?.name || 'Lab Staff'
+        status: 'pending_billing'
       });
       localStorage.setItem('accountant_pending_samples', JSON.stringify(accountantPending));
       
@@ -207,24 +317,28 @@ const LabCheckIn = () => {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             title: 'Sample Check-In Completed',
-            message: `Sample ${checkInData.sampleId} from ${checkInData.customerName} checked in with DRC ${checkInData.drc || 'N/A'}%`,
+            message: `Sample ${checkInData.sampleId} from ${checkInData.customerName} - ${barrelsData.length} barrel(s) checked in`,
             link: '/accountant/latex-verify',
             meta: checkInData,
             targetRole: 'accountant'
           })
         });
       } catch (notifError) {
-        console.warn('Failed to send notification to accountant:', notifError);
+        console.warn('Failed to send notification:', notifError);
       }
       
-      setMessage('Sample checked in successfully! Notification sent to Accountant. Redirecting to dashboard...');
-      setForm({ sampleId: '', customerName: '', receivedAt: '', notes: '', barrelCount: 0 });
+      setMessage('Sample checked in successfully! Redirecting to dashboard...');
+      setForm({ 
+        sampleId: '', 
+        customerName: '', 
+        receivedAt: '', 
+        notes: '', 
+        barrelCount: 0
+      });
       setBarrels([]);
       
-      // Update history from localStorage
       setHistory(existingCheckins);
       
-      // Redirect to dashboard after successful check-in
       setTimeout(() => {
         navigate(`/lab/dashboard`);
       }, 1500);
@@ -237,34 +351,20 @@ const LabCheckIn = () => {
 
   const canSubmit = useMemo(() => {
     if (loading) return false;
-    if (!form.customerName?.trim()) return false;
-    
-    // Check that all barrels have DRC values
-    const barrelCount = Number(form.barrelCount) || 0;
-    if (barrelCount > 0) {
-      for (let i = 0; i < barrelCount; i++) {
-        const barrel = barrels[i];
-        if (!barrel || !barrel.drc || barrel.drc === '' || parseFloat(barrel.drc) <= 0) {
-          return false;
-        }
-      }
-    }
-    
-    return true;
+    const v = validateForm();
+    return Object.keys(v).length === 0;
   }, [loading, form, barrels]);
 
   const generateReport = (item) => {
     const reportDate = item.receivedAt ? new Date(item.receivedAt) : new Date(item.createdAt);
     const doc = new jsPDF();
     
-    // Set up colors and fonts
-    const primaryColor = [59, 130, 246]; // Blue
-    const secondaryColor = [71, 85, 105]; // Slate
-    const lightGray = [148, 163, 184];
+    const primaryColor = [59, 130, 246];
+    const secondaryColor = [71, 85, 105];
     
     let yPos = 20;
     
-    // Header with border
+    // Header
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, 210, 35, 'F');
     doc.setTextColor(255, 255, 255);
@@ -278,13 +378,11 @@ const LabCheckIn = () => {
     
     yPos = 50;
     
-    // Section: Sample Information
+    // Sample Information
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text('SAMPLE INFORMATION', 20, yPos);
-    
-    // Underline
     doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setLineWidth(0.5);
     doc.line(20, yPos + 2, 190, yPos + 2);
@@ -294,7 +392,6 @@ const LabCheckIn = () => {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     
-    // Sample details
     doc.text('Sample ID:', 25, yPos);
     doc.setFont('helvetica', 'normal');
     doc.text(item.sampleId || 'N/A', 70, yPos);
@@ -311,94 +408,39 @@ const LabCheckIn = () => {
     doc.setFont('helvetica', 'normal');
     doc.text(reportDate.toLocaleDateString('en-IN'), 70, yPos);
     
-    yPos += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Received Time:', 25, yPos);
-    doc.setFont('helvetica', 'normal');
-    doc.text(reportDate.toLocaleTimeString('en-IN'), 70, yPos);
-    
     yPos += 18;
     
-    // Section: Quality Analysis
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('QUALITY ANALYSIS', 20, yPos);
-    
-    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.line(20, yPos + 2, 190, yPos + 2);
-    
-    yPos += 12;
-    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-    doc.setFontSize(11);
-    
-    // Quality details with highlight box
-    doc.setFillColor(220, 252, 231); // Light green
-    doc.roundedRect(23, yPos - 5, 80, 10, 2, 2, 'F');
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('DRC Value:', 25, yPos);
-    doc.setFont('helvetica', 'normal');
-    const drcValue = item.drc != null ? Number(item.drc).toFixed(2) + '%' : 'Not Tested';
-    doc.setTextColor(22, 101, 52); // Dark green
-    doc.text(drcValue, 70, yPos);
-    
-    yPos += 12;
-    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-    doc.setFillColor(219, 234, 254); // Light blue
-    doc.roundedRect(23, yPos - 5, 80, 10, 2, 2, 'F');
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Number of Barrels:', 25, yPos);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(30, 64, 175); // Dark blue
-    doc.text(String(item.barrelCount || 0), 70, yPos);
-    
-    yPos += 18;
-    
-    // Section: Additional Notes
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ADDITIONAL NOTES', 20, yPos);
-    
-    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.line(20, yPos + 2, 190, yPos + 2);
-    
-    yPos += 12;
-    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    
-    const notes = item.notes || 'No additional notes';
-    const splitNotes = doc.splitTextToSize(notes, 170);
-    doc.text(splitNotes, 25, yPos);
-    
-    yPos += (splitNotes.length * 6) + 12;
-    
-    // Section: Lab Staff Information
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('LAB STAFF INFORMATION', 20, yPos);
-    
-    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.line(20, yPos + 2, 190, yPos + 2);
-    
-    yPos += 12;
-    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-    doc.setFontSize(11);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Checked In By:', 25, yPos);
-    doc.setFont('helvetica', 'normal');
-    doc.text(item.labStaff || user?.name || 'Lab Staff', 70, yPos);
-    
-    yPos += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Check-In Time:', 25, yPos);
-    doc.setFont('helvetica', 'normal');
-    doc.text(item.checkedInAt ? new Date(item.checkedInAt).toLocaleString('en-IN') : 'N/A', 70, yPos);
+    // Barrel Data
+    if (item.barrels && item.barrels.length > 0) {
+      item.barrels.forEach((barrel, idx) => {
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`BARREL ${barrel.barrelNumber || idx + 1}`, 20, yPos);
+        doc.line(20, yPos + 2, 190, yPos + 2);
+        
+        yPos += 10;
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.setFontSize(10);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text('DRC:', 25, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${barrel.drc?.value?.toFixed(2) || 'N/A'}%`, 50, yPos);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text('TSC:', 90, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${barrel.tsc?.value?.toFixed(2) || 'N/A'}%`, 115, yPos);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text('pH:', 155, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${barrel.ph || 'N/A'}`, 170, yPos);
+        
+        yPos += 12;
+      });
+    }
     
     // Footer
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -408,7 +450,6 @@ const LabCheckIn = () => {
     doc.setFont('helvetica', 'italic');
     doc.text('Holy Family Polymers - Laboratory Department', 105, 287, { align: 'center' });
     
-    // Save the PDF
     const fileName = `Lab_Report_${item.sampleId || 'Sample'}_${reportDate.toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
   };
@@ -418,140 +459,316 @@ const LabCheckIn = () => {
       <h3 style={{ marginTop: 0 }}>Sample Check-In</h3>
       {message && <div className="success-message">{message}</div>}
       {error && <div className="error-message">{error}</div>}
-      <form onSubmit={onSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
-        {/* Hidden field for sampleId - auto-generated, not editable by user */}
-        <input type="hidden" name="sampleId" value={form.sampleId} />
-        <input type="hidden" name="barrelCount" value={form.barrelCount} />
-        
-        <label>Customer Name<input name="customerName" placeholder="Buyer/Customer name" value={form.customerName} onChange={onChange} /></label>
-        
-        {/* Display barrel count as read-only information */}
-        <label>
-          Number of Barrels
-          <div style={{
-            padding: '8px 12px',
-            backgroundColor: '#f1f5f9',
-            border: '1px solid #e2e8f0',
-            borderRadius: '4px',
-            fontSize: '15px',
-            fontWeight: '600',
-            color: '#1e293b'
-          }}>
-            {form.barrelCount || 0} {form.barrelCount === 1 ? 'Barrel' : 'Barrels'}
-          </div>
-        </label>
-        
-        <label>Received At<input type="datetime-local" name="receivedAt" value={form.receivedAt} onChange={onChange} /></label>
-        
-        {/* DRC inputs for each barrel */}
-        {form.barrelCount > 0 && (
-          <div style={{ gridColumn: '1 / -1', marginTop: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h4 style={{ margin: 0, color: '#1e293b', fontSize: '16px' }}>
-                DRC Values for Each Barrel <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
-              </h4>
-              {form.barrelCount > 1 && (
-                <button
-                  type="button"
-                  onClick={copyDrcToAll}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
-                >
-                  <span>📋</span> Copy Barrel 1 DRC to All
-                </button>
+      
+      <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Basic Information */}
+        <div style={{ 
+          padding: 16, 
+          backgroundColor: '#f8fafc', 
+          borderRadius: 8, 
+          border: '1px solid #e2e8f0' 
+        }}>
+          <h4 style={{ marginTop: 0, marginBottom: 12, color: '#1e293b' }}>Basic Information</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+            <label>
+              Customer Name <span style={{ color: '#ef4444' }}>*</span>
+              <input 
+                name="customerName" 
+                placeholder="Buyer/Customer name" 
+                value={form.customerName} 
+                onChange={onChange}
+                style={{ borderColor: validation.customerName ? '#ef4444' : undefined }}
+              />
+              {validation.customerName && (
+                <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  {validation.customerName}
+                </span>
               )}
-            </div>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-              gap: 12,
-              padding: 16,
-              backgroundColor: '#f8fafc',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0'
+            </label>
+            
+            <label>
+              Received At
+              <input 
+                type="datetime-local" 
+                name="receivedAt" 
+                value={form.receivedAt} 
+                onChange={onChange} 
+              />
+            </label>
+            
+            <label>
+              Number of Barrels <span style={{ color: '#ef4444' }}>*</span>
+              <input 
+                type="number" 
+                name="barrelCount" 
+                placeholder="Enter number of barrels" 
+                value={form.barrelCount} 
+                onChange={onChange}
+                min="0"
+                step="1"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Barrel Measurements - Repeat for each barrel */}
+        {barrels.map((barrel, idx) => {
+          const calculated = calculateBarrelValues(barrel);
+          
+          return (
+            <div key={idx} style={{ 
+              padding: 20, 
+              backgroundColor: '#fef3c7', 
+              borderRadius: 12, 
+              border: '3px solid #f59e0b',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
             }}>
-              {barrels.map((barrel, idx) => (
-                <div key={idx} style={{
-                  padding: 12,
-                  backgroundColor: idx === 0 ? '#fef3c7' : 'white',
-                  borderRadius: '6px',
-                  border: idx === 0 ? '2px solid #f59e0b' : '1px solid #e2e8f0'
-                }}>
-                  <label style={{ marginBottom: 0 }}>
-                    <div style={{
-                      fontWeight: '600',
-                      color: idx === 0 ? '#92400e' : '#475569',
-                      marginBottom: 6,
-                      fontSize: '14px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      {idx === 0 && <span>🔬</span>}
-                      Barrel {idx + 1} DRC (%)
-                      {idx === 0 && <span style={{ fontSize: '11px', color: '#92400e' }}>(Test First)</span>}
-                    </div>
+              <h3 style={{ 
+                marginTop: 0, 
+                marginBottom: 16, 
+                color: '#92400e',
+                fontSize: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                🧪 Barrel {idx + 1} Measurements
+              </h3>
+              
+              {/* DRC SECTION */}
+              <div style={{ 
+                padding: 16, 
+                backgroundColor: '#dbeafe', 
+                borderRadius: 8, 
+                border: '2px solid #3b82f6',
+                marginBottom: 16
+              }}>
+                <h4 style={{ marginTop: 0, marginBottom: 8, color: '#1e40af', fontSize: '16px' }}>
+                  📊 DRC Calculation (Dry Rubber Content)
+                </h4>
+                <p style={{ fontSize: '13px', color: '#1e40af', marginBottom: 12, fontStyle: 'italic' }}>
+                  Formula: DRC (%) = (W1_DRC / W2_DRC) × 100
+                </p>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                  <label>
+                    W1_DRC - Weight of Dry Rubber (g) <span style={{ color: '#ef4444' }}>*</span>
                     <input 
                       type="number" 
-                      placeholder="Enter DRC %" 
-                      value={barrel.drc || ''} 
-                      onChange={(e) => onBarrelChange(idx, 'drc', e.target.value)}
+                      placeholder="Enter W1_DRC" 
+                      value={barrel.drc.w1} 
+                      onChange={(e) => onBarrelChange(idx, 'drc', 'w1', e.target.value)}
                       min="0"
-                      max="100"
-                      step="0.1"
-                      required
-                      style={{
-                        width: '100%',
-                        borderColor: validation[`barrel_${idx}_drc`] ? '#ef4444' : undefined,
-                        fontWeight: idx === 0 ? '600' : 'normal'
+                      step="0.01"
+                      style={{ borderColor: validation[`barrel_${idx}_drc_w1`] ? '#ef4444' : undefined }}
+                    />
+                    {validation[`barrel_${idx}_drc_w1`] && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                        {validation[`barrel_${idx}_drc_w1`]}
+                      </span>
+                    )}
+                  </label>
+                  
+                  <label>
+                    W2_DRC - Weight of Original Latex Sample (g) <span style={{ color: '#ef4444' }}>*</span>
+                    <input 
+                      type="number" 
+                      placeholder="Enter W2_DRC" 
+                      value={barrel.drc.w2} 
+                      onChange={(e) => onBarrelChange(idx, 'drc', 'w2', e.target.value)}
+                      min="0"
+                      step="0.01"
+                      style={{ borderColor: validation[`barrel_${idx}_drc_w2`] ? '#ef4444' : undefined }}
+                    />
+                    {validation[`barrel_${idx}_drc_w2`] && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                        {validation[`barrel_${idx}_drc_w2`]}
+                      </span>
+                    )}
+                  </label>
+                  
+                  <label>
+                    DRC (%) - Calculated
+                    <input 
+                      type="text" 
+                      value={calculated.drc} 
+                      readOnly
+                      style={{ 
+                        backgroundColor: '#eff6ff', 
+                        fontWeight: '700', 
+                        color: '#1e40af',
+                        cursor: 'not-allowed',
+                        fontSize: '16px'
                       }}
                     />
-                    {validation[`barrel_${idx}_drc`] && (
-                      <span style={{ 
-                        color: '#ef4444', 
-                        fontSize: '12px', 
-                        marginTop: '4px',
-                        display: 'block'
-                      }}>
-                        {validation[`barrel_${idx}_drc`]}
+                  </label>
+                </div>
+              </div>
+
+              {/* TSC SECTION */}
+              <div style={{ 
+                padding: 16, 
+                backgroundColor: '#dcfce7', 
+                borderRadius: 8, 
+                border: '2px solid #10b981',
+                marginBottom: 16
+              }}>
+                <h4 style={{ marginTop: 0, marginBottom: 8, color: '#166534', fontSize: '16px' }}>
+                  📈 TSC Calculation (Total Solids Content)
+                </h4>
+                <p style={{ fontSize: '13px', color: '#166534', marginBottom: 12, fontStyle: 'italic' }}>
+                  Formula: TSC (%) = (W1_TSC / W2_TSC) × 100
+                </p>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                  <label>
+                    W1_TSC - Weight of Total Dried Residue (g) <span style={{ color: '#ef4444' }}>*</span>
+                    <input 
+                      type="number" 
+                      placeholder="Enter W1_TSC" 
+                      value={barrel.tsc.w1} 
+                      onChange={(e) => onBarrelChange(idx, 'tsc', 'w1', e.target.value)}
+                      min="0"
+                      step="0.01"
+                      style={{ borderColor: validation[`barrel_${idx}_tsc_w1`] ? '#ef4444' : undefined }}
+                    />
+                    {validation[`barrel_${idx}_tsc_w1`] && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                        {validation[`barrel_${idx}_tsc_w1`]}
+                      </span>
+                    )}
+                  </label>
+                  
+                  <label>
+                    W2_TSC - Weight of Original Latex Sample (g) <span style={{ color: '#ef4444' }}>*</span>
+                    <input 
+                      type="number" 
+                      placeholder="Enter W2_TSC" 
+                      value={barrel.tsc.w2} 
+                      onChange={(e) => onBarrelChange(idx, 'tsc', 'w2', e.target.value)}
+                      min="0"
+                      step="0.01"
+                      style={{ borderColor: validation[`barrel_${idx}_tsc_w2`] ? '#ef4444' : undefined }}
+                    />
+                    {validation[`barrel_${idx}_tsc_w2`] && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                        {validation[`barrel_${idx}_tsc_w2`]}
+                      </span>
+                    )}
+                  </label>
+                  
+                  <label>
+                    TSC (%) - Calculated
+                    <input 
+                      type="text" 
+                      value={calculated.tsc} 
+                      readOnly
+                      style={{ 
+                        backgroundColor: '#f0fdf4', 
+                        fontWeight: '700', 
+                        color: '#166534',
+                        cursor: 'not-allowed',
+                        fontSize: '16px'
+                      }}
+                    />
+                  </label>
+                </div>
+                
+                {/* Scientific Validation Error */}
+                {validation[`barrel_${idx}_tsc_validation`] && (
+                  <div style={{ 
+                    marginTop: 12, 
+                    padding: 12, 
+                    backgroundColor: '#fee2e2', 
+                    border: '2px solid #ef4444',
+                    borderRadius: 6,
+                    color: '#991b1b',
+                    fontWeight: '600',
+                    fontSize: '14px'
+                  }}>
+                    ⚠️ {validation[`barrel_${idx}_tsc_validation`]}
+                  </div>
+                )}
+              </div>
+              
+              {/* pH SECTION */}
+              <div style={{ 
+                padding: 16, 
+                backgroundColor: '#fef3c7', 
+                borderRadius: 8, 
+                border: '2px solid #f59e0b'
+              }}>
+                <h4 style={{ marginTop: 0, marginBottom: 8, color: '#92400e', fontSize: '16px' }}>
+                  🧪 pH Measurement
+                </h4>
+                
+                <div style={{ maxWidth: '300px' }}>
+                  <label>
+                    pH Value (0-14) <span style={{ color: '#ef4444' }}>*</span>
+                    <input 
+                      type="number" 
+                      placeholder="Enter pH value" 
+                      value={barrel.ph} 
+                      onChange={(e) => onBarrelChange(idx, 'ph', null, e.target.value)}
+                      min="0"
+                      max="14"
+                      step="0.1"
+                      style={{ borderColor: validation[`barrel_${idx}_ph`] ? '#ef4444' : undefined }}
+                    />
+                    {validation[`barrel_${idx}_ph`] && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                        {validation[`barrel_${idx}_ph`]}
                       </span>
                     )}
                   </label>
                 </div>
-              ))}
+              </div>
             </div>
-            <div style={{
-              marginTop: 12,
-              padding: 12,
-              backgroundColor: '#dbeafe',
-              borderRadius: '6px',
-              border: '1px solid #3b82f6',
-              fontSize: '14px',
-              color: '#1e40af'
-            }}>
-              <strong>💡 Quick Workflow:</strong> Test Barrel 1 first, then click "Copy Barrel 1 DRC to All" if all barrels are from the same batch. The average will be calculated automatically.
-            </div>
+          );
+        })}
+
+        {/* Additional Notes */}
+        {form.barrelCount > 0 && (
+          <div style={{ 
+            padding: 16, 
+            backgroundColor: '#f8fafc', 
+            borderRadius: 8, 
+            border: '1px solid #e2e8f0' 
+          }}>
+            <label>
+              Additional Notes
+              <textarea 
+                name="notes" 
+                placeholder="Optional notes about the sample" 
+                value={form.notes} 
+                onChange={onChange} 
+                rows={3} 
+              />
+            </label>
           </div>
         )}
-        
-        <label style={{ gridColumn: '1 / -1' }}>Notes<textarea name="notes" placeholder="Optional notes" value={form.notes} onChange={onChange} rows={3} /></label>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <button className="btn primary" type="submit" disabled={!canSubmit}>{loading ? 'Saving...' : 'Check In'}</button>
-        </div>
+
+        {/* Submit Button */}
+        {form.barrelCount > 0 && (
+          <div>
+            <button 
+              className="btn primary" 
+              type="submit" 
+              disabled={!canSubmit}
+              style={{ 
+                opacity: canSubmit ? 1 : 0.5,
+                cursor: canSubmit ? 'pointer' : 'not-allowed'
+              }}
+            >
+              {loading ? 'Saving...' : 'Check In Sample'}
+            </button>
+            {!canSubmit && !loading && (
+              <p style={{ fontSize: '13px', color: '#ef4444', marginTop: 8 }}>
+                Please fill all required fields correctly to enable submission
+              </p>
+            )}
+          </div>
+        )}
       </form>
 
       {/* Check-In History */}
@@ -568,10 +785,8 @@ const LabCheckIn = () => {
                 <tr>
                   <th>Date</th>
                   <th>Sample ID</th>
-                  <th>Customer Name</th>
+                  <th>Customer</th>
                   <th>Barrels</th>
-                  <th>DRC (%)</th>
-                  <th>Notes</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -603,45 +818,52 @@ const LabCheckIn = () => {
                         borderRadius: '4px',
                         fontWeight: '600'
                       }}>
-                        {item.barrelCount || 0}
+                        {item.barrels?.length || 0}
                       </span>
                     </td>
                     <td>
-                      {item.drc != null ? (
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '4px 8px',
-                          backgroundColor: '#dcfce7',
-                          color: '#166534',
-                          borderRadius: '4px',
-                          fontWeight: '600'
-                        }}>
-                          {Number(item.drc).toFixed(1)}%
-                        </span>
-                      ) : '-'}
-                    </td>
-                    <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.notes || '-'}
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => generateReport(item)}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: '#3b82f6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          fontWeight: '500',
-                          transition: 'background-color 0.2s'
-                        }}
-                        onMouseOver={(e) => e.target.style.backgroundColor = '#2563eb'}
-                        onMouseOut={(e) => e.target.style.backgroundColor = '#3b82f6'}
-                      >
-                        📄 Generate Report
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => generateReport(item)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseOver={(e) => e.target.style.backgroundColor = '#2563eb'}
+                          onMouseOut={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                        >
+                          📄 Report
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Store sample data for AI Process
+                            localStorage.setItem('ai_process_sample_data', JSON.stringify(item));
+                            navigate('/lab/ai-rubber-process');
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
+                          onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
+                        >
+                          🤖 More
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

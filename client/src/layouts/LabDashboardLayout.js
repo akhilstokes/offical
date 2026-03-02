@@ -83,8 +83,7 @@ const LabDashboardLayout = ({ children }) => {
     { path: '/lab/leave', icon: 'fas fa-calendar-times', label: 'My Leave', category: 'personal' },
     { path: '/lab/shift-schedule', icon: 'fas fa-clock', label: 'Shift Schedule', category: 'schedule' },
     { path: '/lab/check-in', icon: 'fas fa-flask', label: 'Sample Check-In', category: 'lab' },
-    { path: '/lab/quality-classifier', icon: 'fas fa-robot', label: 'AI Quality Classifier', category: 'ai' },
-    { path: '/lab/quality-comparison', icon: 'fas fa-balance-scale', label: 'Compare Algorithms', category: 'ai' },
+    { path: '/lab/ai-rubber-process', icon: 'fas fa-brain', label: 'AI Rubber Process', category: 'lab' },
     { path: '/lab/chem-requests', icon: 'fas fa-atom', label: 'Chemical Requests', category: 'lab' },
     { path: '/lab/salary', icon: 'fas fa-money-bill-wave', label: 'My Salary', category: 'personal' },
     { path: '/lab/reports', icon: 'fas fa-file-chart-line', label: 'Reports', category: 'reports' }
