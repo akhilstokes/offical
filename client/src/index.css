@@ -1,105 +1,27 @@
-/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'); */
-/* @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'); */
+/* === Global Base Styles === */
 
-/* Cursor ripple effect */
-.ripple-cursor {
-  cursor: none;
-  position: relative;
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
-.ripple-cursor .cursor-ripple {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 26px;
-  height: 26px;
-  margin-top: -13px;
-  margin-left: -13px;
-  pointer-events: none;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(0, 200, 255, 0.4), rgba(0, 200, 255, 0.15) 60%, transparent 70%);
-  box-shadow: 0 0 12px rgba(0, 200, 255, 0.7), 0 0 32px rgba(0, 200, 255, 0.4);
+body {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans',
+    'Droid Sans', 'Helvetica Neue', sans-serif;
 
-  transform: translate3d(0, 0, 0);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 
-  transform: translate3d(0,0,0);
-
-  transition: opacity 200ms ease;
-  opacity: 0.9;
-  z-index: 9999;
-}
-
-.ripple-cursor .cursor-ripple.is-hidden {
-  opacity: 0;
-}
-
-@keyframes ripple-pulse {
-
-  0% {
-    transform: scale(0.9);
-    opacity: 0.9;
-  }
-
-  50% {
-    transform: scale(1.05);
-    opacity: 0.6;
-  }
-
-  100% {
-    transform: scale(0.9);
-    opacity: 0.9;
-  }
-
-  0% { transform: scale(0.9); opacity: 0.9; }
-  50% { transform: scale(1.05); opacity: 0.6; }
-  100% { transform: scale(0.9); opacity: 0.9; }
-
-}
-
-.ripple-cursor .cursor-ripple.pulsing {
-  animation: ripple-pulse 1.2s ease-in-out infinite;
-}
-
-/* Staff theme (distinct look) */
-.staff-theme .form-container {
-  border-top: 4px solid #00ed64;
-  box-shadow: 0 8px 24px rgba(0, 237, 100, 0.15);
-}
-
-
-
-
-.staff-theme .form-button {
-  background-color: #00ed64;
+  background-color: #ffffff;
   color: #001e2b;
 }
 
-
-.staff-theme .form-button:hover {
-  background-color: #00d857;
-}
-
-
-.staff-theme .form-button:hover {
-  background-color: #00d857;
-}
-
-.staff-theme .success-message {
-  background: #e7f6ef;
-  color: #006b2f;
-}
-
-
-
-
-.staff-theme .error-message {
-  background: #ffe8e6;
-  color: #c42a1c;
-}
-
-
-/******** Normalize base styles to project theme ********/
-/* Screen reader only class for accessibility */
+/* Accessibility */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -112,93 +34,42 @@
   border-width: 0;
 }
 
-/* Global layout constraints */
-html,
-body {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-
-/******** Normalize base styles to project theme ********/
-body {
-  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-
-  margin: 0;
-  padding: 0;
-
-  background-color: #ffffff;
-  color: #001e2b;
-}
-
-/* Remove global div spacing that causes layout drift */
-
+/* Remove global div spacing */
 div {
   margin-bottom: 0;
 }
 
-div { margin-bottom: 0; }
-
-
+/* Inputs */
 input {
   padding: 8px;
   margin: 5px 0;
   width: 250px;
-
   border: 1px solid rgba(0, 0, 0, 0.15);
-
-  border: 1px solid rgba(0,0,0,0.15);
-
   border-radius: 8px;
   font-family: inherit;
   background-color: #ffffff;
   color: #001e2b;
 }
 
+/* Buttons */
 button {
   padding: 10px 15px;
-
-  background-color: #ea580c;
-  /* Orange 600 - "Button Color" */
-  color: #ffffff;
-
   background-color: #00ed64;
   color: #001e2b;
-
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 600;
-
   font-size: 1rem;
-  /* Slightly larger */
 }
 
 button:hover {
-  background-color: #c2410c;
-  /* Darker Orange */
+  background-color: #00d857;
   transform: translateY(-1px);
 }
 
+/* Links */
 a {
   color: #00a8cc;
 }
-
-}
-
-button:hover { background-color: #00d857; transform: translateY(-1px); }
-
-a { color: #00a8cc; }
-
