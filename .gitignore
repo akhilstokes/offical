@@ -76,3 +76,5 @@ datasets/
 
 # Markdown documentation files
 *.md
+node_modules
+node_modules
