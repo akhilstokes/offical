@@ -61,7 +61,12 @@ export default function UserLiveRate() {
   };
 
   useEffect(() => {
-    if (!token) return; // Don't load data if not authenticated
+    if (!token) {
+      // Clear data if not authenticated
+      setRate(null);
+      setHistory([]);
+      return;
+    }
     
     reloadLatest();
     reloadHistory();
@@ -75,7 +80,10 @@ export default function UserLiveRate() {
   }, [token]);
 
   const reloadHistory = () => {
-    if (!token) return;
+    if (!token) {
+      setHistory([]);
+      return;
+    }
     setLoadingHist(true);
     
     // Use the existing /api/rates/history-range endpoint
@@ -89,7 +97,10 @@ export default function UserLiveRate() {
     })
       .then(({ data }) => setHistory(Array.isArray(data) ? data : data?.rates || data?.rows || []))
       .catch((error) => {
-        console.error('Error loading history:', error);
+        // Silently handle errors - don't spam console
+        if (error.response?.status !== 400) {
+          console.error('Error loading history:', error.message);
+        }
         setHistory([]);
       })
       .finally(() => setLoadingHist(false));

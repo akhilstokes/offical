@@ -18,7 +18,7 @@ const AccountantBillGeneration = () => {
         placeOfSupply: 'Kooroppada',
         bankAccount: '',
         items: [
-            { description: 'Vulcanised Rubber Other Than Hard Rubber (Rubber Bands)', hsn: '40169920', quantity: 0, drc: 0, rate: 0, amount: 0 }
+            { description: 'Vulcanised Rubber Other Than Hard Rubber (Rubber Bands)', hsn: '40169920', quantity: 0, rate: 0, amount: 0 }
         ]
     });
 
@@ -111,7 +111,7 @@ const AccountantBillGeneration = () => {
                 placeOfSupply: 'Kooroppada',
                 bankAccount: '',
                 items: [
-                    { description: 'Vulcanised Rubber Other Than Hard Rubber (Rubber Bands)', hsn: '40169920', quantity: 0, drc: 0, rate: 0, amount: 0 }
+                    { description: 'Vulcanised Rubber Other Than Hard Rubber (Rubber Bands)', hsn: '40169920', quantity: 0, rate: 0, amount: 0 }
                 ]
             });
             
@@ -212,9 +212,13 @@ const AccountantBillGeneration = () => {
         // Pricing Details
         purchasePrice: '',
         purchasePriceType: 'With Tax',
+        totalAmount: '',
         
-        // Party Wise Prices
-        partyPrices: []
+        // Custom Fields
+        customItem: '',
+        customRate: '',
+        customGst: 'None',
+        customInfo: ''
     });
 
     // Categories for dropdown
@@ -454,7 +458,6 @@ const AccountantBillGeneration = () => {
                 description: newItemForm.itemName,
                 hsn: newItemForm.hsnCode || '',
                 quantity: 1,
-                drc: 0,
                 rate: parseFloat(newItemForm.salesPrice) || 0,
                 amount: parseFloat(newItemForm.salesPrice) || 0
             };
@@ -486,7 +489,11 @@ const AccountantBillGeneration = () => {
                 asOfDate: new Date().toISOString().slice(0, 10),
                 purchasePrice: '',
                 purchasePriceType: 'With Tax',
-                partyPrices: []
+                totalAmount: '',
+                customItem: '',
+                customRate: '',
+                customGst: 'None',
+                customInfo: ''
             });
             setActiveItemTab('basic');
             setShowCreateItemModal(false);
@@ -698,32 +705,6 @@ const AccountantBillGeneration = () => {
                                 />
                             </div>
                         </div>
-
-                        {/* Bank Account - Full Width */}
-                        <div className="form-group full-width">
-                            <label className="form-label">💳 Bank Account</label>
-                            <div className="bank-account-selector">
-                                <select 
-                                    name="bankAccount"
-                                    className="form-select"
-                                    value={formData.bankAccount || ''}
-                                    onChange={handleChange}
-                                >
-                                    <option value="">Select Bank Account</option>
-                                    <option value="personal">Personal Account - ****7950</option>
-                                    <option value="business">Business Account - ****2341</option>
-                                    <option value="savings">Savings Account - ****8765</option>
-                                </select>
-                                <button 
-                                    type="button"
-                                    className="add-account-quick-btn"
-                                    onClick={() => setShowBankAccountModal(true)}
-                                    title="Add New Bank Account"
-                                >
-                                    <FiPlus />
-                                </button>
-                            </div>
-                        </div>
                     </div>
 
                     <div className="items-table-container">
@@ -743,7 +724,6 @@ const AccountantBillGeneration = () => {
                                     <th>Description of Goods</th>
                                     <th>HSN/SAC</th>
                                     <th>Qty (Kg)</th>
-                                    <th>DRC %</th>
                                     <th>Rate (₹)</th>
                                     <th>Amount (₹)</th>
                                 </tr>
@@ -773,16 +753,6 @@ const AccountantBillGeneration = () => {
                                                 value={item.quantity}
                                                 onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                                                 placeholder="0"
-                                            />
-                                        </td>
-                                        <td>
-                                            <input
-                                                type="number"
-                                                className="form-input"
-                                                style={{ width: '80px' }}
-                                                value={item.drc}
-                                                onChange={(e) => handleItemChange(index, 'drc', e.target.value)}
-                                                placeholder="%"
                                             />
                                         </td>
                                         <td>
@@ -1338,22 +1308,6 @@ const AccountantBillGeneration = () => {
                                     <span className="nav-icon">💰</span>
                                     <span>Pricing Details</span>
                                 </div>
-                                
-                                <div 
-                                    className={`nav-item ${activeItemTab === 'party' ? 'active' : ''}`}
-                                    onClick={() => setActiveItemTab('party')}
-                                >
-                                    <span className="nav-icon">👥</span>
-                                    <span>Party Wise Prices</span>
-                                </div>
-                                
-                                <div 
-                                    className={`nav-item ${activeItemTab === 'custom' ? 'active' : ''}`}
-                                    onClick={() => setActiveItemTab('custom')}
-                                >
-                                    <span className="nav-icon">⚙️</span>
-                                    <span>Custom Fields</span>
-                                </div>
                             </div>
 
                             {/* Right Content Area */}
@@ -1496,6 +1450,67 @@ const AccountantBillGeneration = () => {
                                                         onChange={(e) => handleNewItemChange('openingStock', e.target.value)}
                                                     />
                                                     <span className="unit-label">PCS</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Custom Fields Section */}
+                                        <div className="custom-fields-section">
+                                            <h4 className="section-title">Custom Fields</h4>
+                                            
+                                            <div className="form-row">
+                                                <div className="form-group">
+                                                    <label className="form-label">Item</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        placeholder="Enter item details"
+                                                        value={newItemForm.customItem || ''}
+                                                        onChange={(e) => handleNewItemChange('customItem', e.target.value)}
+                                                    />
+                                                </div>
+                                                
+                                                <div className="form-group">
+                                                    <label className="form-label">Rate</label>
+                                                    <div className="price-input-group">
+                                                        <span className="currency-symbol">₹</span>
+                                                        <input
+                                                            type="number"
+                                                            className="form-input"
+                                                            placeholder="Enter rate"
+                                                            value={newItemForm.customRate || ''}
+                                                            onChange={(e) => handleNewItemChange('customRate', e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="form-row">
+                                                <div className="form-group">
+                                                    <label className="form-label">GST</label>
+                                                    <select
+                                                        className="form-select"
+                                                        value={newItemForm.customGst || 'None'}
+                                                        onChange={(e) => handleNewItemChange('customGst', e.target.value)}
+                                                    >
+                                                        <option value="None">None</option>
+                                                        <option value="GST 0%">GST 0%</option>
+                                                        <option value="GST 5%">GST 5%</option>
+                                                        <option value="GST 12%">GST 12%</option>
+                                                        <option value="GST 18%">GST 18%</option>
+                                                        <option value="GST 28%">GST 28%</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div className="form-group">
+                                                    <label className="form-label">Additional Info</label>
+                                                    <input
+                                                        type="text"
+                                                        className="form-input"
+                                                        placeholder="Enter additional information"
+                                                        value={newItemForm.customInfo || ''}
+                                                        onChange={(e) => handleNewItemChange('customInfo', e.target.value)}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
@@ -1689,29 +1704,20 @@ const AccountantBillGeneration = () => {
                                                     ))}
                                                 </select>
                                             </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Party Wise Prices Tab */}
-                                {activeItemTab === 'party' && (
-                                    <div className="item-form-section">
-                                        <div className="party-prices-placeholder">
-                                            <div className="placeholder-icon">📄</div>
-                                            <p>To enable Party Wise Prices and set custom prices for parties, please save the item first</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Custom Fields Tab */}
-                                {activeItemTab === 'custom' && (
-                                    <div className="item-form-section">
-                                        <div className="custom-fields-placeholder">
-                                            <div className="placeholder-icon">📋</div>
-                                            <p>You don't have any custom fields created yet</p>
-                                            <button type="button" className="create-custom-fields-btn">
-                                                + Create Custom fields
-                                            </button>
+                                            
+                                            <div className="form-group">
+                                                <label className="form-label">Total Amount</label>
+                                                <div className="price-input-group">
+                                                    <span className="currency-symbol">₹</span>
+                                                    <input
+                                                        type="number"
+                                                        className="form-input"
+                                                        placeholder="ex: ₹1000"
+                                                        value={newItemForm.totalAmount || ''}
+                                                        onChange={(e) => handleNewItemChange('totalAmount', e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

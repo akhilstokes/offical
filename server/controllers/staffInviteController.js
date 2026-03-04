@@ -93,26 +93,42 @@ exports.invite = async (req, res) => {
       </div>
     `;
 
-    await sendEmail({
-      email,
-      subject: `Staff Invitation - Your Staff ID: ${staffId}`,
-      message: `You are invited to join Holy Family Polymers. Staff ID: ${staffId}. Complete registration: ${verifyUrl}`,
-      html,
-    });
+    // Try to send email, but don't fail if it doesn't work
+    let emailSent = false;
+    try {
+      await sendEmail({
+        email,
+        subject: `Staff Invitation - Your Staff ID: ${staffId}`,
+        message: `You are invited to join Holy Family Polymers. Staff ID: ${staffId}. Complete registration: ${verifyUrl}`,
+        html,
+      });
+      emailSent = true;
+    } catch (emailErr) {
+      console.error('Email sending failed:', emailErr);
+      // Continue anyway - admin can share the link manually
+    }
 
     // Log the invitation activity
-    await ActivityLogger.logStaffInvitation(
-      req.user?._id, 
-      email, 
-      name, 
-      staffId
-    );
+    try {
+      await ActivityLogger.logStaffInvitation(
+        req.user?._id, 
+        email, 
+        name, 
+        staffId
+      );
+    } catch (logErr) {
+      console.error('Activity logging failed:', logErr);
+    }
 
     res.status(201).json({ 
-      message: 'Invite sent successfully', 
+      message: emailSent 
+        ? 'Invite sent successfully' 
+        : 'Invite created successfully (email sending failed - please share the link manually)',
       inviteId: invite._id, 
       staffId: staffId,
-      token 
+      token,
+      verifyUrl,
+      emailSent
     });
   } catch (err) {
     console.error('Invite error', err);

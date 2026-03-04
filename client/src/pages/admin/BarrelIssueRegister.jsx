@@ -82,7 +82,7 @@ const BarrelIssueRegister = () => {
         }
       }
 
-      const response = await fetch(`${API_URL}/api/barrel-register?${params}`, {
+      const response = await fetch(`${API_URL}/api/barrel-issue-register?${params}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -102,7 +102,7 @@ const BarrelIssueRegister = () => {
 
   const loadStatistics = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/barrel-register/statistics`, {
+      const response = await fetch(`${API_URL}/api/barrel-issue-register/statistics`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -126,7 +126,7 @@ const BarrelIssueRegister = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/barrel-register/return`, {
+      const response = await fetch(`${API_URL}/api/barrel-issue-register/return`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

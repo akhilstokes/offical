@@ -40,12 +40,20 @@ exports.approveBarrelRequest = async (req, res) => {
     const { id } = req.params;
     const doc = await BarrelRequest.findByIdAndUpdate(
       id,
-      { status: 'approved', adminNotes: req.body.notes || 'Approved by manager' },
+      { 
+        status: 'APPROVED', 
+        adminNotes: req.body.notes || 'Approved by manager',
+        approvedAt: new Date(),
+        approvedBy: req.user?._id || req.user?.id
+      },
       { new: true }
-    ).populate('user', 'name email');
+    ).populate('user', 'name email phone');
     if (!doc) return res.status(404).json({ message: 'Request not found' });
+    
+    console.log('Barrel request approved:', { id, status: doc.status });
     return res.json(doc);
   } catch (e) {
+    console.error('Error approving barrel request:', e);
     return res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };
@@ -63,6 +71,38 @@ exports.rejectBarrelRequest = async (req, res) => {
     if (!doc) return res.status(404).json({ message: 'Request not found' });
     return res.json(doc);
   } catch (e) {
+    return res.status(500).json({ message: 'Server Error', error: e.message });
+  }
+};
+
+// Manager: Assign delivery staff to barrel request
+exports.assignBarrelRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { deliveryStaffId } = req.body;
+    
+    if (!deliveryStaffId) {
+      return res.status(400).json({ message: 'deliveryStaffId is required' });
+    }
+    
+    const doc = await BarrelRequest.findByIdAndUpdate(
+      id,
+      { 
+        status: 'ASSIGNED',
+        assignedDeliveryStaffId: deliveryStaffId,
+        assignedAt: new Date(),
+        assignedBy: req.user?._id || req.user?.id
+      },
+      { new: true }
+    ).populate('user', 'name email phone')
+     .populate('assignedDeliveryStaffId', 'name email phone');
+    
+    if (!doc) return res.status(404).json({ message: 'Request not found' });
+    
+    console.log('Barrel request assigned:', { id, deliveryStaffId, status: doc.status });
+    return res.json(doc);
+  } catch (e) {
+    console.error('Error assigning barrel request:', e);
     return res.status(500).json({ message: 'Server Error', error: e.message });
   }
 };

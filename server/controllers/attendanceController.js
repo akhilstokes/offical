@@ -539,10 +539,15 @@ const attendanceController = {
       
       // Validate ObjectId format
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid attendance ID format' });
+        console.error('Invalid attendance ID:', id);
+        return res.status(400).json({ message: 'Invalid attendance ID format', id });
       }
 
       const { status, notes } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ message: 'Status is required in request body' });
+      }
 
       if (!['approved', 'rejected'].includes(status)) {
         return res.status(400).json({ message: 'Status must be approved or rejected' });
@@ -559,10 +564,16 @@ const attendanceController = {
       if (notes) attendance.approvalNotes = notes;
 
       await attendance.save();
-      await ActivityLogger.log(req.user._id, 'attendance', 'approve', {
-        attendanceId: id,
-        status: status
-      });
+      
+      // Try to log activity, but don't fail if it errors
+      try {
+        await ActivityLogger.log(req.user._id, 'attendance', 'approve', {
+          attendanceId: id,
+          status: status
+        });
+      } catch (logError) {
+        console.warn('Failed to log activity:', logError.message);
+      }
 
       const populatedAttendance = await Attendance.findById(id)
         .populate('staff', 'name email staffId')
@@ -723,7 +734,8 @@ const attendanceController = {
       
       // Validate ObjectId format
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid attendance ID format' });
+        console.error('Invalid attendance ID:', id);
+        return res.status(400).json({ message: 'Invalid attendance ID format', id });
       }
 
       const { verified, notes } = req.body;
@@ -739,10 +751,16 @@ const attendanceController = {
       if (notes) attendance.verificationNotes = notes;
 
       await attendance.save();
-      await ActivityLogger.log(req.user._id, 'attendance', 'verify', {
-        attendanceId: id,
-        verified: attendance.verified
-      });
+      
+      // Try to log activity, but don't fail if it errors
+      try {
+        await ActivityLogger.log(req.user._id, 'attendance', 'verify', {
+          attendanceId: id,
+          verified: attendance.verified
+        });
+      } catch (logError) {
+        console.warn('Failed to log activity:', logError.message);
+      }
 
       const populatedAttendance = await Attendance.findById(id)
         .populate('staff', 'name email staffId')

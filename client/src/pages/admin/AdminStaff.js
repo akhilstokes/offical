@@ -18,6 +18,7 @@ const AdminStaff = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showStaffIdOnly, setShowStaffIdOnly] = useState(false);
+  const [viewMode, setViewMode] = useState('invites'); // 'invites' or 'records'
 
   // Helpers
   const noSpaces = (v) => String(v || '').replace(/\s+/g, '');
@@ -327,13 +328,22 @@ const AdminStaff = () => {
           <p style={{ margin: '8px 0 0 0', color: '#64748b' }}>View and manage all staff with their IDs</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <a 
-            href="/admin/staff-records" 
-            className="btn btn-outline"
-            style={{ textDecoration: 'none' }}
+          <button 
+            className={`btn ${viewMode === 'records' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => {
+              setViewMode('records');
+              setStatusFilter('approved');
+              // Scroll to staff table
+              setTimeout(() => {
+                const table = document.querySelector('.dashboard-table');
+                if (table) {
+                  table.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 100);
+            }}
           >
             Staff Records
-          </a>
+          </button>
           <button 
             className="btn btn-primary" 
             onClick={load}
@@ -347,17 +357,19 @@ const AdminStaff = () => {
       {error && <div style={{ color: 'tomato', marginTop: 8 }}>{error}</div>}
       {success && <div style={{ color: 'limegreen', marginTop: 8 }}>{success}</div>}
 
-      <div style={{ 
-        marginTop: 24,
-        padding: '20px',
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        border: '1px solid #e2e8f0'
-      }}>
-        <h3 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>📧 Send Staff Invitation</h3>
-        <p style={{ margin: '0 0 20px 0', color: '#64748b', fontSize: '14px' }}>
-          Fill in the staff details below to send an invitation email
-        </p>
+      {/* Show invitation form only when in invites mode */}
+      {viewMode === 'invites' && (
+        <div style={{ 
+          marginTop: 24,
+          padding: '20px',
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <h3 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>📧 Send Staff Invitation</h3>
+          <p style={{ margin: '0 0 20px 0', color: '#64748b', fontSize: '14px' }}>
+            Fill in the staff details below to send an invitation email
+          </p>
         
         <form onSubmit={onInviteSubmit} style={{ 
           display: 'grid', 
@@ -583,6 +595,7 @@ const AdminStaff = () => {
           </div>
         )}
       </div>
+      )}
 
       {rows.filter(r => r.status === 'verified').length > 0 && (
         <div style={{ 

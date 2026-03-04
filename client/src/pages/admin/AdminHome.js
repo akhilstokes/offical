@@ -31,19 +31,27 @@ const AdminHome = () => {
   React.useEffect(() => {
     const fetchPendingRequests = async () => {
       try {
-        const response = await fetch('/api/customer/requests', {
+        const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${API}/api/barrel-management/admin/barrel-requests`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
+        
+        if (!response.ok) {
+          console.warn('Failed to fetch barrel requests:', response.status);
+          return;
+        }
+        
         const data = await response.json();
         // Handle both array and object responses
         const requests = Array.isArray(data) ? data : (data.requests || data.data || []);
         // Count pending barrel requests
-        const pending = requests.filter(r => r.type === 'BARREL' && r.status === 'pending').length;
+        const pending = requests.filter(r => r.status === 'pending').length;
         setPendingRequests(pending);
       } catch (error) {
         console.error('Error fetching requests:', error);
+        // Silently fail - don't show errors to user
       }
     };
     

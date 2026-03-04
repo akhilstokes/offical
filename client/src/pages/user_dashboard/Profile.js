@@ -41,7 +41,12 @@ const Profile = () => {
         }
         // Fetch fresh from backend with Authorization header
         const token = localStorage.getItem('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        if (!token) {
+          console.warn('No auth token found');
+          setLoading(false);
+          return;
+        }
+        const headers = { Authorization: `Bearer ${token}` };
         const res = await axios.get(`${API}/api/users/profile`, { headers });
         const u = res.data;
         const fetched = { 
@@ -59,6 +64,14 @@ const Profile = () => {
         setForm(fetched);
         setOriginalForm(fetched);
       } catch (e) {
+        console.error('Profile fetch error:', e?.response?.status, e?.response?.data);
+        // If 401, token is invalid - clear and redirect to login
+        if (e?.response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('auth');
+          window.location.href = '/login';
+        }
         // Keep local values if request fails
       } finally {
         setLoading(false);

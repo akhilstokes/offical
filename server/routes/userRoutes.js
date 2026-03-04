@@ -87,7 +87,15 @@ router.get('/all-staff', protect, async (req, res) => {
   }
 });
 
+// IMPORTANT: All specific routes must come BEFORE the /:id route
+// Define the routes for the user
+router.post('/submit-bill', protect, submitBillRequest);
+router.get('/profile', protect, getUserProfile);
+router.put('/profile', protect, updateUserProfile);
+router.get('/my-submissions', protect, getMySubmissions);
+
 // Get user by ID (for billing/payments - restricted to staff)
+// IMPORTANT: This MUST come LAST to avoid matching specific routes like /profile
 router.get('/:id', protect, async (req, res) => {
   try {
     const { id } = req.params;
@@ -112,12 +120,6 @@ router.get('/:id', protect, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch user details' });
   }
 });
-
-// Define the routes for the user
-router.post('/submit-bill', protect, submitBillRequest);
-router.get('/profile', protect, getUserProfile);
-router.put('/profile', protect, updateUserProfile);
-router.get('/my-submissions', protect, getMySubmissions);
 
 // PATCH route to update specific user fields (like dailySalary)
 router.patch('/:id', protect, async (req, res) => {

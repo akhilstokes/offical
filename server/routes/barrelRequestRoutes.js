@@ -12,6 +12,7 @@ router.get('/admin/all', protect, adminOrManager, ctrl.listAllBarrelRequests);
 router.get('/manager/all', protect, adminOrManager, ctrl.listAllBarrelRequests);
 router.put('/:id/approve', protect, adminOrManager, ctrl.approveBarrelRequest);
 router.put('/:id/reject', protect, adminOrManager, ctrl.rejectBarrelRequest);
+router.put('/:id/assign', protect, adminOrManager, ctrl.assignBarrelRequest);
 
 module.exports = router;
 

@@ -6,14 +6,18 @@ const barrelRequestSchema = new mongoose.Schema(
     quantity: { type: Number, required: true, min: 1 },
     address: { type: String, default: '' }, // Optional for barrel requests
     notes: { type: String, default: '' },
-    status: { type: String, enum: ['pending', 'approved', 'rejected', 'fulfilled', 'assigned'], default: 'pending', index: true },
+    status: { type: String, enum: ['pending', 'PENDING', 'approved', 'APPROVED', 'rejected', 'REJECTED', 'fulfilled', 'FULFILLED', 'assigned', 'ASSIGNED'], default: 'pending', index: true },
     adminNotes: { type: String, default: '' },
+    approvedAt: { type: Date },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     // Barrel assignment fields
     assignedBarrels: [{ type: String }],
     barrelSource: { type: String, enum: ['returned', 'inventory'] },
     assignedAt: { type: Date },
+    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     // Delivery assignment fields
     deliveryStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    assignedDeliveryStaffId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     deliveryDate: { type: Date },
     deliveryLocation: { type: String },
     deliveryStatus: { type: String, enum: ['pending', 'in_transit', 'delivered'], default: 'pending' },

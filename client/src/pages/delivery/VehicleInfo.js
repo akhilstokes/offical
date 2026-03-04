@@ -45,8 +45,10 @@ const VehicleInfo = () => {
       setLoading(true);
       setError(null);
 
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
       // Try to load from API first
-      const response = await fetch('/api/delivery/vehicle-info', {
+      const response = await fetch(`${API_URL}/api/delivery/vehicle-info`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

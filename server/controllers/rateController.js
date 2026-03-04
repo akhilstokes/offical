@@ -196,18 +196,32 @@ exports.getPublicRates = async (req, res) => {
 };
 
 // User/Admin: Get rate history by date range (inclusive) for a product
-// @route GET /api/rates/history-range?from=2024-01-01&to=2024-01-31&product=latex60
+// @route GET /api/rates/history-range?from=2024-01-01&to=2024-01-31&product=latex60&limit=50
 exports.getRatesByDateRange = async (req, res) => {
   try {
-    const { from, to } = req.query;
+    const { from, to, startDate, endDate } = req.query;
     const product = req.query.product || 'latex60';
+    const limit = Number(req.query.limit) || 50;
 
-    if (!from || !to) {
-      return res.status(400).json({ message: 'from and to query params are required (YYYY-MM-DD)' });
+    // Support both from/to and startDate/endDate parameter names
+    const fromParam = from || startDate;
+    const toParam = to || endDate;
+
+    // If no date range provided, return recent history
+    if (!fromParam && !toParam) {
+      const rates = await Rate.find({ product, status: 'published' })
+        .sort({ effectiveDate: -1, createdAt: -1 })
+        .limit(limit);
+      return res.json(rates);
     }
 
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
+    // If date range provided, validate and use it
+    if (!fromParam || !toParam) {
+      return res.status(400).json({ message: 'Both from/to or startDate/endDate query params are required (YYYY-MM-DD)' });
+    }
+
+    const fromDate = new Date(fromParam);
+    const toDate = new Date(toParam);
     if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
       return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
     }
@@ -217,8 +231,9 @@ exports.getRatesByDateRange = async (req, res) => {
 
     const rates = await Rate.find({
       product,
+      status: 'published',
       effectiveDate: { $gte: fromDate, $lte: toDate },
-    }).sort({ effectiveDate: -1, createdAt: -1 });
+    }).sort({ effectiveDate: -1, createdAt: -1 }).limit(limit);
 
     return res.json(rates);
   } catch (error) {

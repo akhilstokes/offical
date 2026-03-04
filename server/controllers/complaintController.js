@@ -78,7 +78,7 @@ exports.createComplaint = async (req, res) => {
 // Get all complaints (for managers/admins)
 exports.getAllComplaints = async (req, res) => {
   try {
-    const { status, priority, category, assignedTo, page = 1, limit = 10 } = req.query;
+    const { status, priority, category, assignedTo, page = 1, limit = 50 } = req.query;
     
     // Build filter object
     const filter = {};
@@ -89,13 +89,26 @@ exports.getAllComplaints = async (req, res) => {
 
     const skip = (page - 1) * limit;
     
-    const complaints = await Complaint.find(filter)
-      .populate('reportedBy', 'name email role')
-      .populate('assignedTo', 'name email role')
-      .populate('resolvedBy', 'name email role')
-      .sort({ reportedAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+    // Try without populate first to avoid errors
+    let complaints;
+    try {
+      complaints = await Complaint.find(filter)
+        .populate('reportedBy', 'name email role')
+        .populate('assignedTo', 'name email role')
+        .populate('resolvedBy', 'name email role')
+        .sort({ reportedAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean();
+    } catch (populateError) {
+      console.warn('Populate failed, fetching without populate:', populateError.message);
+      // Fallback: fetch without populate
+      complaints = await Complaint.find(filter)
+        .sort({ reportedAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean();
+    }
 
     const total = await Complaint.countDocuments(filter);
 
@@ -108,6 +121,7 @@ exports.getAllComplaints = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error in getAllComplaints:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };

@@ -70,12 +70,16 @@ app.use('/api/hanger-spaces', require('./routes/hangerSpaceRoutes'));
 app.use('/api/chemicals', require('./routes/chemRoutes'));
 app.use('/api/chem-requests', require('./routes/chemicalRequestRoutes'));
 
+// Latex testing
+app.use('/api/latex', require('./routes/latexRoutes'));
+
 // Rates and pricing
 app.use('/api/rates', require('./routes/rateRoutes'));
 app.use('/api/rubber-rates', require('./routes/rubberRateRoutes'));
 
 // Bills and payments
 app.use('/api/bills', require('./routes/billRoutes'));
+app.use('/api/invoices', require('./routes/invoiceRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
 
 // Staff and workers
@@ -100,6 +104,9 @@ app.use('/api/sell-requests', require('./routes/sellRequestRoutes'));
 // Notifications
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/bulk-notifications', require('./routes/bulkNotificationRoutes'));
+
+// Complaints
+app.use('/api/complaints', require('./routes/complaintRoutes'));
 
 // Uploads
 app.use('/api/uploads', require('./routes/uploadRoutes'));

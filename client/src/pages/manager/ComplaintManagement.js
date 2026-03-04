@@ -19,53 +19,71 @@ const ComplaintManagement = () => {
     setLoading(true);
     try {
       if (activeTab === 'staff') {
-        // Fetch attendance data
-        const attendanceResponse = await fetch(`${API_BASE}/api/attendance/pending`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        // Fetch attendance data - use /all endpoint with manager auth
+        try {
+          const attendanceResponse = await fetch(`${API_BASE}/api/attendance/all`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (attendanceResponse.ok) {
+            const result = await attendanceResponse.json();
+            const data = result.data || result.attendance || result;
+            setAttendanceData(Array.isArray(data) ? data : []);
+          } else {
+            console.warn('Failed to load attendance:', attendanceResponse.status);
+            setAttendanceData([]);
           }
-        });
-        if (attendanceResponse.ok) {
-          const data = await attendanceResponse.json();
-          setAttendanceData(Array.isArray(data) ? data : []);
-        } else {
+        } catch (err) {
+          console.error('Error loading attendance:', err);
           setAttendanceData([]);
         }
 
-        // Fetch staff complaints
-        const complaintsResponse = await fetch(`${API_BASE}/api/complaints/staff`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        // Fetch staff complaints - use /all endpoint
+        try {
+          const complaintsResponse = await fetch(`${API_BASE}/api/complaints/all`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (complaintsResponse.ok) {
+            const result = await complaintsResponse.json();
+            const data = result.data || result.complaints || result;
+            setStaffComplaints(Array.isArray(data) ? data : []);
+          } else {
+            console.warn('Failed to load complaints:', complaintsResponse.status);
+            setStaffComplaints([]);
           }
-        });
-        if (complaintsResponse.ok) {
-          const data = await complaintsResponse.json();
-          setStaffComplaints(Array.isArray(data) ? data : []);
-        } else {
+        } catch (err) {
+          console.error('Error loading complaints:', err);
           setStaffComplaints([]);
         }
       } else {
-        // Fetch user complaints
-        const userComplaintsResponse = await fetch(`${API_BASE}/api/complaints/users`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        // Fetch user complaints - use /all endpoint
+        try {
+          const userComplaintsResponse = await fetch(`${API_BASE}/api/complaints/all`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (userComplaintsResponse.ok) {
+            const result = await userComplaintsResponse.json();
+            const data = result.data || result.complaints || result;
+            setUserComplaints(Array.isArray(data) ? data : []);
+          } else {
+            console.warn('Failed to load user complaints:', userComplaintsResponse.status);
+            setUserComplaints([]);
           }
-        });
-        if (userComplaintsResponse.ok) {
-          const data = await userComplaintsResponse.json();
-          setUserComplaints(Array.isArray(data) ? data : []);
-        } else {
+        } catch (err) {
+          console.error('Error loading user complaints:', err);
           setUserComplaints([]);
         }
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      setAttendanceData([]);
-      setStaffComplaints([]);
-      setUserComplaints([]);
     } finally {
       setLoading(false);
     }
@@ -73,18 +91,33 @@ const ComplaintManagement = () => {
 
   const handleVerifyAttendance = async (id, action) => {
     try {
-      const response = await fetch(`${API_BASE}/api/attendance/${action}/${id}`, {
-        method: 'POST',
+      // Correct endpoint: PUT /api/attendance/:id/verify or POST /api/attendance/:id/approve
+      const endpoint = action === 'verify' 
+        ? `${API_BASE}/api/attendance/${id}/verify`
+        : `${API_BASE}/api/attendance/${id}/approve`;
+      
+      const method = action === 'verify' ? 'PUT' : 'POST';
+      
+      // Prepare request body
+      const body = action === 'approve' 
+        ? { status: 'approved' } // approveAttendance expects status in body
+        : { verified: true }; // verifyAttendance expects verified in body
+      
+      const response = await fetch(endpoint, {
+        method: method,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify(body)
       });
 
       if (response.ok) {
         fetchData(); // Refresh data
       } else {
-        alert(`Failed to ${action} attendance`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`Failed to ${action} attendance:`, errorData);
+        alert(`Failed to ${action} attendance: ${errorData.message || response.status}`);
       }
     } catch (error) {
       console.error(`Error ${action}ing attendance:`, error);

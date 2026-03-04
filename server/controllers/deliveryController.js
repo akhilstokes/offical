@@ -972,9 +972,9 @@ exports.updateIntake = async (req, res) => {
       }
     }
 
-    // Update the intake
+    // Update the intake - use Object.assign but skip validation for partial updates
     Object.assign(intake, req.body);
-    await intake.save();
+    await intake.save({ validateModifiedOnly: true });
     
     await intake.populate('createdBy', 'name email role');
 

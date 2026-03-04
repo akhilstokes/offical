@@ -12,44 +12,6 @@ const UserRequests = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
-  const [userAddress, setUserAddress] = useState('');
-  const [showAddressWarning, setShowAddressWarning] = useState(false);
-
-  const checkUserAddress = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.log('No token found');
-        setShowAddressWarning(true);
-        return;
-      }
-      
-      const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${API}/api/users/profile`, { 
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        const address = data.address || '';
-        setUserAddress(address);
-        if (!address || address.trim() === '' || address.trim().length < 10) {
-          setShowAddressWarning(true);
-        } else {
-          setShowAddressWarning(false);
-        }
-      } else {
-        console.error('Failed to fetch profile:', res.status);
-        // Don't show warning if API fails, keep current state
-      }
-    } catch (e) {
-      console.error('Error checking user address:', e);
-      // Don't show warning if API fails, keep current state
-    }
-  };
 
   const load = async () => {
     setLoading(true);
@@ -59,18 +21,10 @@ const UserRequests = () => {
   };
 
   useEffect(() => { 
-    load(); 
-    checkUserAddress();
+    load();
   }, []);
 
   const submitBarrel = async () => {
-    // Check if user has address before allowing request
-    if (!userAddress || userAddress.trim() === '') {
-      setErr('Please complete your address in your profile before requesting barrels. Delivery staff need your address for barrel delivery.');
-      setShowAddressWarning(true);
-      return;
-    }
-
     setSubmitting(true); setErr('');
     try {
       const qty = Number(barrel.quantity) || 1;
@@ -79,21 +33,16 @@ const UserRequests = () => {
         setSubmitting(false);
         return;
       }
-      await createRequest({ type: 'BARREL', quantity: qty, notes: barrel.notes, address: userAddress });
+      await createRequest({ type: 'BARREL', quantity: qty, notes: barrel.notes });
       setBarrel(initialBarrel);
       await load();
-    } catch (e) { setErr('Failed to submit request'); }
+    } catch (e) { 
+      setErr(e.response?.data?.message || e.message || 'Failed to submit request'); 
+    }
     finally { setSubmitting(false); }
   };
 
-  const repeatBarrelRequest = async (request) => {
-    // Check if user has address before allowing request
-    if (!userAddress || userAddress.trim() === '') {
-      setErr('Please complete your address in your profile before requesting barrels. Delivery staff need your address for barrel delivery.');
-      setShowAddressWarning(true);
-      return;
-    }
-
+  const repeatBarrelRequest = (request) => {
     // Switch to barrel tab and populate form
     setTab('BARREL');
     setBarrel({
@@ -145,65 +94,6 @@ const UserRequests = () => {
               <div className="alert error" style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                 <i className="fas fa-exclamation-circle" style={{ marginTop: '2px' }}></i>
                 <span style={{ flex: 1 }}>{err}</span>
-              </div>
-            )}
-
-            {showAddressWarning && (!userAddress || userAddress.trim() === '' || userAddress.trim().length < 10) && tab === 'BARREL' && (
-              <div className="alert" style={{ 
-                background: '#fffbeb', 
-                border: '1px solid #fde68a', 
-                color: '#92400e', 
-                marginBottom: '20px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '12px'
-              }}>
-                <i className="fas fa-exclamation-triangle" style={{ fontSize: '1.2rem', marginTop: '2px', flexShrink: 0 }}></i>
-                <div style={{ flex: 1 }}>
-                  <strong style={{ display: 'block', marginBottom: '4px' }}>Address Required</strong>
-                  <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.5' }}>
-                    Delivery staff need your address for barrel delivery. Please update your address in your{' '}
-                    <a href="/user/profile" style={{ color: '#92400e', textDecoration: 'underline', fontWeight: '700' }}>
-                      profile
-                    </a>
-                    {' '}before submitting a barrel request.
-                  </p>
-                  <button 
-                    type="button" 
-                    onClick={checkUserAddress}
-                    style={{ 
-                      marginTop: '8px', 
-                      padding: '4px 12px', 
-                      fontSize: '0.8rem', 
-                      background: '#92400e', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '4px', 
-                      cursor: 'pointer',
-                      fontWeight: '600'
-                    }}
-                  >
-                    <i className="fas fa-sync-alt"></i> Refresh Address Check
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!showAddressWarning && userAddress && userAddress.trim().length >= 10 && tab === 'BARREL' && (
-              <div className="alert" style={{ 
-                background: '#f0fdf4', 
-                border: '1px solid #86efac', 
-                color: '#166534', 
-                marginBottom: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px'
-              }}>
-                <i className="fas fa-check-circle" style={{ fontSize: '1.2rem', color: '#22c55e' }}></i>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-                  ✓ Address verified - You can submit barrel requests
-                </span>
               </div>
             )}
 

@@ -341,6 +341,7 @@ const ManagerSellRequests = () => {
       if (req.barrelCount) metaData.barrelCount = req.barrelCount;
       if (req._type === 'SELL' && req._id) metaData.sellRequestId = req._id;
       if (req._type === 'SELL_BARRELS' && req._id) metaData.intakeId = req._id;
+      if (req._type === 'BARREL' && req._id) metaData.barrelRequestId = req._id;
       if (req.locationAccuracy) metaData.locationAccuracy = req.locationAccuracy;
       
       const payload = {
@@ -381,7 +382,7 @@ const ManagerSellRequests = () => {
       
       await createTask(payload);
       
-      // Update the sell request/intake status to ASSIGNED in the database
+      // Update the request status to ASSIGNED in the database
       if (req._type === 'SELL_BARRELS' && req._id) {
         // Update delivery intake status
         try {
@@ -395,6 +396,19 @@ const ManagerSellRequests = () => {
           });
         } catch (updateError) {
           console.error('Failed to update intake status (non-critical):', updateError);
+        }
+      } else if (req._type === 'BARREL' && req._id) {
+        // Update barrel request status
+        try {
+          await fetch(`${API}/api/barrel-requests/${req._id}/assign`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ 
+              deliveryStaffId: selectedStaff
+            })
+          });
+        } catch (updateError) {
+          console.error('Failed to update barrel request status (non-critical):', updateError);
         }
       }
       
@@ -478,7 +492,7 @@ const ManagerSellRequests = () => {
     const confirmMessage = `Are you sure you want to approve this request?\n\n` +
       `Customer: ${customerName}\n` +
       `Barrels: ${barrelCount}\n` +
-      `Type: ${r._type || 'SELL'}\n\n` +
+      `Type: ${r._type || 'BARREL'}\n\n` +
       `After approval, you can assign delivery staff.`;
     
     if (!window.confirm(confirmMessage)) {
@@ -490,25 +504,43 @@ const ManagerSellRequests = () => {
     setError('');
     
     try {
-      // If this row came from delivery barrel intake list, mark approved via generic update
-      // The /approve endpoint requires pricePerBarrel and returns 400 without it.
+      let target, body;
+      
+      // Determine the correct endpoint based on request type and source
       if (String(r._source || '').includes('/delivery/barrels/intake')) {
-        const target = `${API}/api/delivery/barrels/intake/${id}`;
-        const res = await fetch(target, { 
-          method: 'PUT', 
-          headers: authHeaders(), 
-          body: JSON.stringify({ status: 'approved' }) 
-        });
-        
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          const errorMessage = errorData.message || errorData.error || `Server error (${res.status})`;
-          throw new Error(errorMessage);
-        }
-        
-        const responseData = await res.json().catch(() => ({}));
-        console.log('Approval response:', responseData);
+        // Delivery barrel intake
+        target = `${API}/api/delivery/barrels/intake/${id}`;
+        body = { status: 'approved' };
+      } else if (String(r._source || '').includes('/barrel-requests')) {
+        // Regular barrel request
+        target = `${API}/api/barrel-requests/${id}/approve`;
+        body = {};
+      } else if (r._type === 'SELL_BARRELS') {
+        // Fallback for SELL_BARRELS type
+        target = `${API}/api/delivery/barrels/intake/${id}`;
+        body = { status: 'approved' };
+      } else {
+        // Default to barrel-requests
+        target = `${API}/api/barrel-requests/${id}/approve`;
+        body = {};
       }
+      
+      console.log('Approving request:', { id, type: r._type, source: r._source, target });
+      
+      const res = await fetch(target, { 
+        method: 'PUT', 
+        headers: authHeaders(), 
+        body: JSON.stringify(body) 
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || `Server error (${res.status})`;
+        throw new Error(errorMessage);
+      }
+      
+      const responseData = await res.json().catch(() => ({}));
+      console.log('Approval response:', responseData);
       
       // Update approved requests Set AFTER successful API call
       setApprovedRequests(prev => new Set([...prev, id]));
@@ -1024,7 +1056,7 @@ const ManagerSellRequests = () => {
                         </button>
                       </>
                     )}
-                    {r._type === 'SELL_BARRELS' && (
+                    {(r._type === 'SELL_BARRELS' || r._type === 'BARREL') && (
                       <>
                         <button
                           onClick={() => approve(r._id)}
@@ -1068,7 +1100,7 @@ const ManagerSellRequests = () => {
                         </button>
                       </>
                     )}
-                    {r._type !== 'SELL' && r._type !== 'SELL_BARRELS' && (
+                    {r._type !== 'SELL' && r._type !== 'SELL_BARRELS' && r._type !== 'BARREL' && (
                       <button
                         onClick={() => alert(`View ${r._type} request details`)}
                         className="action-btn action-btn-details"
@@ -1262,7 +1294,7 @@ const ManagerSellRequests = () => {
                             </button>
                           </>
                         )}
-                        {r._type === 'SELL_BARRELS' && (
+                        {(r._type === 'SELL_BARRELS' || r._type === 'BARREL') && (
                           <>
                             <button
                               onClick={() => approve(r._id)}
@@ -1297,7 +1329,7 @@ const ManagerSellRequests = () => {
                             </button>
                           </>
                         )}
-                        {r._type !== 'SELL' && r._type !== 'SELL_BARRELS' && (
+                        {r._type !== 'SELL' && r._type !== 'SELL_BARRELS' && r._type !== 'BARREL' && (
                           <button
                             onClick={() => alert(`View ${r._type} request details`)}
                             className="action-btn action-btn-details"
@@ -1413,7 +1445,7 @@ const ManagerSellRequests = () => {
             <div className="modal-body">
               {/* Customer Info */}
               {assignDeliveryId && (() => {
-                const req = [...pendingRequests, ...approvedRequests].find(r => r._id === assignDeliveryId);
+                const req = rows.find(r => r._id === assignDeliveryId);
                 if (req) {
                   const customerName = req.customerName || req.name || req.user?.name || req.farmerId?.name || 'Customer';
                   const customerAddress = req.address || req.user?.address || req.farmerId?.address || req.notes || 'Address not provided';

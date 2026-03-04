@@ -11,6 +11,7 @@ const AdminExpenses = () => {
     const [categoryFilter, setCategoryFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [gstEnabled, setGstEnabled] = useState(false);
+    const [error, setError] = useState('');
 
     // Form state
     const [formData, setFormData] = useState({
@@ -62,6 +63,39 @@ const AdminExpenses = () => {
             }));
         }
     }, [isModalOpen]);
+
+    // Load expenses from backend
+    useEffect(() => {
+        loadExpenses();
+    }, []);
+
+    const loadExpenses = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const token = localStorage.getItem('token');
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+            const response = await fetch(`${apiUrl}/api/expenses`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to load expenses: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const expenseList = data.expenses || data.data || data || [];
+            setExpenses(Array.isArray(expenseList) ? expenseList : []);
+        } catch (err) {
+            console.error('Error loading expenses:', err);
+            setError('Failed to load expenses');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Handle form input changes
     const handleInputChange = (e) => {
@@ -115,19 +149,35 @@ const AdminExpenses = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setError('');
 
         try {
+            const token = localStorage.getItem('token');
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+            
             const expenseData = {
                 ...formData,
                 totalAmount: calculateTotal(),
                 gstEnabled,
                 gstAmount: gstEnabled ? formData.items.reduce((sum, item) => sum + (item.quantity * item.amount), 0) * 0.18 : 0,
-                createdAt: new Date().toISOString(),
                 status: 'approved' // Admin expenses are auto-approved
             };
 
-            // Add to local state (in real app, this would be an API call)
-            setExpenses(prev => [expenseData, ...prev]);
+            const response = await fetch(`${apiUrl}/api/expenses`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(expenseData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to create expense: ${response.status}`);
+            }
+
+            // Reload expenses from backend
+            await loadExpenses();
             
             // Reset form and close modal
             setFormData({
@@ -140,33 +190,69 @@ const AdminExpenses = () => {
             });
             setGstEnabled(false);
             setIsModalOpen(false);
-            
-            console.log('Expense created:', expenseData);
         } catch (error) {
             console.error('Error creating expense:', error);
+            setError('Failed to create expense');
         } finally {
             setLoading(false);
         }
     };
 
     // Handle expense approval (Admin can approve any expense)
-    const handleApprove = (expenseId) => {
-        setExpenses(prev => prev.map(expense => 
-            expense.expenseNumber === expenseId 
-                ? { ...expense, status: 'approved' }
-                : expense
-        ));
+    const handleApprove = async (expenseId) => {
+        setError('');
+        try {
+            const token = localStorage.getItem('token');
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+            
+            const response = await fetch(`${apiUrl}/api/expenses/${expenseId}/approve`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to approve expense: ${response.status}`);
+            }
+
+            // Reload expenses
+            await loadExpenses();
+        } catch (error) {
+            console.error('Error approving expense:', error);
+            setError('Failed to approve expense');
+        }
     };
 
     // Handle expense rejection (Admin can reject any expense)
-    const handleReject = (expenseId) => {
+    const handleReject = async (expenseId) => {
         const reason = prompt('Please enter rejection reason:');
         if (reason) {
-            setExpenses(prev => prev.map(expense => 
-                expense.expenseNumber === expenseId 
-                    ? { ...expense, status: 'rejected', rejectionReason: reason }
-                    : expense
-            ));
+            setError('');
+            try {
+                const token = localStorage.getItem('token');
+                const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${apiUrl}/api/expenses/${expenseId}/reject`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reason })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to reject expense: ${response.status}`);
+                }
+
+                // Reload expenses
+                await loadExpenses();
+            } catch (error) {
+                console.error('Error rejecting expense:', error);
+                setError('Failed to reject expense');
+            }
         }
     };
 
@@ -211,6 +297,19 @@ const AdminExpenses = () => {
                     </button>
                 </div>
             </div>
+
+            {error && (
+                <div style={{ 
+                    padding: '12px 16px', 
+                    backgroundColor: '#fee2e2', 
+                    color: '#991b1b', 
+                    borderRadius: '6px',
+                    marginBottom: '16px',
+                    border: '1px solid #fecaca'
+                }}>
+                    {error}
+                </div>
+            )}
 
             {/* Filters */}
             <div className="expense-filters">
