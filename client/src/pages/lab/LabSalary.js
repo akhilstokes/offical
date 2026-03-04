@@ -18,7 +18,7 @@ const LabSalary = () => {
     if (!user?._id) return;
     setLoading(true); setError(''); setRecord(null);
     try {
-      const res = await fetch(`${base}/api/salary/history/${user._id}?year=${year}&limit=12`, {
+      const res = await fetch(`${base}/api/salary/my-salary`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: 'include'
       });
@@ -28,7 +28,7 @@ const LabSalary = () => {
       }
       const data = await res.json();
       const list = data?.data || [];
-      const r = list.find(x => Number(x.month) === Number(month));
+      const r = list.find(x => Number(x.month) === Number(month) && Number(x.year) === Number(year));
       if (!r && list.length === 0) {
         setError('No salary data available. Please contact HR or try a different month.');
       }

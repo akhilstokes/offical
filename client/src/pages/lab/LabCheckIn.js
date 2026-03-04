@@ -17,8 +17,12 @@ const LabCheckIn = () => {
     barrelCount: 0
   });
   
-  // Barrels state - each barrel has separate DRC, TSC, and pH sections
-  const [barrels, setBarrels] = useState([]);
+  // Single measurement state - applies to all barrels
+  const [measurements, setMeasurements] = useState({
+    drc: { w1: '', w2: '', value: '0.00' },
+    tsc: { w1: '', w2: '', value: '0.00' },
+    ph: ''
+  });
   
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -33,30 +37,12 @@ const LabCheckIn = () => {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  // Initialize barrels array when barrelCount changes
-  useEffect(() => {
-    const n = Number(form.barrelCount) || 0;
-    setBarrels(prev => {
-      const arr = [...prev];
-      if (arr.length > n) return arr.slice(0, n);
-      while (arr.length < n) {
-        arr.push({
-          barrelNumber: arr.length + 1,
-          drc: { w1: '', w2: '', value: '0.00' },
-          tsc: { w1: '', w2: '', value: '0.00' },
-          ph: ''
-        });
-      }
-      return arr;
-    });
-  }, [form.barrelCount]);
-
-  // Calculate DRC and TSC for a specific barrel
-  const calculateBarrelValues = (barrel) => {
-    const drcW1 = parseFloat(barrel.drc.w1) || 0;
-    const drcW2 = parseFloat(barrel.drc.w2) || 0;
-    const tscW1 = parseFloat(barrel.tsc.w1) || 0;
-    const tscW2 = parseFloat(barrel.tsc.w2) || 0;
+  // Calculate DRC and TSC values
+  const calculateValues = () => {
+    const drcW1 = parseFloat(measurements.drc.w1) || 0;
+    const drcW2 = parseFloat(measurements.drc.w2) || 0;
+    const tscW1 = parseFloat(measurements.tsc.w1) || 0;
+    const tscW2 = parseFloat(measurements.tsc.w2) || 0;
     
     let drcValue = 0;
     let tscValue = 0;
@@ -75,42 +61,31 @@ const LabCheckIn = () => {
     };
   };
 
-  // Update barrel field
-  const onBarrelChange = (index, section, field, value) => {
-    setBarrels(prev => {
-      const updated = [...prev];
-      const currentBarrel = { ...updated[index] };
+  // Update measurement field
+  const onMeasurementChange = (section, field, value) => {
+    setMeasurements(prev => {
+      const updated = { ...prev };
       
       if (section === 'ph') {
-        updated[index] = { ...currentBarrel, ph: value };
+        updated.ph = value;
       } else {
-        // Create a new section object with the updated field
-        const updatedSection = {
-          ...currentBarrel[section],
+        // Update the field
+        updated[section] = {
+          ...updated[section],
           [field]: value
         };
         
-        // Update the barrel with the new section
-        currentBarrel[section] = updatedSection;
-        
-        // Recalculate the value for this section
-        const calculated = calculateBarrelValues(currentBarrel);
-        
-        // Create final section object with calculated value
-        currentBarrel[section] = {
-          ...updatedSection,
-          value: calculated[section]
-        };
-        
-        updated[index] = currentBarrel;
+        // Recalculate
+        const calculated = calculateValues();
+        updated[section].value = calculated[section];
       }
       
       return updated;
     });
     
     // Clear validation error
-    if (validation[`barrel_${index}_${section}_${field}`]) {
-      setValidation(v => ({ ...v, [`barrel_${index}_${section}_${field}`]: undefined }));
+    if (validation[`${section}_${field}`]) {
+      setValidation(v => ({ ...v, [`${section}_${field}`]: undefined }));
     }
   };
 
@@ -120,62 +95,63 @@ const LabCheckIn = () => {
     
     // Basic validations
     if (!form.customerName?.trim()) v.customerName = 'Customer name is required';
+    if (!form.barrelCount || form.barrelCount <= 0) v.barrelCount = 'Barrel count must be greater than 0';
     
-    // Validate each barrel
-    barrels.forEach((barrel, idx) => {
+    // Only validate measurements if barrel count > 0
+    if (form.barrelCount > 0) {
       // DRC validations
-      const drcW1 = parseFloat(barrel.drc.w1);
-      const drcW2 = parseFloat(barrel.drc.w2);
+      const drcW1 = parseFloat(measurements.drc.w1);
+      const drcW2 = parseFloat(measurements.drc.w2);
       
-      if (!barrel.drc.w1 || isNaN(drcW1) || drcW1 <= 0) {
-        v[`barrel_${idx}_drc_w1`] = 'W1_DRC must be a positive number';
+      if (!measurements.drc.w1 || isNaN(drcW1) || drcW1 <= 0) {
+        v.drc_w1 = 'W1_DRC must be a positive number';
       }
       
-      if (!barrel.drc.w2 || isNaN(drcW2) || drcW2 <= 0) {
-        v[`barrel_${idx}_drc_w2`] = 'W2_DRC must be a positive number';
+      if (!measurements.drc.w2 || isNaN(drcW2) || drcW2 <= 0) {
+        v.drc_w2 = 'W2_DRC must be a positive number';
       } else if (drcW2 === 0) {
-        v[`barrel_${idx}_drc_w2`] = 'W2_DRC cannot be zero';
+        v.drc_w2 = 'W2_DRC cannot be zero';
       }
       
       if (drcW1 > 0 && drcW2 > 0 && drcW1 > drcW2) {
-        v[`barrel_${idx}_drc_w1`] = 'W1_DRC must be ≤ W2_DRC';
+        v.drc_w1 = 'W1_DRC must be ≤ W2_DRC';
       }
       
       // TSC validations
-      const tscW1 = parseFloat(barrel.tsc.w1);
-      const tscW2 = parseFloat(barrel.tsc.w2);
+      const tscW1 = parseFloat(measurements.tsc.w1);
+      const tscW2 = parseFloat(measurements.tsc.w2);
       
-      if (!barrel.tsc.w1 || isNaN(tscW1) || tscW1 <= 0) {
-        v[`barrel_${idx}_tsc_w1`] = 'W1_TSC must be a positive number';
+      if (!measurements.tsc.w1 || isNaN(tscW1) || tscW1 <= 0) {
+        v.tsc_w1 = 'W1_TSC must be a positive number';
       }
       
-      if (!barrel.tsc.w2 || isNaN(tscW2) || tscW2 <= 0) {
-        v[`barrel_${idx}_tsc_w2`] = 'W2_TSC must be a positive number';
+      if (!measurements.tsc.w2 || isNaN(tscW2) || tscW2 <= 0) {
+        v.tsc_w2 = 'W2_TSC must be a positive number';
       } else if (tscW2 === 0) {
-        v[`barrel_${idx}_tsc_w2`] = 'W2_TSC cannot be zero';
+        v.tsc_w2 = 'W2_TSC cannot be zero';
       }
       
       if (tscW1 > 0 && tscW2 > 0 && tscW1 > tscW2) {
-        v[`barrel_${idx}_tsc_w1`] = 'W1_TSC must be ≤ W2_TSC';
+        v.tsc_w1 = 'W1_TSC must be ≤ W2_TSC';
       }
       
       // Scientific validation: TSC >= DRC
-      const calculated = calculateBarrelValues(barrel);
+      const calculated = calculateValues();
       const drcValue = parseFloat(calculated.drc);
       const tscValue = parseFloat(calculated.tsc);
       
       if (tscValue < drcValue) {
-        v[`barrel_${idx}_tsc_validation`] = 'Invalid measurement: TSC cannot be less than DRC';
+        v.tsc_validation = 'Invalid measurement: TSC cannot be less than DRC';
       }
       
       // pH validation
-      const ph = parseFloat(barrel.ph);
-      if (!barrel.ph || isNaN(ph)) {
-        v[`barrel_${idx}_ph`] = 'pH is required';
+      const ph = parseFloat(measurements.ph);
+      if (!measurements.ph || isNaN(ph)) {
+        v.ph = 'pH is required';
       } else if (ph < 0 || ph > 14) {
-        v[`barrel_${idx}_ph`] = 'pH must be between 0 and 14';
+        v.ph = 'pH must be between 0 and 14';
       }
-    });
+    }
     
     return v;
   };
@@ -248,33 +224,32 @@ const LabCheckIn = () => {
     try {
       setLoading(true);
       
-      // Prepare barrel data with backend recalculation
-      const barrelsData = barrels.map((barrel, idx) => {
-        const drcW1 = parseFloat(barrel.drc.w1);
-        const drcW2 = parseFloat(barrel.drc.w2);
-        const tscW1 = parseFloat(barrel.tsc.w1);
-        const tscW2 = parseFloat(barrel.tsc.w2);
-        const ph = parseFloat(barrel.ph);
-        
-        // Recalculate on backend side
-        const drcValue = (drcW1 / drcW2) * 100;
-        const tscValue = (tscW1 / tscW2) * 100;
-        
-        return {
-          barrelNumber: idx + 1,
-          drc: {
-            w1: drcW1,
-            w2: drcW2,
-            value: Number(drcValue.toFixed(2))
-          },
-          tsc: {
-            w1: tscW1,
-            w2: tscW2,
-            value: Number(tscValue.toFixed(2))
-          },
-          ph: ph
-        };
-      });
+      // Prepare barrel data - same measurements for all barrels
+      const drcW1 = parseFloat(measurements.drc.w1);
+      const drcW2 = parseFloat(measurements.drc.w2);
+      const tscW1 = parseFloat(measurements.tsc.w1);
+      const tscW2 = parseFloat(measurements.tsc.w2);
+      const ph = parseFloat(measurements.ph);
+      
+      // Calculate values
+      const drcValue = (drcW1 / drcW2) * 100;
+      const tscValue = (tscW1 / tscW2) * 100;
+      
+      // Create barrel data array with same measurements for each barrel
+      const barrelsData = Array.from({ length: form.barrelCount }, (_, idx) => ({
+        barrelNumber: idx + 1,
+        drc: {
+          w1: drcW1,
+          w2: drcW2,
+          value: Number(drcValue.toFixed(2))
+        },
+        tsc: {
+          w1: tscW1,
+          w2: tscW2,
+          value: Number(tscValue.toFixed(2))
+        },
+        ph: ph
+      }));
       
       // Prepare check-in data
       const checkInData = {
@@ -289,14 +264,26 @@ const LabCheckIn = () => {
       
       console.log('Sample Check-In Data:', checkInData);
       
-      // TODO: Replace with actual API call
-      // const response = await fetch(`${base}/api/lab/samples/checkin`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      //   body: JSON.stringify(checkInData)
-      // });
+      // Update the intake status in database if sampleId exists
+      if (form.sampleId && form.sampleId.match(/^[a-fA-F0-9]{24}$/)) {
+        try {
+          const updateResponse = await fetch(`${base}/api/delivery/barrels/intake/${form.sampleId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ status: 'checked_in' })
+          });
+          
+          if (updateResponse.ok) {
+            console.log('✅ Intake status updated to checked_in in database');
+          } else {
+            console.warn('⚠️ Failed to update intake status in database');
+          }
+        } catch (updateError) {
+          console.warn('⚠️ Error updating intake status:', updateError);
+        }
+      }
       
-      // Store in localStorage as temporary solution
+      // Store in localStorage as backup
       const existingCheckins = JSON.parse(localStorage.getItem('lab_checkins') || '[]');
       existingCheckins.unshift(checkInData);
       if (existingCheckins.length > 10) existingCheckins.pop();
@@ -335,7 +322,11 @@ const LabCheckIn = () => {
         notes: '', 
         barrelCount: 0
       });
-      setBarrels([]);
+      setMeasurements({
+        drc: { w1: '', w2: '', value: '0.00' },
+        tsc: { w1: '', w2: '', value: '0.00' },
+        ph: ''
+      });
       
       setHistory(existingCheckins);
       
@@ -353,7 +344,7 @@ const LabCheckIn = () => {
     if (loading) return false;
     const v = validateForm();
     return Object.keys(v).length === 0;
-  }, [loading, form, barrels]);
+  }, [loading, form, measurements]);
 
   const generateReport = (item) => {
     const reportDate = item.receivedAt ? new Date(item.receivedAt) : new Date(item.createdAt);
@@ -511,29 +502,26 @@ const LabCheckIn = () => {
           </div>
         </div>
 
-        {/* Barrel Measurements - Repeat for each barrel */}
-        {barrels.map((barrel, idx) => {
-          const calculated = calculateBarrelValues(barrel);
-          
-          return (
-            <div key={idx} style={{ 
-              padding: 20, 
-              backgroundColor: '#fef3c7', 
-              borderRadius: 12, 
-              border: '3px solid #f59e0b',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-            }}>
-              <h3 style={{ 
-                marginTop: 0, 
-                marginBottom: 16, 
-                color: '#92400e',
-                fontSize: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                🧪 Barrel {idx + 1} Measurements
-              </h3>
+        {/* Single Measurement Section - Applies to all barrels */}
+        {form.barrelCount > 0 && (
+        <div style={{ 
+          padding: 20, 
+          backgroundColor: '#fef3c7', 
+          borderRadius: 12, 
+          border: '3px solid #f59e0b',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+        }}>
+          <h3 style={{ 
+            marginTop: 0, 
+            marginBottom: 16, 
+            color: '#92400e',
+            fontSize: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            🧪 Barrel Measurements
+          </h3>
               
               {/* DRC SECTION */}
               <div style={{ 
@@ -556,15 +544,15 @@ const LabCheckIn = () => {
                     <input 
                       type="number" 
                       placeholder="Enter W1_DRC" 
-                      value={barrel.drc.w1} 
-                      onChange={(e) => onBarrelChange(idx, 'drc', 'w1', e.target.value)}
+                      value={measurements.drc.w1} 
+                      onChange={(e) => onMeasurementChange('drc', 'w1', e.target.value)}
                       min="0"
                       step="0.01"
-                      style={{ borderColor: validation[`barrel_${idx}_drc_w1`] ? '#ef4444' : undefined }}
+                      style={{ borderColor: validation.drc_w1 ? '#ef4444' : undefined }}
                     />
-                    {validation[`barrel_${idx}_drc_w1`] && (
+                    {validation.drc_w1 && (
                       <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                        {validation[`barrel_${idx}_drc_w1`]}
+                        {validation.drc_w1}
                       </span>
                     )}
                   </label>
@@ -574,15 +562,15 @@ const LabCheckIn = () => {
                     <input 
                       type="number" 
                       placeholder="Enter W2_DRC" 
-                      value={barrel.drc.w2} 
-                      onChange={(e) => onBarrelChange(idx, 'drc', 'w2', e.target.value)}
+                      value={measurements.drc.w2} 
+                      onChange={(e) => onMeasurementChange('drc', 'w2', e.target.value)}
                       min="0"
                       step="0.01"
-                      style={{ borderColor: validation[`barrel_${idx}_drc_w2`] ? '#ef4444' : undefined }}
+                      style={{ borderColor: validation.drc_w2 ? '#ef4444' : undefined }}
                     />
-                    {validation[`barrel_${idx}_drc_w2`] && (
+                    {validation.drc_w2 && (
                       <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                        {validation[`barrel_${idx}_drc_w2`]}
+                        {validation.drc_w2}
                       </span>
                     )}
                   </label>
@@ -591,7 +579,7 @@ const LabCheckIn = () => {
                     DRC (%) - Calculated
                     <input 
                       type="text" 
-                      value={calculated.drc} 
+                      value={measurements.drc.value} 
                       readOnly
                       style={{ 
                         backgroundColor: '#eff6ff', 
@@ -626,15 +614,15 @@ const LabCheckIn = () => {
                     <input 
                       type="number" 
                       placeholder="Enter W1_TSC" 
-                      value={barrel.tsc.w1} 
-                      onChange={(e) => onBarrelChange(idx, 'tsc', 'w1', e.target.value)}
+                      value={measurements.tsc.w1} 
+                      onChange={(e) => onMeasurementChange('tsc', 'w1', e.target.value)}
                       min="0"
                       step="0.01"
-                      style={{ borderColor: validation[`barrel_${idx}_tsc_w1`] ? '#ef4444' : undefined }}
+                      style={{ borderColor: validation.tsc_w1 ? '#ef4444' : undefined }}
                     />
-                    {validation[`barrel_${idx}_tsc_w1`] && (
+                    {validation.tsc_w1 && (
                       <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                        {validation[`barrel_${idx}_tsc_w1`]}
+                        {validation.tsc_w1}
                       </span>
                     )}
                   </label>
@@ -644,15 +632,15 @@ const LabCheckIn = () => {
                     <input 
                       type="number" 
                       placeholder="Enter W2_TSC" 
-                      value={barrel.tsc.w2} 
-                      onChange={(e) => onBarrelChange(idx, 'tsc', 'w2', e.target.value)}
+                      value={measurements.tsc.w2} 
+                      onChange={(e) => onMeasurementChange('tsc', 'w2', e.target.value)}
                       min="0"
                       step="0.01"
-                      style={{ borderColor: validation[`barrel_${idx}_tsc_w2`] ? '#ef4444' : undefined }}
+                      style={{ borderColor: validation.tsc_w2 ? '#ef4444' : undefined }}
                     />
-                    {validation[`barrel_${idx}_tsc_w2`] && (
+                    {validation.tsc_w2 && (
                       <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                        {validation[`barrel_${idx}_tsc_w2`]}
+                        {validation.tsc_w2}
                       </span>
                     )}
                   </label>
@@ -661,7 +649,7 @@ const LabCheckIn = () => {
                     TSC (%) - Calculated
                     <input 
                       type="text" 
-                      value={calculated.tsc} 
+                      value={measurements.tsc.value} 
                       readOnly
                       style={{ 
                         backgroundColor: '#f0fdf4', 
@@ -675,7 +663,7 @@ const LabCheckIn = () => {
                 </div>
                 
                 {/* Scientific Validation Error */}
-                {validation[`barrel_${idx}_tsc_validation`] && (
+                {validation.tsc_validation && (
                   <div style={{ 
                     marginTop: 12, 
                     padding: 12, 
@@ -686,7 +674,7 @@ const LabCheckIn = () => {
                     fontWeight: '600',
                     fontSize: '14px'
                   }}>
-                    ⚠️ {validation[`barrel_${idx}_tsc_validation`]}
+                    ⚠️ {validation.tsc_validation}
                   </div>
                 )}
               </div>
@@ -708,24 +696,23 @@ const LabCheckIn = () => {
                     <input 
                       type="number" 
                       placeholder="Enter pH value" 
-                      value={barrel.ph} 
-                      onChange={(e) => onBarrelChange(idx, 'ph', null, e.target.value)}
+                      value={measurements.ph} 
+                      onChange={(e) => onMeasurementChange('ph', null, e.target.value)}
                       min="0"
                       max="14"
                       step="0.1"
-                      style={{ borderColor: validation[`barrel_${idx}_ph`] ? '#ef4444' : undefined }}
+                      style={{ borderColor: validation.ph ? '#ef4444' : undefined }}
                     />
-                    {validation[`barrel_${idx}_ph`] && (
+                    {validation.ph && (
                       <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                        {validation[`barrel_${idx}_ph`]}
+                        {validation.ph}
                       </span>
                     )}
                   </label>
                 </div>
               </div>
             </div>
-          );
-        })}
+        )}
 
         {/* Additional Notes */}
         {form.barrelCount > 0 && (

@@ -119,8 +119,9 @@ const DeliveryLeave = () => {
         <button 
           className="btn btn-outline-primary"
           onClick={() => setShowHistoryModal(true)}
+          style={{ padding: '8px 16px', fontSize: '14px', whiteSpace: 'nowrap', minWidth: 'auto' }}
         >
-          📋 View Leave History
+          📋 History
         </button>
       </div>
       {error && <div style={{ color:'tomato', marginBottom:8 }}>{error}</div>}

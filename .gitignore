@@ -66,6 +66,8 @@ python/__pycache__/
 *.pyc
 *.pyo
 python/datasets/*.csv
+venv/
+ml-service/venv/
 
 # Datasets
 datasets/

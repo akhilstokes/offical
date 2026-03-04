@@ -67,17 +67,8 @@ const LabDashboard = () => {
         ? items.filter(item => {
             console.log('Checking item:', item._id, 'status:', item.status);
             
-            // Check if this request has been checked in (from localStorage)
-            const completedCheckins = JSON.parse(localStorage.getItem('lab_checkins') || '[]');
-            const isCompleted = completedCheckins.some(checkin => 
-              checkin.sampleId === (item.requestId || item._id)
-            );
-            
-            if (isCompleted) {
-              console.log('Request already checked in:', item._id);
-              return false;
-            }
-            
+            // Only filter by status - don't use localStorage filtering
+            // Lab staff should see all pending requests from the database
             return item.status === 'pending' || !item.status;
           })
         : [];

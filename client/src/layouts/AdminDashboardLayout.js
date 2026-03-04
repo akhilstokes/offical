@@ -104,7 +104,6 @@ const AdminDashboardLayout = ({ children }) => {
         { to: '/admin/chem-requests', icon: 'fa-flask', label: 'Chemical Requests' },
         { to: '/admin/notifications', icon: 'fa-bell', label: 'Notifications' },
         { to: '/admin/rates', icon: 'fa-chart-line', label: 'Rates' },
-        { to: '/admin/rate-approval', icon: 'fa-check-circle', label: 'Rate Approval' },
       ]
     },
     {

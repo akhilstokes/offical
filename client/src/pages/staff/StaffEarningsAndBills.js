@@ -254,18 +254,6 @@ const StaffEarningsAndBills = () => {
           {/* DAILY EARNINGS TAB */}
           {activeTab === 'earnings' && (
             <div className="earnings-section">
-              {/* Daily Rate Card */}
-              <div className="rate-card">
-                <div className="rate-icon">
-                  <i className="fas fa-rupee-sign"></i>
-                </div>
-                <div className="rate-info">
-                  <h3>Your Daily Rate</h3>
-                  <p className="rate-amount">₹{dailyRate.toFixed(2)}</p>
-                  <span className="rate-label">Per Working Day</span>
-                </div>
-              </div>
-
               {/* Earnings Summary Cards */}
               <div className="earnings-grid">
                 <div className="earning-card today">

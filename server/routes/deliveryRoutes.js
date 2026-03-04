@@ -40,6 +40,10 @@ router.get('/task-history/:taskId', protect, historyCtrl.getTaskHistoryDetail); 
 // Shift schedule endpoint (delivery staff)
 router.get('/shift-schedule', protect, ctrl.getDeliveryShiftSchedule);
 
+// Vehicle info endpoints (delivery staff)
+router.get('/vehicle-info', protect, ctrl.getVehicleInfo);
+router.post('/vehicle-info', protect, ctrl.updateVehicleInfo);
+
 // Intake endpoints
 router.post('/barrels/intake', protect, ctrl.intakeBarrels); // delivery staff
 router.get('/barrels/intake', protect, adminManagerAccountant, adminRateLimiter, ctrl.listIntakes); // accountant/manager/admin

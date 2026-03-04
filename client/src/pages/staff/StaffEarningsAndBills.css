@@ -91,47 +91,57 @@
 
 /* Rate Card */
 .rate-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border-radius: 16px;
-  padding: 32px;
+  padding: 28px 40px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
   color: white;
+  min-height: 120px;
 }
 
 .rate-icon {
-  width: 80px;
-  height: 80px;
-  background: rgba(255, 255, 255, 0.2);
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.rate-info {
+  flex: 1;
 }
 
 .rate-info h3 {
   font-size: 18px;
-  font-weight: 700;
-  margin: 0 0 8px 0;
+  font-weight: 600;
+  margin: 0 0 10px 0;
   color: white;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .rate-amount {
-  font-size: 52px;
+  font-size: 48px;
   font-weight: 700;
-  margin: 0;
+  margin: 0 0 6px 0;
   line-height: 1;
   color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .rate-label {
   font-size: 16px;
   font-weight: 500;
-  color: white;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Earnings Grid */
@@ -196,12 +206,12 @@
 }
 
 .earning-details h4 {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
-  color: #2d3748;
+  color: #1a202c;
   margin: 0 0 8px 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
 }
 
 .earning-amount {
@@ -213,9 +223,9 @@
 }
 
 .earning-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #4a5568;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2d3748;
 }
 
 /* Attendance Card */

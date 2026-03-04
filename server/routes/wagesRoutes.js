@@ -12,6 +12,9 @@ router.use(protect);
 // GET /api/wages/staff - Get staff by role
 router.get('/staff', wagesController.getStaffByRole);
 
+// GET /api/wages/my-wages - Get my wages (for delivery staff)
+router.get('/my-wages', wagesController.getMyWages);
+
 // GET /api/wages/payslips - Get payslips
 router.get('/payslips', wagesController.getPayslips);
 

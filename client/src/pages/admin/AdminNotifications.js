@@ -119,9 +119,10 @@ const AdminNotifications = () => {
               >
                 <option value="all">All Users</option>
                 <option value="user">Users/Customers</option>
-                <option value="staff">Staff</option>
-                <option value="delivery">Delivery Staff</option>
-                <option value="lab">Lab Staff</option>
+                <option value="field_staff">Field Staff</option>
+                <option value="delivery_staff">Delivery Staff</option>
+                <option value="lab_staff">Lab Staff</option>
+                <option value="lab_manager">Lab Manager</option>
                 <option value="manager">Managers</option>
                 <option value="accountant">Accountants</option>
               </select>

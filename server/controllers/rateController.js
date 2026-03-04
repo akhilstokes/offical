@@ -57,7 +57,11 @@ exports.getLatestRate = async (req, res) => {
 exports.getPublishedLatest = async (req, res) => {
   try {
     const product = req.query.product || 'latex60';
-    const rate = await Rate.findOne({ product, status: 'published' }).sort({ effectiveDate: -1, createdAt: -1 });
+    // Accept both 'approved' and 'published' status
+    const rate = await Rate.findOne({ 
+      product, 
+      status: { $in: ['approved', 'published'] } 
+    }).sort({ effectiveDate: -1, createdAt: -1 });
     if (!rate) return res.status(404).json({ message: 'No published rates found' });
     return res.json(rate);
   } catch (error) {
@@ -70,7 +74,11 @@ exports.getPublishedLatest = async (req, res) => {
 exports.getCompanyRate = async (req, res) => {
   try {
     const product = req.query.product || 'latex60';
-    const rate = await Rate.findOne({ product, status: 'published' }).sort({ effectiveDate: -1, createdAt: -1 });
+    // Accept both 'approved' and 'published' status
+    const rate = await Rate.findOne({ 
+      product, 
+      status: { $in: ['approved', 'published'] } 
+    }).sort({ effectiveDate: -1, createdAt: -1 });
     if (!rate) {
       return res.json({ rate: 0, message: 'No company rate found' });
     }
@@ -182,13 +190,17 @@ exports.getAllRates = async (req, res) => {
   }
 };
 
-// Public: Get recent rate history (no auth)
+// Public: Get recent rate history (no auth) - only approved/published rates
 // @route GET /api/rates/public-history?product=latex60&limit=30
 exports.getPublicRates = async (req, res) => {
   try {
     const product = req.query.product || 'latex60';
     const limit = Number(req.query.limit) || 30;
-    const rates = await Rate.find({ product }).sort({ effectiveDate: -1, createdAt: -1 }).limit(limit);
+    // Only return approved or published rates
+    const rates = await Rate.find({ 
+      product, 
+      status: { $in: ['approved', 'published'] } 
+    }).sort({ effectiveDate: -1, createdAt: -1 }).limit(limit);
     return res.json(rates);
   } catch (error) {
     return res.status(500).json({ message: "Error fetching public rates", error: error.message });

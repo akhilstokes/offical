@@ -6,12 +6,6 @@ const UserRateHistory = () => {
   const [rates, setRates] = useState([]);
   const [rubberBoardRates, setRubberBoardRates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState({
-    from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0]
-  });
-
-  const todayStr = new Date().toISOString().split('T')[0];
 
   const token = localStorage.getItem('token');
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -20,7 +14,7 @@ const UserRateHistory = () => {
     setLoading(true);
     try {
       const [ratesRes, rubberBoardRes] = await Promise.all([
-        axios.get(`/api/rates/history-range?from=${dateRange.from}&to=${dateRange.to}`, config),
+        axios.get('/api/rates/public-history?limit=30', config),
         axios.get('/api/rates/live/latex', config).catch(() => ({ data: [] }))
       ]);
       
@@ -31,7 +25,7 @@ const UserRateHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, [dateRange, config]);
+  }, [config]);
 
   useEffect(() => {
     fetchData();
@@ -45,38 +39,6 @@ const UserRateHistory = () => {
       <div className="header">
         <h1>📊 Rate History</h1>
         <p>View official rubber board rates and company rates</p>
-      </div>
-
-      {/* Date Range Filter */}
-      <div className="date-filter">
-        <div className="filter-group">
-          <label>From Date:</label>
-          <input
-            type="date"
-            value={dateRange.from}
-            max={todayStr}
-            onChange={(e) => {
-              const v = e.target.value;
-              const to = dateRange.to < v ? v : dateRange.to;
-              setDateRange({ from: v, to });
-            }}
-          />
-        </div>
-        <div className="filter-group">
-          <label>To Date:</label>
-          <input
-            type="date"
-            value={dateRange.to}
-            min={dateRange.from}
-            max={todayStr}
-            onChange={(e) => {
-              const v = e.target.value;
-              const to = v < dateRange.from ? dateRange.from : v;
-              setDateRange({ ...dateRange, to });
-            }}
-          />
-        </div>
-        <button onClick={fetchData} className="btn-refresh">🔄 Refresh</button>
       </div>
 
       {/* Official Rubber Board Rates */}
@@ -101,29 +63,25 @@ const UserRateHistory = () => {
 
       {/* Company Rates */}
       <div className="company-rates-section">
-        <h3>🏢 Company Rates</h3>
+        <h3>🏢 Company Rate History</h3>
         {loading ? (
           <div className="loading">Loading rates...</div>
         ) : rates.length === 0 ? (
-          <div className="no-data">No company rates found for selected date range</div>
+          <div className="no-data">No company rates available</div>
         ) : (
           <div className="rates-table-container">
             <table className="rates-table">
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Product Type</th>
                   <th>Company Rate</th>
-                  <th>Updated By</th>
                 </tr>
               </thead>
               <tbody>
                 {rates.map((rate) => (
                   <tr key={rate._id}>
                     <td>{formatDate(rate.effectiveDate)}</td>
-                    <td className="product-type">{rate.product}</td>
-                    <td className="rate-value">{formatPrice(rate.rate)}</td>
-                    <td>{rate.updatedBy?.name || 'Admin'}</td>
+                    <td className="rate-value">{formatPrice(rate.companyRate || rate.rate)}</td>
                   </tr>
                 ))}
               </tbody>

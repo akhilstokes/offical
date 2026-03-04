@@ -13,12 +13,8 @@ export default function UserLiveRate() {
   const [rate, setRate] = useState(null);
   const [history, setHistory] = useState([]);
   const [drc, setDrc] = useState(''); // optional DRC for calculator handoff
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [loadingHist, setLoadingHist] = useState(false);
   const [loadingLatest, setLoadingLatest] = useState(false);
-
-  const todayStr = new Date().toISOString().split('T')[0];
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const normalize = (rec) => {
     if (!rec) return { official: null, company: null, date: null };
@@ -60,6 +56,33 @@ export default function UserLiveRate() {
       .finally(() => setLoadingLatest(false));
   };
 
+  const reloadHistory = () => {
+    if (!token) return;
+    setLoadingHistory(true);
+    axios.get(`${API}/api/rates/public-history?limit=30`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(({ data }) => {
+        // Deduplicate by date - keep only one rate per day (the latest one)
+        const ratesArray = Array.isArray(data) ? data : [];
+        const uniqueByDate = {};
+        
+        ratesArray.forEach(rate => {
+          const dateKey = new Date(rate.effectiveDate || rate.createdAt).toDateString();
+          if (!uniqueByDate[dateKey]) {
+            uniqueByDate[dateKey] = rate;
+          }
+        });
+        
+        setHistory(Object.values(uniqueByDate).slice(0, 10));
+      })
+      .catch((error) => {
+        console.error('Error loading history:', error);
+        setHistory([]);
+      })
+      .finally(() => setLoadingHistory(false));
+  };
+
   useEffect(() => {
     if (!token) {
       // Clear data if not authenticated
@@ -79,78 +102,6 @@ export default function UserLiveRate() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const reloadHistory = () => {
-    if (!token) {
-      setHistory([]);
-      return;
-    }
-    setLoadingHist(true);
-    
-    // Use the existing /api/rates/history-range endpoint
-    const params = { product: 'latex60', limit: 50 };
-    if (from) params.startDate = from;
-    if (to) params.endDate = to;
-    
-    axios.get(`${API}/api/rates/history-range`, {
-      params,
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(({ data }) => setHistory(Array.isArray(data) ? data : data?.rates || data?.rows || []))
-      .catch((error) => {
-        // Silently handle errors - don't spam console
-        if (error.response?.status !== 400) {
-          console.error('Error loading history:', error.message);
-        }
-        setHistory([]);
-      })
-      .finally(() => setLoadingHist(false));
-  };
-
-  const saveBlob = (blob, filename) => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const handleExportCsv = async (e) => {
-    e.preventDefault();
-    try {
-      // Generate CSV from current history data
-      const csvContent = generateCsv(history);
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      saveBlob(blob, `latex60-rate-history.csv`);
-    } catch (error) {
-      console.error('Error exporting CSV:', error);
-    }
-  };
-
-  const handleExportPdf = async (e) => {
-    e.preventDefault();
-    try {
-      // Use browser print for PDF export
-      window.print();
-    } catch (error) {
-      console.error('Error exporting PDF:', error);
-    }
-  };
-
-  const generateCsv = (data) => {
-    const headers = ['Date', 'Category', 'Market Rate', 'Company Rate'];
-    const rows = data.map(row => {
-      const n = normalize(row);
-      return [
-        new Date(n.date || row.effectiveDate).toLocaleDateString('en-IN'),
-        'LATEX 60',
-        n.official ?? '-',
-        n.company ?? '-'
-      ];
-    });
-    return [headers, ...rows].map(row => row.join(',')).join('\n');
-  };
-
   return (
     <div className="user-dashboard">
       <div className="userdash-header">
@@ -165,8 +116,8 @@ export default function UserLiveRate() {
               <span>Updated: {rate.effectiveDate ? new Date(rate.effectiveDate).toLocaleString('en-IN') : '—'}</span>
             </div>
           )}
-          <button type="button" className="btn-secondary" onClick={() => { reloadLatest(); reloadHistory(); }} disabled={loadingLatest || loadingHist}>
-            <i className={`fas fa-sync-alt ${loadingLatest || loadingHist ? 'fa-spin' : ''}`}></i>
+          <button type="button" className="btn-secondary" onClick={reloadLatest} disabled={loadingLatest}>
+            <i className={`fas fa-sync-alt ${loadingLatest ? 'fa-spin' : ''}`}></i>
             <span>Refresh</span>
           </button>
         </div>
@@ -241,70 +192,40 @@ export default function UserLiveRate() {
         </div>
       )}
 
-      <div className="userdash-section-label">
-        <h3>Rate History</h3>
+      <div className="userdash-section-label" style={{ marginTop: '32px' }}>
+        <h3>Recent Rate History</h3>
         <div className="section-divider"></div>
       </div>
 
-      <div className="dash-card history-card" style={{ padding: '24px' }}>
-        <div className="history-filters">
-          <div className="date-inputs">
-            <label>
-              From
-              <input type="date" value={from} max={todayStr} onChange={(e) => setFrom(e.target.value)} />
-            </label>
-            <label>
-              To
-              <input type="date" value={to} min={from} max={todayStr} onChange={(e) => setTo(e.target.value)} />
-            </label>
-          </div>
-          <div className="filter-actions">
-            <button type="button" className="btn" onClick={reloadHistory} disabled={loadingHist}>
-              <i className="fas fa-filter"></i> Filter
-            </button>
-            <button type="button" className="btn-secondary" onClick={handleExportCsv}>
-              <i className="fas fa-file-csv"></i> CSV
-            </button>
-            <button type="button" className="btn-secondary" onClick={handleExportPdf}>
-              <i className="fas fa-file-pdf"></i> PDF
-            </button>
-          </div>
+      {loadingHistory ? (
+        <div className="no-data"><i className="fas fa-spinner fa-spin"></i> Loading History...</div>
+      ) : history && history.length > 0 ? (
+        <div className="userdash-stats-row" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+          {history.map((row) => {
+            const n = normalize(row);
+            return (
+              <div key={row._id} className="userdash-stat-card" style={{ minHeight: '120px' }}>
+                <div className="userdash-stat-content">
+                  <div className="userdash-stat-icon-wrapper" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                    <i className="fas fa-calendar-day"></i>
+                  </div>
+                  <div className="userdash-stat-info">
+                    <span className="userdash-stat-label" style={{ fontSize: '12px' }}>
+                      {new Date(n.date || row.effectiveDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                    <h3 className="userdash-stat-value" style={{ fontSize: '22px' }}>₹ {n.company ?? '-'}</h3>
+                  </div>
+                </div>
+                <div className="userdash-stat-link">
+                  <span style={{ fontSize: '11px' }}>Company Rate</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
-
-        {loadingHist ? (
-          <div className="no-data"><i className="fas fa-spinner fa-spin"></i> Loading History...</div>
-        ) : history && history.length > 0 ? (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Category</th>
-                  <th>Market Rate</th>
-                  <th>Company Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((row) => {
-                  const n = normalize(row);
-                  return (
-                    <tr key={row._id}>
-                      <td style={{ fontWeight: '600', color: '#64748b' }}>
-                        {new Date(n.date || row.effectiveDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td><span className="badge status-in-progress">LATEX 60</span></td>
-                      <td style={{ fontWeight: '700' }}>₹ {n.official ?? '-'}</td>
-                      <td style={{ fontWeight: '800', color: '#10b981' }}>₹ {n.company ?? '-'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="no-data">No rate history found for the selected range.</div>
-        )}
-      </div>
+      ) : (
+        <div className="no-data">No rate history available.</div>
+      )}
     </div>
   );
 }

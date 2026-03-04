@@ -53,27 +53,44 @@ router.post('/broadcast', async (req, res) => {
     const User = require('../models/userModel');
     let users = [];
     
-    if (targetRole === 'all') {
-      users = await User.find({}, '_id');
-    } else {
-      users = await User.find({ role: targetRole }, '_id');
+    try {
+      if (targetRole === 'all') {
+        users = await User.find({}, '_id role');
+      } else {
+        users = await User.find({ role: targetRole }, '_id role');
+      }
+      
+      console.log(`Found ${users.length} users with role: ${targetRole}`);
+    } catch (dbError) {
+      console.error('Database query error:', dbError);
+      return res.status(500).json({ message: 'Database error while fetching users' });
     }
     
     if (users.length === 0) {
-      return res.status(404).json({ message: 'No users found for the specified role' });
+      return res.status(200).json({ 
+        success: true,
+        message: `No users found with role: ${targetRole}`,
+        count: 0
+      });
     }
     
     // Create notifications for all users
     const notifications = users.map(user => ({
       userId: user._id,
-      role: targetRole === 'all' ? 'user' : targetRole,
+      role: targetRole === 'all' ? (user.role || 'user') : targetRole,
       title,
       message,
       priority: priority || 'normal',
       meta: { broadcast: true }
     }));
     
-    await Notification.insertMany(notifications);
+    try {
+      await Notification.insertMany(notifications);
+      console.log(`Successfully created ${notifications.length} notifications`);
+    } catch (insertError) {
+      console.error('Error inserting notifications:', insertError);
+      return res.status(500).json({ message: 'Failed to create notifications' });
+    }
     
     res.status(201).json({ 
       success: true, 
@@ -82,7 +99,11 @@ router.post('/broadcast', async (req, res) => {
     });
   } catch (e) {
     console.error('Error broadcasting notification:', e);
-    res.status(500).json({ message: 'Failed to broadcast notification' });
+    console.error('Error stack:', e.stack);
+    res.status(500).json({ 
+      message: 'Failed to broadcast notification',
+      error: e.message 
+    });
   }
 });
 

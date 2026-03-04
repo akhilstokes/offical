@@ -1186,3 +1186,99 @@ exports.getDeliveryShiftSchedule = async (req, res) => {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
+
+
+// Get vehicle info for current delivery staff
+exports.getVehicleInfo = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const Vehicle = require('../models/vehicleModel');
+    
+    // Find vehicle assigned to this driver
+    const vehicle = await Vehicle.findOne({ assignedDriver: userId });
+    
+    if (!vehicle) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'No vehicle assigned to you yet' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      vehicleNumber: vehicle.vehicleNumber,
+      driverName: req.user.name,
+      driverPhone: req.user.phoneNumber || req.user.phone,
+      vehicleType: vehicle.vehicleType || 'truck',
+      capacity: vehicle.capacity || '',
+      fuelType: vehicle.fuelType || 'diesel',
+      insuranceExpiry: vehicle.insuranceExpiryDate || '',
+      lastService: vehicle.lastServiceDate || '',
+      currentLocation: ''
+    });
+  } catch (error) {
+    console.error('Error fetching vehicle info:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch vehicle information', 
+      error: error.message 
+    });
+  }
+};
+
+// Update vehicle info for current delivery staff
+exports.updateVehicleInfo = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const Vehicle = require('../models/vehicleModel');
+    const { vehicleNumber, vehicleType, capacity, fuelType, insuranceExpiry, lastService } = req.body;
+    
+    // Find vehicle assigned to this driver
+    let vehicle = await Vehicle.findOne({ assignedDriver: userId });
+    
+    if (!vehicle) {
+      // Create new vehicle if none exists
+      vehicle = await Vehicle.create({
+        vehicleNumber: vehicleNumber || '',
+        assignedDriver: userId,
+        vehicleType: vehicleType || 'truck',
+        capacity: capacity || 0,
+        fuelType: fuelType || 'diesel',
+        insuranceExpiryDate: insuranceExpiry || null,
+        lastServiceDate: lastService || null,
+        status: 'active'
+      });
+    } else {
+      // Update existing vehicle
+      if (vehicleNumber) vehicle.vehicleNumber = vehicleNumber;
+      if (vehicleType) vehicle.vehicleType = vehicleType;
+      if (capacity) vehicle.capacity = capacity;
+      if (fuelType) vehicle.fuelType = fuelType;
+      if (insuranceExpiry) vehicle.insuranceExpiryDate = insuranceExpiry;
+      if (lastService) vehicle.lastServiceDate = lastService;
+      
+      await vehicle.save();
+    }
+    
+    res.json({
+      success: true,
+      message: 'Vehicle information updated successfully',
+      vehicleNumber: vehicle.vehicleNumber,
+      driverName: req.user.name,
+      driverPhone: req.user.phoneNumber || req.user.phone,
+      vehicleType: vehicle.vehicleType,
+      capacity: vehicle.capacity,
+      fuelType: vehicle.fuelType,
+      insuranceExpiry: vehicle.insuranceExpiryDate,
+      lastService: vehicle.lastServiceDate,
+      currentLocation: ''
+    });
+  } catch (error) {
+    console.error('Error updating vehicle info:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to update vehicle information', 
+      error: error.message 
+    });
+  }
+};

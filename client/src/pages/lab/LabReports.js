@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-
 import { Link } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
 import './LabDashboard.css'; // Ensure we use the dashboard theme
 
 
@@ -40,11 +40,149 @@ const LabReports = () => {
 
 
   const handleCreate = async () => {
-    // Logic to save the new report goes here
-    // For now, just close the modal
-    console.log('Creating Report', newReport);
+    // Validate inputs
+    if (!newReport.date || !newReport.sampleId || !newReport.supplier || !newReport.drc || !newReport.barrels) {
+      setError('Please fill all fields');
+      return;
+    }
+
+    // Create report entry
+    const reportEntry = {
+      analyzedAt: newReport.date,
+      sampleId: newReport.sampleId,
+      supplier: newReport.supplier,
+      batch: `BATCH-${Date.now()}`,
+      quantityLiters: parseInt(newReport.barrels) * 200, // Assuming 200L per barrel
+      drc: parseFloat(newReport.drc)
+    };
+
+    // Add to rows
+    setRows([reportEntry, ...rows]);
+    
+    // Reset form and close modal
+    setNewReport({ date: '', sampleId: '', supplier: '', drc: '', barrels: '' });
     setShowCreateModal(false);
-    alert('Report Created (Simulation)');
+  };
+
+  const downloadReportPDF = (report) => {
+    const doc = new jsPDF();
+    
+    const primaryColor = [59, 130, 246];
+    const secondaryColor = [71, 85, 105];
+    
+    let yPos = 20;
+    
+    // Header
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, 210, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('LAB ANALYSIS REPORT', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 105, 28, { align: 'center' });
+    
+    yPos = 50;
+    
+    // Report Information
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('REPORT DETAILS', 20, yPos);
+    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setLineWidth(0.5);
+    doc.line(20, yPos + 2, 190, yPos + 2);
+    
+    yPos += 12;
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.setFontSize(11);
+    
+    // Date
+    doc.setFont('helvetica', 'bold');
+    doc.text('Analysis Date:', 25, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(report.analyzedAt ? new Date(report.analyzedAt).toLocaleDateString('en-IN') : 'N/A', 70, yPos);
+    
+    yPos += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Sample ID:', 25, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(report.sampleId || 'N/A', 70, yPos);
+    
+    yPos += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Supplier:', 25, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(report.supplier || 'N/A', 70, yPos);
+    
+    yPos += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Batch:', 25, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(report.batch || 'N/A', 70, yPos);
+    
+    yPos += 18;
+    
+    // Analysis Results
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ANALYSIS RESULTS', 20, yPos);
+    doc.line(20, yPos + 2, 190, yPos + 2);
+    
+    yPos += 12;
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.setFontSize(11);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Quantity:', 25, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${report.quantityLiters || 0} Liters`, 70, yPos);
+    
+    yPos += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.text('DRC (Dry Rubber Content):', 25, yPos);
+    doc.setFont('helvetica', 'normal');
+    const drcColor = report.drc > 30 ? [22, 163, 74] : [234, 88, 12];
+    doc.setTextColor(drcColor[0], drcColor[1], drcColor[2]);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${report.drc}%`, 70, yPos);
+    
+    yPos += 20;
+    
+    // Quality Assessment
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('QUALITY ASSESSMENT', 20, yPos);
+    doc.line(20, yPos + 2, 190, yPos + 2);
+    
+    yPos += 12;
+    doc.setFontSize(11);
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.setFont('helvetica', 'normal');
+    
+    const quality = report.drc > 35 ? 'Excellent' : report.drc > 30 ? 'Good' : report.drc > 25 ? 'Fair' : 'Poor';
+    const qualityColor = report.drc > 35 ? [22, 163, 74] : report.drc > 30 ? [34, 197, 94] : report.drc > 25 ? [251, 146, 60] : [239, 68, 68];
+    
+    doc.text('Quality Grade:', 25, yPos);
+    doc.setTextColor(qualityColor[0], qualityColor[1], qualityColor[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text(quality, 70, yPos);
+    
+    // Footer
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 277, 210, 20, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Holy Family Polymers - Laboratory Department', 105, 287, { align: 'center' });
+    
+    const fileName = `Lab_Report_${report.sampleId || 'Sample'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
   };
 
   return (
@@ -130,6 +268,7 @@ const LabReports = () => {
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '600', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Batch</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '600', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Qty (L)</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '600', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>DRC %</th>
+                <th style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b', fontWeight: '600', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -159,10 +298,33 @@ const LabReports = () => {
                       </span>
                     ) : '-'}
                   </td>
+                  <td style={{ padding: '14px 16px', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
+                    <button
+                      onClick={() => downloadReportPDF(r)}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#2563eb'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                    >
+                      <i className="fas fa-file-pdf"></i> PDF
+                    </button>
+                  </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
                     <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>📊</div>
                     <div>No data found for the selected range</div>
                   </td>

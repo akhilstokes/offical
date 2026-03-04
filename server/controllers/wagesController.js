@@ -394,3 +394,61 @@ exports.createWage = async (req, res) => {
     });
   }
 };
+
+// Get my wages (for delivery staff to see their earnings)
+exports.getMyWages = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { date } = req.query;
+    
+    // Parse date or use current date
+    const targetDate = date ? new Date(date) : new Date();
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth() + 1;
+    
+    // Get wage summary for the current month
+    const wageSummary = await SalarySummary.findOne({
+      staff: userId,
+      year: year,
+      month: month
+    }).populate('staff', 'name email role');
+    
+    // Get salary record for the current month
+    const salaryRecord = await Salary.findOne({
+      staffMember: userId,
+      year: year,
+      month: month
+    });
+    
+    // Calculate today's earnings (if any tasks completed today)
+    let todayEarnings = 0;
+    const todayStart = new Date(targetDate);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(targetDate);
+    todayEnd.setHours(23, 59, 59, 999);
+    
+    // Get user's daily rate
+    const user = await User.findById(userId).select('dailySalary baseSalary dailyWage');
+    const dailyRate = user.dailySalary || user.baseSalary || user.dailyWage || 500;
+    
+    res.json({
+      success: true,
+      data: {
+        todayEarnings: todayEarnings,
+        dailyRate: dailyRate,
+        monthlyTotal: wageSummary?.grossSalary || salaryRecord?.grossSalary || 0,
+        workingDays: wageSummary?.workingDays || salaryRecord?.presentDays || 0,
+        status: wageSummary?.status || salaryRecord?.status || 'pending',
+        year: year,
+        month: month
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching my wages:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch wages', 
+      error: error.message 
+    });
+  }
+};

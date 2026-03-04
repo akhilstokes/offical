@@ -648,8 +648,8 @@ const AIRubberProcess = () => {
     const resultsDiv = document.getElementById('kohResults');
     const kohNumberDiv = document.getElementById('kohNumberResult');
     
-    // Validate weight range (5-10g)
-    if (w > 0 && (w < 5 || w > 10)) {
+    // Validate weight range (5-17g)
+    if (w > 0 && (w < 5 || w > 17)) {
       if (weightErrorDiv) {
         weightErrorDiv.style.display = 'block';
       }
@@ -1482,7 +1482,7 @@ const AIRubberProcess = () => {
               </div>
               <div>
                 <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', color: '#6b21a8', fontSize: '13px' }}>
-                  Weight of Sample (W) - g (5-10g)
+                  Weight of Sample (W) - g (5-17g)
                 </label>
                 <input
                   type="number"
@@ -1550,7 +1550,7 @@ const AIRubberProcess = () => {
             • N = Normality of the acid<br/>
             • W = Weight of latex or serum sample (g)<br/>
             • 56.1 = Molecular weight of KOH<br/><br/>
-            <strong>Sample Weight Range:</strong> 5-10g (positive decimals allowed)<br/>
+            <strong>Sample Weight Range:</strong> 5-17g (positive decimals allowed)<br/>
             <strong>KOH Number:</strong> Indicates the amount of potassium hydroxide (in mg) required to neutralize the fatty acids in 1g of sample
           </div>
         </div>

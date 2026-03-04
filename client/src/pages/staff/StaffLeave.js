@@ -118,13 +118,19 @@ const StaffLeave = () => {
 
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <h2 style={{ margin: 0 }}>Field Staff Leave Management</h2>
         <button 
           className="btn btn-outline-primary"
           onClick={() => setShowHistoryModal(true)}
+          style={{ 
+            padding: '8px 16px',
+            fontSize: '14px',
+            whiteSpace: 'nowrap',
+            minWidth: 'auto'
+          }}
         >
-          📋 View Leave History
+          📋 History
         </button>
       </div>
       {error && <div style={{ color: 'crimson', marginTop: 8 }}>{error}</div>}

@@ -158,7 +158,6 @@ import AdminExpenses from "./pages/admin/AdminExpenses";
 import AdminChemicalRequests from "./pages/admin/AdminChemicalRequests";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminRateVerification from "./pages/admin/AdminRateVerification";
-import AdminRateApproval from "./pages/admin/AdminRateApproval";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminProfile from "./pages/admin/AdminProfile";
 import AdminReports from "./pages/admin/AdminReports";
@@ -1136,16 +1135,6 @@ function App() {
             <AdminProtectedRoute>
               <AdminDashboardLayout>
                 <AdminRateVerification />
-              </AdminDashboardLayout>
-            </AdminProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/rate-approval"
-          element={
-            <AdminProtectedRoute>
-              <AdminDashboardLayout>
-                <AdminRateApproval />
               </AdminDashboardLayout>
             </AdminProtectedRoute>
           }
