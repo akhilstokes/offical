@@ -75,94 +75,138 @@ const AccountantLayoutAntigravity = ({ children }) => {
         else return "Good Evening";
     };
 
-    const menuItems = [
-        { path: '/accountant/rates', label: 'Set Live Rate' },
-        { path: '/accountant/expenses', label: 'Expenses' },
-        { path: '/accountant/stock', label: 'Stock Monitor' },
-        { path: '/accountant/attendance', label: 'Attendance' },
-        { path: '/accountant/leave', label: 'Leave' },
-        { path: '/accountant/salaries', label: 'Salaries' },
-        { path: '/accountant/bill-generation', label: 'Bill Generation' },
-        { path: '/accountant/delivery-intake', label: 'Delivery Intake/Verify' },
-        { path: '/accountant/documents', label: 'Documents' },
+    const navigationItems = [
+        {
+            section: 'Overview',
+            items: [
+                { to: '/accountant/dashboard', icon: 'fa-tachometer-alt', label: 'Dashboard' },
+                { to: '/accountant/rates', icon: 'fa-chart-line', label: 'Set Live Rate' },
+            ]
+        },
+        {
+            section: 'Operations',
+            items: [
+                { to: '/accountant/expenses', icon: 'fa-receipt', label: 'Expenses' },
+                { to: '/accountant/stock', icon: 'fa-warehouse', label: 'Stock Monitor' },
+                { to: '/accountant/delivery-intake', icon: 'fa-truck-loading', label: 'Delivery Intake' },
+            ]
+        },
+        {
+            section: 'Staff Management',
+            items: [
+                { to: '/accountant/attendance', icon: 'fa-user-check', label: 'Attendance' },
+                { to: '/accountant/leave', icon: 'fa-calendar-times', label: 'Leave' },
+                { to: '/accountant/salaries', icon: 'fa-money-bill-wave', label: 'Salaries' },
+            ]
+        },
+        {
+            section: 'Billing',
+            items: [
+                { to: '/accountant/bill-generation', icon: 'fa-file-invoice-dollar', label: 'Bill Generation' },
+            ]
+        }
     ];
 
     return (
         <div className="modern-dashboard">
-            {/* Modern Sidebar */}
-            <aside className="modern-sidebar">
-                <div className="sidebar-brand">
-                    <div className="brand-logo">
-                        <img src="/images/logo.png" alt="Holy Family Polymers Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    </div>
-                    <div className="brand-text">
-                        <h3>Holy Family Polymers</h3>
-                        <span>Accountant Module</span>
+            {/* Modern Sidebar - Admin Style */}
+            <aside className="accountant-sidebar">
+                {/* Sidebar Header */}
+                <div className="accountant-sidebar-header">
+                    <div className="accountant-brand">
+                        <div className="accountant-brand-icon">
+                            <i className="fas fa-calculator"></i>
+                        </div>
+                        <div className="accountant-brand-text">
+                            <h3>HFP Accountant</h3>
+                            <span>Finance Panel</span>
+                        </div>
                     </div>
                 </div>
 
-                <nav className="sidebar-navigation">
-                    <div className="nav-section">
-                        <h4 className="nav-section-title">Main Menu</h4>
-                        <ul className="nav-list">
-                            {menuItems.map((item) => {
-                                const validPath = item.path.startsWith('/') ? item.path : `/${item.path}`;
-                                return (
-                                    <li key={validPath} className="nav-item">
-                                        <NavLink
-                                            to={validPath}
-                                            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                                        >
-                                            <span className="nav-label">{item.label}</span>
-                                        </NavLink>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                {/* User Profile Card */}
+                <div className="accountant-user-card">
+                    <div className="accountant-user-avatar">
+                        {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
                     </div>
+                    <div className="accountant-user-info">
+                        <div className="accountant-user-greeting">Welcome back,</div>
+                        <div className="accountant-user-name">{user?.name || user?.email || 'Accountant'}</div>
+                        <div className="accountant-user-role">Finance Manager</div>
+                    </div>
+                </div>
+
+                {/* Navigation */}
+                <nav className="accountant-nav">
+                    {navigationItems.map((section, sectionIndex) => (
+                        <div key={sectionIndex} className="accountant-nav-section">
+                            <div className="accountant-nav-title">{section.section}</div>
+                            <div className="accountant-nav-items">
+                                {section.items.map((item, itemIndex) => (
+                                    <NavLink
+                                        key={itemIndex}
+                                        to={item.to}
+                                        className={({ isActive }) => 
+                                            `accountant-nav-item ${isActive ? 'active' : ''}`
+                                        }
+                                    >
+                                        <div className="accountant-nav-icon">
+                                            <i className={`fas ${item.icon}`}></i>
+                                        </div>
+                                        <span className="accountant-nav-label">{item.label}</span>
+                                    </NavLink>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                 </nav>
 
-                <div className="sidebar-logout">
-                    <button className="logout-btn" onClick={handleLogout}>
-                        <FiLogOut className="logout-icon" />
-                        <span className="logout-text">Logout</span>
+                {/* Sidebar Footer */}
+                <div className="accountant-sidebar-footer">
+                    <button className="accountant-logout-btn" onClick={handleLogout}>
+                        <i className="fas fa-sign-out-alt"></i>
+                        <span>Sign Out</span>
                     </button>
                 </div>
             </aside>
 
-            <div className="main-wrapper">
-                <header className="modern-header">
-                    <div className="header-content">
-                        <div className="header-left">
-                            <div className="header-logo">
-                                <img src="/images/logo.png" alt="Logo" />
-                            </div>
-                            <div className="header-greeting">
-                                <h1>{getGreeting()}, {user?.name || 'Jeffin'}!</h1>
-                                <p>Holy Family Polymers - Accountant Dashboard 👋</p>
+            <div className="accountant-main-content">
+                <header className="accountant-top-header">
+                    <div className="accountant-header-content">
+                        <div className="accountant-header-left">
+                            <div className="accountant-page-title">
+                                <div className="accountant-page-icon">
+                                    <i className="fas fa-calculator"></i>
+                                </div>
+                                <div className="accountant-page-info">
+                                    <h1>{getGreeting()}, {user?.name || 'Jeffin'}!</h1>
+                                    <p>Holy Family Polymers - Accountant Dashboard 👋</p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="header-actions">
+                        <div className="accountant-header-right">
                             {/* Notifications Dropdown */}
-                            <div className="dropdown-wrapper" ref={notificationRef}>
+                            <div className="accountant-dropdown-wrapper" ref={notificationRef}>
                                 <button
-                                    className={`header-action-btn notification-btn ${isNotificationOpen ? 'active' : ''}`}
+                                    className={`accountant-notification-btn ${isNotificationOpen ? 'active' : ''}`}
                                     onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                                 >
                                     <FiBell />
-                                    <span className="notification-badge">{notifications.length}</span>
+                                    {notifications.length > 0 && (
+                                        <div className="accountant-notification-badge">{notifications.length}</div>
+                                    )}
                                 </button>
 
                                 {isNotificationOpen && (
-                                    <div className="dropdown-menu notification-dropdown">
-                                        <div className="dropdown-header">
+                                    <div className="accountant-dropdown-menu">
+                                        <div className="accountant-dropdown-header">
                                             <h4>Notifications</h4>
                                             <button onClick={() => navigate('/accountant/alerts')}>View All</button>
                                         </div>
-                                        <div className="dropdown-list">
+                                        <div className="accountant-dropdown-list">
                                             {notifications.map(n => (
-                                                <div key={n.id} className="dropdown-item">
+                                                <div key={n.id} className="accountant-dropdown-item">
                                                     <div className={`item-icon ${n.type}`}>
                                                         {n.type === 'success' && <FiCheckCircle />}
                                                         {n.type === 'pending' && <FiClock />}
@@ -180,32 +224,30 @@ const AccountantLayoutAntigravity = ({ children }) => {
                             </div>
 
                             {/* Profile Dropdown */}
-                            <div className="dropdown-wrapper" ref={profileRef}>
+                            <div className="accountant-profile-dropdown" ref={profileRef}>
                                 <button
-                                    className={`header-action-btn profile-icon-btn ${isProfileOpen ? 'active' : ''}`}
+                                    className="accountant-profile-btn"
                                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                                 >
-                                    <FiUser />
+                                    <div className="accountant-profile-avatar">
+                                        {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                                    </div>
+                                    <div className="accountant-profile-info">
+                                        <div className="accountant-profile-name">{user?.name || 'Accountant'}</div>
+                                        <div className="accountant-profile-role">Finance Manager</div>
+                                    </div>
                                 </button>
 
                                 {isProfileOpen && (
-                                    <div className="dropdown-menu profile-dropdown">
-                                        <div className="profile-info">
-                                            <div className="profile-avatar">
-                                                <FiUser />
-                                            </div>
-                                            <div className="profile-details">
-                                                <p className="profile-name">{user?.name || 'Jeffin'}</p>
-                                                <p className="profile-role">Accountant</p>
-                                            </div>
+                                    <div className="accountant-dropdown-menu accountant-profile-menu">
+                                        <div className="accountant-dropdown-item" onClick={() => setIsEditProfileOpen(true)}>
+                                            <i className="fas fa-user-edit"></i>
+                                            Edit Profile
                                         </div>
-                                        <div className="dropdown-divider"></div>
-                                        <button className="dropdown-item" onClick={() => setIsEditProfileOpen(true)}>
-                                            <FiSettings /> <span>Edit Profile</span>
-                                        </button>
-                                        <button className="dropdown-item" onClick={handleLogout}>
-                                            <FiLogOut /> <span>Logout</span>
-                                        </button>
+                                        <div className="accountant-dropdown-item" onClick={handleLogout}>
+                                            <i className="fas fa-sign-out-alt"></i>
+                                            Sign Out
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -213,7 +255,7 @@ const AccountantLayoutAntigravity = ({ children }) => {
                     </div>
                 </header>
 
-                <main className="main-content">
+                <main className="accountant-content">
                     {children}
                 </main>
             </div>

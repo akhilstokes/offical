@@ -35,6 +35,57 @@ router.post('/', async (req, res) => {
   }
 });
 
+// POST /api/notifications/broadcast - Send notification to all users of a role
+router.post('/broadcast', async (req, res) => {
+  try {
+    const { targetRole, title, message, priority } = req.body;
+    
+    // Only allow admins to broadcast notifications
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to broadcast notifications' });
+    }
+    
+    if (!title || !message) {
+      return res.status(400).json({ message: 'Title and message are required' });
+    }
+    
+    // Get all users of the target role
+    const User = require('../models/userModel');
+    let users = [];
+    
+    if (targetRole === 'all') {
+      users = await User.find({}, '_id');
+    } else {
+      users = await User.find({ role: targetRole }, '_id');
+    }
+    
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'No users found for the specified role' });
+    }
+    
+    // Create notifications for all users
+    const notifications = users.map(user => ({
+      userId: user._id,
+      role: targetRole === 'all' ? 'user' : targetRole,
+      title,
+      message,
+      priority: priority || 'normal',
+      meta: { broadcast: true }
+    }));
+    
+    await Notification.insertMany(notifications);
+    
+    res.status(201).json({ 
+      success: true, 
+      message: `Notification sent to ${users.length} user(s)`,
+      count: users.length
+    });
+  } catch (e) {
+    console.error('Error broadcasting notification:', e);
+    res.status(500).json({ message: 'Failed to broadcast notification' });
+  }
+});
+
 // GET /api/notifications?limit=20
 router.get('/', async (req, res) => {
   try {

@@ -18,19 +18,36 @@ const UserRequests = () => {
   const checkUserAddress = async () => {
     try {
       const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      if (!token) {
+        console.log('No token found');
+        setShowAddressWarning(true);
+        return;
+      }
+      
       const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${API}/api/users/profile`, { headers });
+      const res = await fetch(`${API}/api/users/profile`, { 
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
       if (res.ok) {
         const data = await res.json();
         const address = data.address || '';
         setUserAddress(address);
-        if (!address || address.trim() === '') {
+        if (!address || address.trim() === '' || address.trim().length < 10) {
           setShowAddressWarning(true);
+        } else {
+          setShowAddressWarning(false);
         }
+      } else {
+        console.error('Failed to fetch profile:', res.status);
+        // Don't show warning if API fails, keep current state
       }
     } catch (e) {
       console.error('Error checking user address:', e);
+      // Don't show warning if API fails, keep current state
     }
   };
 
@@ -69,6 +86,26 @@ const UserRequests = () => {
     finally { setSubmitting(false); }
   };
 
+  const repeatBarrelRequest = async (request) => {
+    // Check if user has address before allowing request
+    if (!userAddress || userAddress.trim() === '') {
+      setErr('Please complete your address in your profile before requesting barrels. Delivery staff need your address for barrel delivery.');
+      setShowAddressWarning(true);
+      return;
+    }
+
+    // Switch to barrel tab and populate form
+    setTab('BARREL');
+    setBarrel({
+      type: 'BARREL',
+      quantity: request.quantity || 1,
+      notes: request.notes || ''
+    });
+    
+    // Scroll to top to show the form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const submitComplaint = async () => {
     setSubmitting(true); setErr('');
     try {
@@ -96,7 +133,7 @@ const UserRequests = () => {
             <button className={tab === 'COMPLAINT' ? 'active' : ''} onClick={() => setTab('COMPLAINT')}>Complaint</button>
           </div>
 
-          <div className="dash-card" style={{ padding: '32px' }}>
+          <div className="dash-card" style={{ padding: '32px', maxHeight: 'calc(100vh - 250px)', overflowY: 'auto' }}>
             <div className="card-header">
               <h3>
                 <i className={tab === 'BARREL' ? 'fas fa-drum' : 'fas fa-exclamation-circle'}></i>
@@ -105,29 +142,73 @@ const UserRequests = () => {
             </div>
 
             {err && (
-              <div className="alert error">
-                <i className="fas fa-exclamation-circle"></i>
-                <span>{err}</span>
+              <div className="alert error" style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <i className="fas fa-exclamation-circle" style={{ marginTop: '2px' }}></i>
+                <span style={{ flex: 1 }}>{err}</span>
               </div>
             )}
 
-            {showAddressWarning && (!userAddress || userAddress.trim() === '') && (
-              <div className="alert" style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', marginBottom: '20px' }}>
-                <i className="fas fa-exclamation-triangle" style={{ fontSize: '1.2rem' }}></i>
-                <div>
-                  <strong>Address Required</strong>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
-                    Delivery staff need your address for barrel delivery. 
-                    <a href="/user/profile" style={{ color: '#92400e', textDecoration: 'underline', marginLeft: '8px', fontWeight: '700' }}>
-                      Profile →
+            {showAddressWarning && (!userAddress || userAddress.trim() === '' || userAddress.trim().length < 10) && tab === 'BARREL' && (
+              <div className="alert" style={{ 
+                background: '#fffbeb', 
+                border: '1px solid #fde68a', 
+                color: '#92400e', 
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
+              }}>
+                <i className="fas fa-exclamation-triangle" style={{ fontSize: '1.2rem', marginTop: '2px', flexShrink: 0 }}></i>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ display: 'block', marginBottom: '4px' }}>Address Required</strong>
+                  <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.5' }}>
+                    Delivery staff need your address for barrel delivery. Please update your address in your{' '}
+                    <a href="/user/profile" style={{ color: '#92400e', textDecoration: 'underline', fontWeight: '700' }}>
+                      profile
                     </a>
+                    {' '}before submitting a barrel request.
                   </p>
+                  <button 
+                    type="button" 
+                    onClick={checkUserAddress}
+                    style={{ 
+                      marginTop: '8px', 
+                      padding: '4px 12px', 
+                      fontSize: '0.8rem', 
+                      background: '#92400e', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <i className="fas fa-sync-alt"></i> Refresh Address Check
+                  </button>
                 </div>
               </div>
             )}
 
+            {!showAddressWarning && userAddress && userAddress.trim().length >= 10 && tab === 'BARREL' && (
+              <div className="alert" style={{ 
+                background: '#f0fdf4', 
+                border: '1px solid #86efac', 
+                color: '#166534', 
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px'
+              }}>
+                <i className="fas fa-check-circle" style={{ fontSize: '1.2rem', color: '#22c55e' }}></i>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                  ✓ Address verified - You can submit barrel requests
+                </span>
+              </div>
+            )}
+
             {tab === 'BARREL' ? (
-              <>
+              <div style={{ marginTop: '20px' }}>
                 <label>
                   Quantity (Max: 50 barrels)
                   <input type="number" min={1} max={50} step={1} value={barrel.quantity} onChange={e => setBarrel({ ...barrel, quantity: e.target.value })} placeholder="Enter quantity" />
@@ -139,9 +220,9 @@ const UserRequests = () => {
                 <button className="btn" onClick={submitBarrel} disabled={submitting} style={{ width: '100%', marginTop: '8px' }}>
                   {submitting ? <><i className="fas fa-spinner fa-spin"></i> Submitting...</> : <><i className="fas fa-paper-plane"></i> Submit Request</>}
                 </button>
-              </>
+              </div>
             ) : (
-              <>
+              <div style={{ marginTop: '20px' }}>
                 <label>
                   Subject
                   <input type="text" value={complaint.subject} onChange={e => setComplaint({ ...complaint, subject: e.target.value })} placeholder="Brief summary" />
@@ -162,7 +243,7 @@ const UserRequests = () => {
                 <button className="btn" onClick={submitComplaint} disabled={submitting} style={{ width: '100%', marginTop: '8px' }}>
                   {submitting ? <><i className="fas fa-spinner fa-spin"></i> Submitting...</> : <><i className="fas fa-paper-plane"></i> Submit Complaint</>}
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -190,6 +271,7 @@ const UserRequests = () => {
                       <th>Type</th>
                       <th>Details</th>
                       <th>Status</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -209,6 +291,32 @@ const UserRequests = () => {
                             {r.type === 'BARREL' ? (r.notes || `${r.quantity} Barrels`) : (r.subject || r.notes || '-')}
                           </td>
                           <td><span className={`badge status-${statusClass}`} style={{ fontSize: '0.7rem', padding: '2px 8px' }}>{r.status || 'pending'}</span></td>
+                          <td>
+                            {r.type === 'BARREL' && (
+                              <button
+                                onClick={() => repeatBarrelRequest(r)}
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  background: '#7c3aed',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontWeight: '600',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => e.target.style.background = '#6d28d9'}
+                                onMouseOut={(e) => e.target.style.background = '#7c3aed'}
+                                title="Repeat this barrel request"
+                              >
+                                <i className="fas fa-redo"></i> Repeat
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}

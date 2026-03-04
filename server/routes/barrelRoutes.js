@@ -255,7 +255,7 @@ router.post('/assign', protect, admin, async (req, res) => {
 });
 
 // Get returned barrels
-router.get('/returned', protect, admin, async (req, res) => {
+router.get('/returned', protect, adminOrManager, async (req, res) => {
   try {
     // In a real implementation, fetch from ReturnedBarrel model
     // For now, return empty array

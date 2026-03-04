@@ -152,9 +152,13 @@ const AccountantLiveRate = () => {
         return rateDate.getTime() === today.getTime();
       }) : null;
 
-      if (todayRate) {
+      // Only block if today's submission is NOT draft (i.e., it's pending, approved, or published)
+      if (todayRate && todayRate.status !== 'draft') {
         setSubmittedToday(true);
         setTodaySubmission(todayRate);
+      } else {
+        setSubmittedToday(false);
+        setTodaySubmission(null);
       }
     } catch (err) {
       console.error('Error fetching submitted rates:', err);
@@ -202,8 +206,8 @@ const AccountantLiveRate = () => {
       return;
     }
 
-    // Check if already submitted today
-    if (submittedToday) {
+    // Check if already submitted today (but allow draft status to be resubmitted)
+    if (submittedToday && todaySubmission && todaySubmission.status !== 'draft') {
       setError('You have already submitted a rate today. Only one submission per day is allowed.');
       setTimeout(() => setError(''), 5000);
       return;
@@ -376,7 +380,7 @@ const AccountantLiveRate = () => {
       <div className="rate-form-card">
         <h2 className="card-title">Submit New Rate</h2>
         
-        {submittedToday && todaySubmission && (
+        {submittedToday && todaySubmission && todaySubmission.status !== 'draft' && (
           <div style={{
             padding: 16,
             backgroundColor: '#fef3c7',
@@ -473,9 +477,9 @@ const AccountantLiveRate = () => {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={submitting || !rateForm.marketRate || submittedToday}
+              disabled={submitting || !rateForm.marketRate || (submittedToday && todaySubmission?.status !== 'draft')}
             >
-              {submitting ? 'Submitting...' : submittedToday ? '✓ Already Submitted Today' : !rateForm.marketRate ? 'Loading Rate...' : 'Submit for Approval'}
+              {submitting ? 'Submitting...' : (submittedToday && todaySubmission?.status !== 'draft') ? '✓ Already Submitted Today' : !rateForm.marketRate ? 'Loading Rate...' : 'Submit for Approval'}
             </button>
           </div>
         </form>

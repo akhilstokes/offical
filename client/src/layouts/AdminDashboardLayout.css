@@ -3,7 +3,7 @@
   display: flex;
   min-height: 100vh;
   background: #f5f7fa;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Sidebar Overlay for Mobile */
@@ -38,6 +38,7 @@
   transition: all 0.3s ease;
   z-index: 999;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .admin-sidebar.collapsed {
@@ -562,6 +563,9 @@
 .admin-content {
   flex: 1;
   padding: 24px;
+  overflow-y: auto;
+  max-height: calc(100vh - 80px);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* Responsive */

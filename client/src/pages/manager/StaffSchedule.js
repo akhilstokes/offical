@@ -134,7 +134,7 @@ const StaffSchedule = () => {
         });
 
       const response = await axios.post(
-        'http://localhost:5000/api/manager/schedule/bulk-assign',
+        'http://localhost:5000/api/staff-schedule/bulk-assign',
         { schedules: scheduleData },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -171,7 +171,7 @@ const StaffSchedule = () => {
       if (historyFilters.shift) params.append('shift', historyFilters.shift);
 
       const response = await axios.get(
-        `http://localhost:5000/api/manager/schedule/history?${params.toString()}`,
+        `http://localhost:5000/api/staff-schedule/history?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

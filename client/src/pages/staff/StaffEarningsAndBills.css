@@ -115,21 +115,23 @@
 
 .rate-info h3 {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 8px 0;
-  opacity: 0.9;
+  color: white;
 }
 
 .rate-amount {
-  font-size: 48px;
+  font-size: 52px;
   font-weight: 700;
   margin: 0;
   line-height: 1;
+  color: white;
 }
 
 .rate-label {
-  font-size: 14px;
-  opacity: 0.8;
+  font-size: 16px;
+  font-weight: 500;
+  color: white;
 }
 
 /* Earnings Grid */
@@ -195,23 +197,25 @@
 
 .earning-details h4 {
   font-size: 14px;
-  font-weight: 600;
-  color: #718096;
+  font-weight: 700;
+  color: #2d3748;
   margin: 0 0 8px 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .earning-amount {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 700;
   color: #1a202c;
   margin: 0 0 4px 0;
+  line-height: 1;
 }
 
 .earning-label {
-  font-size: 13px;
-  color: #a0aec0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4a5568;
 }
 
 /* Attendance Card */
@@ -233,7 +237,7 @@
 }
 
 .card-header h2 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: #1a202c;
   margin: 0;
@@ -292,8 +296,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  color: #4a5568;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a202c;
 }
 
 .attendance-date i,

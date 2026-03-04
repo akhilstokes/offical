@@ -273,65 +273,33 @@ const PendingLeaves = () => {
                     </div>
                     <div className="staff-details">
                       <h3>{leave.staffName || leave.staff?.name || 'Unknown Staff'}</h3>
-                      <span className="staff-role">
-                        {leave.staff?.role?.replace('_', ' ') || 'Unknown Role'}
-                      </span>
                     </div>
                   </div>
-                  <div className="leave-type-badge">
-                    <span 
-                      className="type-badge"
-                      style={{ backgroundColor: getLeaveTypeColor(leave.leaveType) }}
-                    >
-                      {getLeaveTypeIcon(leave.leaveType)}
-                      {leave.leaveType || 'Leave'}
-                    </span>
-                  </div>
+                  <span 
+                    className="type-badge"
+                    style={{ backgroundColor: getLeaveTypeColor(leave.leaveType) }}
+                  >
+                    {leave.leaveType || 'Leave'}
+                  </span>
                 </div>
 
-                <div className="leave-timeline">
-                  <div className="timeline-item">
-                    <div className="timeline-icon start">
-                      <i className="fas fa-play"></i>
-                    </div>
-                    <div className="timeline-content">
-                      <div className="timeline-label">From</div>
-                      <div className="timeline-date">{formatDate(leave.startDate)}</div>
-                    </div>
+                <div className="leave-dates">
+                  <div className="date-item">
+                    <span className="date-label">From</span>
+                    <span className="date-value">{formatDate(leave.startDate)}</span>
                   </div>
-                  <div className="timeline-connector"></div>
-                  <div className="timeline-item">
-                    <div className="timeline-icon end">
-                      <i className="fas fa-stop"></i>
-                    </div>
-                    <div className="timeline-content">
-                      <div className="timeline-label">To</div>
-                      <div className="timeline-date">{formatDate(leave.endDate)}</div>
-                    </div>
+                  <div className="date-separator">→</div>
+                  <div className="date-item">
+                    <span className="date-label">To</span>
+                    <span className="date-value">{formatDate(leave.endDate)}</span>
                   </div>
-                </div>
-
-                <div className="leave-info">
-                  <div className="info-item">
-                    <i className="fas fa-calendar-day"></i>
-                    <span className="info-label">Duration:</span>
-                    <span className="info-value">
-                      {calculateDays(leave.startDate, leave.endDate)} days
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <i className="fas fa-clock"></i>
-                    <span className="info-label">Applied:</span>
-                    <span className="info-value">{formatDate(leave.createdAt)}</span>
+                  <div className="duration-badge">
+                    {calculateDays(leave.startDate, leave.endDate)} days
                   </div>
                 </div>
 
                 {leave.reason && (
                   <div className="leave-reason">
-                    <div className="reason-header">
-                      <i className="fas fa-comment-alt"></i>
-                      <span>Reason</span>
-                    </div>
                     <p>{leave.reason}</p>
                   </div>
                 )}

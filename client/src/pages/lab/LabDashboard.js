@@ -92,60 +92,11 @@ const LabDashboard = () => {
     }
   };
 
-  // Mock data for pending barrels from delivery staff
-  const pendingBarrels = [
-    { 
-      barrelId: 'BRL001', 
-      userId: 'USR123', 
-      userName: 'John Smith',
-      deliveryDate: '2025-01-02',
-      deliveryStaff: 'Mike Johnson',
-      vehicleNumber: 'KA01AB1234',
-      status: 'PENDING_TEST'
-    },
-    { 
-      barrelId: 'BRL002', 
-      userId: 'USR124', 
-      userName: 'Sarah Wilson',
-      deliveryDate: '2025-01-02',
-      deliveryStaff: 'Mike Johnson',
-      vehicleNumber: 'KA01AB1234',
-      status: 'PENDING_TEST'
-    },
-    { 
-      barrelId: 'BRL003', 
-      userId: 'USR125', 
-      userName: 'David Brown',
-      deliveryDate: '2025-01-01',
-      deliveryStaff: 'Lisa Davis',
-      vehicleNumber: 'KA02CD5678',
-      status: 'PENDING_TEST'
-    }
-  ];
+  // Pending barrels from delivery staff - loaded from API
+  const pendingBarrels = [];
 
-  // Mock data for completed tests
-  const completedTests = [
-    { 
-      barrelId: 'BRL004', 
-      userId: 'USR126', 
-      userName: 'Emma Taylor',
-      testDate: '2025-01-01',
-      drcValue: 92.5,
-      testNotes: 'Good quality, meets standards',
-      status: 'COMPLETED',
-      sentToAccountant: true
-    },
-    { 
-      barrelId: 'BRL005', 
-      userId: 'USR127', 
-      userName: 'Robert Lee',
-      testDate: '2025-01-01',
-      drcValue: 88.3,
-      testNotes: 'Acceptable quality',
-      status: 'COMPLETED',
-      sentToAccountant: true
-    }
-  ];
+  // Completed tests - loaded from API
+  const completedTests = [];
 
   const handleStartTest = (barrel) => {
     setSelectedBarrel(barrel);

@@ -142,7 +142,6 @@ const ManagerDashboardLayout = ({ children }) => {
       section: 'Staff & Planning',
       items: [
         { to: '/manager/staff-schedule', icon: 'fa-calendar-check', label: 'Staff Schedule' },
-        { to: '/manager/shifts', icon: 'fa-clock', label: 'Shift Planning' },
         { to: '/manager/shift-management', icon: 'fa-calendar-alt', label: 'Shift Management' },
         { to: '/manager/chem-requests', icon: 'fa-flask', label: 'Chemical Requests' },
         { to: '/manager/notifications', icon: 'fa-bullhorn', label: 'Send Notifications' },

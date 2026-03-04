@@ -68,10 +68,90 @@ router.get('/:id', protect, async (req, res) => {
 // Create new shift
 router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
+    // Clean and validate the incoming data
     const shiftData = {
       ...req.body,
       createdBy: req.user.id
     };
+
+    // Remove assignedStaff if it exists (shifts don't have assignedStaff, assignments do)
+    delete shiftData.assignedStaff;
+
+    // Validate required fields
+    if (!shiftData.name || !shiftData.name.trim()) {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: ['Shift name is required'] 
+      });
+    }
+
+    if (!shiftData.startTime) {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: ['Start time is required'] 
+      });
+    }
+
+    if (!shiftData.endTime) {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: ['End time is required'] 
+      });
+    }
+
+    if (!shiftData.category) {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: ['Category is required'] 
+      });
+    }
+
+    if (!shiftData.location || !shiftData.location.trim()) {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: ['Location is required'] 
+      });
+    }
+
+    if (!shiftData.department || !shiftData.department.trim()) {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: ['Department is required'] 
+      });
+    }
+
+    // Ensure daysOfWeek is an array
+    if (shiftData.daysOfWeek && !Array.isArray(shiftData.daysOfWeek)) {
+      if (typeof shiftData.daysOfWeek === 'string') {
+        try {
+          shiftData.daysOfWeek = JSON.parse(shiftData.daysOfWeek);
+        } catch (e) {
+          shiftData.daysOfWeek = [shiftData.daysOfWeek];
+        }
+      }
+    }
+
+    // Ensure breaks is an array if provided
+    if (shiftData.breaks && !Array.isArray(shiftData.breaks)) {
+      if (typeof shiftData.breaks === 'string') {
+        try {
+          shiftData.breaks = JSON.parse(shiftData.breaks);
+        } catch (e) {
+          shiftData.breaks = [];
+        }
+      }
+    }
+
+    // Ensure requiredSkills is an array if provided
+    if (shiftData.requiredSkills && !Array.isArray(shiftData.requiredSkills)) {
+      if (typeof shiftData.requiredSkills === 'string') {
+        try {
+          shiftData.requiredSkills = JSON.parse(shiftData.requiredSkills);
+        } catch (e) {
+          shiftData.requiredSkills = [];
+        }
+      }
+    }
 
     const shift = new Shift(shiftData);
     await shift.save();
@@ -100,6 +180,42 @@ router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
       ...req.body,
       updatedBy: req.user.id
     };
+
+    // Remove assignedStaff if it exists (shifts don't have assignedStaff, assignments do)
+    delete updateData.assignedStaff;
+
+    // Ensure daysOfWeek is an array
+    if (updateData.daysOfWeek && !Array.isArray(updateData.daysOfWeek)) {
+      if (typeof updateData.daysOfWeek === 'string') {
+        try {
+          updateData.daysOfWeek = JSON.parse(updateData.daysOfWeek);
+        } catch (e) {
+          updateData.daysOfWeek = [updateData.daysOfWeek];
+        }
+      }
+    }
+
+    // Ensure breaks is an array if provided
+    if (updateData.breaks && !Array.isArray(updateData.breaks)) {
+      if (typeof updateData.breaks === 'string') {
+        try {
+          updateData.breaks = JSON.parse(updateData.breaks);
+        } catch (e) {
+          updateData.breaks = [];
+        }
+      }
+    }
+
+    // Ensure requiredSkills is an array if provided
+    if (updateData.requiredSkills && !Array.isArray(updateData.requiredSkills)) {
+      if (typeof updateData.requiredSkills === 'string') {
+        try {
+          updateData.requiredSkills = JSON.parse(updateData.requiredSkills);
+        } catch (e) {
+          updateData.requiredSkills = [];
+        }
+      }
+    }
 
     const shift = await Shift.findByIdAndUpdate(
       req.params.id,

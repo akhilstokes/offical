@@ -1,27 +1,68 @@
-/* === Global Base Styles === */
+/* ============================= */
+/*        GLOBAL RESET           */
+/* ============================= */
 
-html,
-body {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+}
+
+/* ============================= */
+/*        HTML & BODY            */
+/* ============================= */
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans',
-    'Droid Sans', 'Helvetica Neue', sans-serif;
-
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 
   background-color: #ffffff;
   color: #001e2b;
+  line-height: 1.6;
+
+  overflow-x: hidden;   /* Prevent horizontal scroll */
 }
 
-/* Accessibility */
+/* ============================= */
+/*        ROOT LAYOUT FIX        */
+/* ============================= */
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================= */
+/*        MEDIA DEFAULTS         */
+/* ============================= */
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font-family: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* ============================= */
+/*        ACCESSIBILITY          */
+/* ============================= */
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -31,45 +72,5 @@ body {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
-  border-width: 0;
-}
-
-/* Remove global div spacing */
-div {
-  margin-bottom: 0;
-}
-
-/* Inputs */
-input {
-  padding: 8px;
-  margin: 5px 0;
-  width: 250px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  font-family: inherit;
-  background-color: #ffffff;
-  color: #001e2b;
-}
-
-/* Buttons */
-button {
-  padding: 10px 15px;
-  background-color: #00ed64;
-  color: #001e2b;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-button:hover {
-  background-color: #00d857;
-  transform: translateY(-1px);
-}
-
-/* Links */
-a {
-  color: #00a8cc;
+  border: 0;
 }

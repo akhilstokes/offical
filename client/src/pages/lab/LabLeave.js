@@ -111,6 +111,7 @@ const LabLeave = () => {
         <button
           className="btn btn-outline-primary"
           onClick={() => setShowHistoryModal(true)}
+          style={{ width: 'auto', padding: '6px 16px', fontSize: '14px' }}
         >
           📋 View Leave History
         </button>

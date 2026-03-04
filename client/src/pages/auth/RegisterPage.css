@@ -220,10 +220,20 @@
 }
 
 .field-success {
-  position: absolute;
-  right: 16px;
-  top: 42px;
-  color: #10B981;
+  position: absolute !important;
+  right: 16px !important;
+  top: 43px !important;
+  color: #10B981 !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Adjust for textarea fields */
+.form-field textarea ~ .field-success {
+  top: 43px !important;
 }
 
 /* Form Actions */

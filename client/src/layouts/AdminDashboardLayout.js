@@ -50,13 +50,13 @@ const AdminDashboardLayout = ({ children }) => {
     if (path.includes('/yard-stock')) return { title: 'Yard Stock', subtitle: 'Yard inventory management', icon: 'fa-warehouse' };
     if (path.includes('/godown-rubber-stock')) return { title: 'Godown Rubber Stock', subtitle: 'Rubber stock management', icon: 'fa-boxes' };
     if (path.includes('/hanger-space')) return { title: 'Hanger Free Space', subtitle: 'Storage space management', icon: 'fa-warehouse' };
-    if (path.includes('/chemical-stock-history')) return { title: 'Chemical Stock History', subtitle: 'Chemical inventory history', icon: 'fa-flask' };
     if (path.includes('/worker-schedule')) return { title: 'Worker Schedule', subtitle: 'Schedule management', icon: 'fa-calendar-alt' };
     if (path.includes('/worker-documents')) return { title: 'Worker Documents', subtitle: 'Document management', icon: 'fa-file-alt' };
     if (path.includes('/create-barrel')) return { title: 'Barrel', subtitle: 'Barrel management', icon: 'fa-drum' };
     if (path.includes('/barrel-register')) return { title: 'Barrel Issue Register', subtitle: 'Transaction ledger and audit trail', icon: 'fa-book' };
     if (path.includes('/barrel-requests')) return { title: 'Barrel Requests', subtitle: 'Handle barrel requests', icon: 'fa-drum' };
     if (path.includes('/chem-requests')) return { title: 'Chemical Requests', subtitle: 'Chemical request management', icon: 'fa-flask' };
+    if (path.includes('/notifications')) return { title: 'Notifications', subtitle: 'Send broadcast notifications', icon: 'fa-bell' };
     if (path.includes('/rates')) return { title: 'Rates', subtitle: 'Rate management', icon: 'fa-chart-line' };
     if (path.includes('/rate-approval')) return { title: 'Rate Approval', subtitle: 'Approve submitted rates', icon: 'fa-check-circle' };
     if (path.includes('/vehicles')) return { title: 'Vehicle Management', subtitle: 'Manage delivery vehicles', icon: 'fa-truck' };
@@ -88,7 +88,6 @@ const AdminDashboardLayout = ({ children }) => {
         { to: '/admin/yard-stock', icon: 'fa-warehouse', label: 'Yard Stock' },
         { to: '/admin/godown-rubber-stock', icon: 'fa-boxes', label: 'Godown Rubber Stock' },
         { to: '/admin/hanger-space', icon: 'fa-warehouse', label: 'Hanger Free Space' },
-        { to: '/admin/chemical-stock-history', icon: 'fa-flask', label: 'Chemical Stock History' },
       ]
     },
     {
@@ -103,6 +102,7 @@ const AdminDashboardLayout = ({ children }) => {
       items: [
         { to: '/admin/expenses', icon: 'fa-receipt', label: 'Expenses' },
         { to: '/admin/chem-requests', icon: 'fa-flask', label: 'Chemical Requests' },
+        { to: '/admin/notifications', icon: 'fa-bell', label: 'Notifications' },
         { to: '/admin/rates', icon: 'fa-chart-line', label: 'Rates' },
         { to: '/admin/rate-approval', icon: 'fa-check-circle', label: 'Rate Approval' },
       ]

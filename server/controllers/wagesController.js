@@ -247,3 +247,150 @@ exports.deletePayslip = async (req, res) => {
     });
   }
 };
+
+// Get all wage entries
+exports.getAllWages = async (req, res) => {
+  try {
+    const wages = await SalarySummary.find()
+      .populate('staff', 'name email role')
+      .sort({ createdAt: -1 })
+      .limit(100);
+    
+    // Transform to include staffName for frontend
+    const wagesWithNames = wages.map(wage => ({
+      ...wage.toObject(),
+      staffId: wage.staff?._id,
+      staffName: wage.staff?.name,
+      staffRole: wage.staff?.role,
+      date: wage.createdAt,
+      dailyRate: wage.dailyWage || wage.grossSalary || 0
+    }));
+    
+    res.json(wagesWithNames);
+  } catch (error) {
+    console.error('Error fetching wages:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch wages', 
+      error: error.message 
+    });
+  }
+};
+
+// Create wage entry
+exports.createWage = async (req, res) => {
+  try {
+    const { staffId, dailyRate, date } = req.body;
+    
+    if (!staffId || !dailyRate) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'staffId and dailyRate are required' 
+      });
+    }
+    
+    // Get staff member details
+    const staffMember = await User.findById(staffId);
+    if (!staffMember) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Staff member not found' 
+      });
+    }
+    
+    // Parse the date or use current date
+    const wageDate = date ? new Date(date) : new Date();
+    const year = wageDate.getFullYear();
+    const month = wageDate.getMonth() + 1;
+    
+    // Check if wage entry already exists for this staff/year/month
+    const existing = await SalarySummary.findOne({
+      staff: staffId,
+      year: year,
+      month: month
+    });
+    
+    let wage;
+    if (existing) {
+      // Update existing entry by adding to the daily wage
+      existing.dailyWage = (existing.dailyWage || 0) + Number(dailyRate);
+      existing.workingDays = (existing.workingDays || 0) + 1;
+      existing.baseSalary = existing.dailyWage;
+      existing.grossSalary = existing.dailyWage;
+      existing.netSalary = existing.dailyWage;
+      existing.status = 'calculated';
+      existing.calculatedAt = new Date();
+      
+      wage = await existing.save();
+      await wage.populate('staff', 'name email role');
+    } else {
+      // Create new wage entry
+      wage = await SalarySummary.create({
+        staff: staffId,
+        year: year,
+        month: month,
+        dailyWage: Number(dailyRate),
+        baseSalary: Number(dailyRate),
+        grossSalary: Number(dailyRate),
+        netSalary: Number(dailyRate),
+        workingDays: 1,
+        wageType: 'daily',
+        status: 'calculated',
+        calculatedAt: new Date()
+      });
+      
+      await wage.populate('staff', 'name email role');
+    }
+    
+    // Also update or create Salary record for Staff/Accountant pages
+    try {
+      const existingSalary = await Salary.findOne({
+        staffMember: staffId,
+        year: year,
+        month: month
+      });
+      
+      if (existingSalary) {
+        // Update existing salary record
+        existingSalary.basicSalary = wage.grossSalary;
+        existingSalary.grossSalary = wage.grossSalary;
+        existingSalary.netSalary = wage.netSalary;
+        existingSalary.presentDays = wage.workingDays;
+        await existingSalary.save();
+      } else {
+        // Create new salary record
+        await Salary.create({
+          staffMember: staffId,
+          year: year,
+          month: month,
+          period: `${year}-${String(month).padStart(2, '0')}`,
+          basicSalary: wage.grossSalary,
+          grossSalary: wage.grossSalary,
+          netSalary: wage.netSalary,
+          presentDays: wage.workingDays,
+          totalDays: 30,
+          status: 'pending'
+        });
+      }
+    } catch (salaryError) {
+      console.error('Error syncing to Salary model:', salaryError);
+      // Don't fail the request if salary sync fails
+    }
+    
+    res.status(201).json({
+      ...wage.toObject(),
+      staffId: wage.staff._id,
+      staffName: wage.staff.name,
+      staffRole: wage.staff.role,
+      date: wage.createdAt,
+      dailyRate: wage.dailyWage
+    });
+  } catch (error) {
+    console.error('Error creating wage:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create wage entry', 
+      error: error.message 
+    });
+  }
+};

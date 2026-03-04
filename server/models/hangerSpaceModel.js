@@ -15,4 +15,5 @@ const HangerSpaceSchema = new mongoose.Schema({
 
 HangerSpaceSchema.index({ block: 1, row: 1, col: 1 }, { unique: true });
 
-module.exports = mongoose.model('HangerSpace', HangerSpaceSchema);
+// Prevent model overwrite error
+module.exports = mongoose.models.HangerSpace || mongoose.model('HangerSpace', HangerSpaceSchema);

@@ -51,15 +51,70 @@ app.use((req, res, next) => {
 
 app.post('/api/staff/verify-invite', staffInviteController.verify);
 
+// Core routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/user-management', require('./routes/userManagementRoutes'));
+
+// Barrel routes
 app.use('/api/barrels', require('./routes/barrelRoutes'));
+app.use('/api/barrel-management', require('./routes/barrelManagementRoutes'));
+app.use('/api/barrel-requests', require('./routes/barrelRequestRoutes'));
+app.use('/api/requests', require('./routes/requestRoutes'));
+app.use('/api/barrel-issue-register', require('./routes/barrelIssueRegisterRoutes'));
+app.use('/api/return-barrels', require('./routes/returnBarrelRoutes'));
+
+// Stock and inventory
 app.use('/api/stock', require('./routes/stockRoutes'));
+app.use('/api/hanger-spaces', require('./routes/hangerSpaceRoutes'));
+app.use('/api/chemicals', require('./routes/chemRoutes'));
+app.use('/api/chem-requests', require('./routes/chemicalRequestRoutes'));
+
+// Rates and pricing
 app.use('/api/rates', require('./routes/rateRoutes'));
+app.use('/api/rubber-rates', require('./routes/rubberRateRoutes'));
+
+// Bills and payments
 app.use('/api/bills', require('./routes/billRoutes'));
+app.use('/api/expenses', require('./routes/expenseRoutes'));
+
+// Staff and workers
+app.use('/api/staff-invite', require('./routes/staffInviteRoutes'));
+app.use('/api/workers', require('./routes/workerRoutes'));
+app.use('/api/attendance', require('./routes/attendanceRoutes'));
+app.use('/api/schedules', require('./routes/scheduleRoutes'));
+app.use('/api/staff-schedule', require('./routes/staffScheduleRoutes'));
+app.use('/api/shifts', require('./routes/shifts'));
+app.use('/api/shift-assignments', require('./routes/shiftAssignments'));
+app.use('/api/leave', require('./routes/leaveRoutes'));
+app.use('/api/salary', require('./routes/salaryRoutes'));
+app.use('/api/wages', require('./routes/wagesRoutes'));
+
+// Delivery and field staff
+app.use('/api/delivery', require('./routes/deliveryRoutes'));
+app.use('/api/field-staff', require('./routes/fieldStaffRoutes'));
+
+// Sell requests
+app.use('/api/sell-requests', require('./routes/sellRequestRoutes'));
+
+// Notifications
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/bulk-notifications', require('./routes/bulkNotificationRoutes'));
+
+// Uploads
+app.use('/api/uploads', require('./routes/uploadRoutes'));
+
+// Predictions
 app.use('/api/predict', require('./routes/predictionRoutes'));
+
+// Vehicles
 app.use('/api/vehicles', require('./routes/vehicleRoutes'));
+
+// Dashboards
 app.use('/api/admin-dashboard', require('./routes/adminDashboard'));
+app.use('/api/manager-dashboard', require('./routes/managerDashboard'));
+app.use('/api/staff-dashboard', require('./routes/staffDashboard'));
+app.use('/api/user-dashboard', require('./routes/userDashboard'));
 
 /* =========================
    HEALTH CHECK ROUTE

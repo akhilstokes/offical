@@ -209,23 +209,36 @@ const AccountantDocuments = () => {
             <p>{documents.length}</p>
           </div>
           <div className="summary-icon icon-blue">
-            <FiFile />
+            <i className="fas fa-folder-open" style={{ fontSize: '24px' }}></i>
           </div>
         </div>
-        {categories.slice(0, 3).map(cat => {
-          const count = documents.filter(d => d.category === cat.value).length;
-          return (
-            <div key={cat.value} className="summary-card">
-              <div className="summary-content">
-                <p>{cat.label}</p>
-                <p>{count}</p>
-              </div>
-              <div className={`summary-icon ${cat.iconClass}`}>
-                <FiFolder />
-              </div>
-            </div>
-          );
-        })}
+        <div className="summary-card">
+          <div className="summary-content">
+            <p>Invoice</p>
+            <p>{documents.filter(d => d.category === 'invoice').length}</p>
+          </div>
+          <div className="summary-icon icon-blue">
+            <i className="fas fa-file-invoice-dollar" style={{ fontSize: '24px' }}></i>
+          </div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-content">
+            <p>Bill</p>
+            <p>{documents.filter(d => d.category === 'bill').length}</p>
+          </div>
+          <div className="summary-icon icon-green">
+            <i className="fas fa-file-invoice" style={{ fontSize: '24px' }}></i>
+          </div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-content">
+            <p>Receipt</p>
+            <p>{documents.filter(d => d.category === 'receipt').length}</p>
+          </div>
+          <div className="summary-icon icon-purple">
+            <i className="fas fa-receipt" style={{ fontSize: '24px' }}></i>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}

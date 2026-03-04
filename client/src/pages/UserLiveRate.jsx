@@ -1,9 +1,11 @@
 // client/src/pages/UserLiveRate.jsx
 import React, { useEffect, useState } from 'react';
-import { getHistory, exportCsv, exportPdf } from '../services/dailyRateService';
 import { getPublishedLatest } from '../services/rateService';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 import './UserLiveRate.css';
+
+const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export default function UserLiveRate() {
   const { token } = useAuth();
@@ -73,9 +75,19 @@ export default function UserLiveRate() {
   }, [token]);
 
   const reloadHistory = () => {
+    if (!token) return;
     setLoadingHist(true);
-    getHistory({ category, limit: 50, from, to }, token)
-      .then(({ data }) => setHistory(Array.isArray(data) ? data : data?.rows || []))
+    
+    // Use the existing /api/rates/history-range endpoint
+    const params = { product: 'latex60', limit: 50 };
+    if (from) params.startDate = from;
+    if (to) params.endDate = to;
+    
+    axios.get(`${API}/api/rates/history-range`, {
+      params,
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(({ data }) => setHistory(Array.isArray(data) ? data : data?.rates || data?.rows || []))
       .catch((error) => {
         console.error('Error loading history:', error);
         setHistory([]);
@@ -95,7 +107,9 @@ export default function UserLiveRate() {
   const handleExportCsv = async (e) => {
     e.preventDefault();
     try {
-      const blob = (await exportCsv({ category, from, to }, token)).data;
+      // Generate CSV from current history data
+      const csvContent = generateCsv(history);
+      const blob = new Blob([csvContent], { type: 'text/csv' });
       saveBlob(blob, `latex60-rate-history.csv`);
     } catch (error) {
       console.error('Error exporting CSV:', error);
@@ -105,11 +119,25 @@ export default function UserLiveRate() {
   const handleExportPdf = async (e) => {
     e.preventDefault();
     try {
-      const blob = (await exportPdf({ category, from, to }, token)).data;
-      saveBlob(blob, `latex60-rate-history.pdf`);
+      // Use browser print for PDF export
+      window.print();
     } catch (error) {
       console.error('Error exporting PDF:', error);
     }
+  };
+
+  const generateCsv = (data) => {
+    const headers = ['Date', 'Category', 'Market Rate', 'Company Rate'];
+    const rows = data.map(row => {
+      const n = normalize(row);
+      return [
+        new Date(n.date || row.effectiveDate).toLocaleDateString('en-IN'),
+        'LATEX 60',
+        n.official ?? '-',
+        n.company ?? '-'
+      ];
+    });
+    return [headers, ...rows].map(row => row.join(',')).join('\n');
   };
 
   return (

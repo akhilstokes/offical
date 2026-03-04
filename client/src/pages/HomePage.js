@@ -221,6 +221,63 @@ const HomePage = () => {
                 </div>
             </section>
 
+            {/* Our Products Section */}
+            <section className="products-section">
+                <div className="container">
+                    <div className="section-header">
+                        <span className="section-tag">Products</span>
+                        <h2 className="section-title">Our Products</h2>
+                        <p className="section-subtitle">
+                            Premium quality rubber products manufactured with cutting-edge technology and strict quality control
+                        </p>
+                    </div>
+                    <div className="products-grid">
+                        <div className="product-card">
+                            <div className="product-icon">
+                                <i className="fas fa-flask"></i>
+                            </div>
+                            <h3>Natural Rubber Latex</h3>
+                            <p>
+                                High-quality natural rubber latex with consistent DRC levels, perfect for various industrial applications.
+                            </p>
+                            <ul className="product-features">
+                                <li><i className="fas fa-check"></i> Premium Grade Quality</li>
+                                <li><i className="fas fa-check"></i> Consistent DRC Levels</li>
+                                <li><i className="fas fa-check"></i> ISO Certified</li>
+                            </ul>
+                        </div>
+                        <div className="product-card">
+                            <div className="product-icon">
+                                <i className="fas fa-cube"></i>
+                            </div>
+                            <h3>Rubber Compounds</h3>
+                            <p>
+                                Custom rubber compounds formulated to meet specific requirements for diverse industrial needs.
+                            </p>
+                            <ul className="product-features">
+                                <li><i className="fas fa-check"></i> Custom Formulations</li>
+                                <li><i className="fas fa-check"></i> High Performance</li>
+                                <li><i className="fas fa-check"></i> Quality Tested</li>
+                            </ul>
+                        </div>
+                        <div className="product-card">
+                            <div className="product-icon">
+                                <i className="fas fa-industry"></i>
+                            </div>
+                            <h3>Industrial Rubber Products</h3>
+                            <p>
+                                Wide range of industrial rubber products designed for durability and optimal performance.
+                            </p>
+                            <ul className="product-features">
+                                <li><i className="fas fa-check"></i> Durable Materials</li>
+                                <li><i className="fas fa-check"></i> Wide Application Range</li>
+                                <li><i className="fas fa-check"></i> Competitive Pricing</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* Quick Navigation Section - COMMENTED OUT TO REMOVE WHITE SPACE */}
             {/* <section className="quick-nav-section">
                 <div className="container">

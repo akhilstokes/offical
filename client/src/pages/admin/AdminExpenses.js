@@ -521,7 +521,7 @@ const AdminExpenses = () => {
                 </div>
             )}
 
-            <style jsx>{`
+            <style>{`
                 .status-badge {
                     padding: 4px 8px;
                     border-radius: 4px;

@@ -37,15 +37,22 @@ const ManagerNotifications = () => {
         body: JSON.stringify(body)
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        setSuccess('Notification sent successfully!');
+        if (data.count === 0) {
+          setSuccess(`⚠️ ${data.message || 'No recipients found'}`);
+        } else {
+          setSuccess(`✅ ${data.message || 'Notification sent successfully!'}`);
+        }
         setTitle('');
         setMessage('');
       } else {
-        alert('Failed to send notification');
+        alert(data.message || 'Failed to send notification');
       }
     } catch (error) {
-      alert('Error sending notification');
+      console.error('Send notification error:', error);
+      alert('Error sending notification. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -53,6 +60,7 @@ const ManagerNotifications = () => {
 
   const sendQuickReminder = async (type) => {
     setLoading(true);
+    setSuccess('');
     
     const messages = {
       attendance: {
@@ -79,13 +87,20 @@ const ManagerNotifications = () => {
         body: JSON.stringify(messages[type])
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        setSuccess(`${messages[type].title} sent to all staff!`);
+        if (data.count === 0) {
+          setSuccess(`⚠️ ${messages[type].title}: No staff members found to notify`);
+        } else {
+          setSuccess(`✅ ${messages[type].title} sent to ${data.count} staff member(s)!`);
+        }
       } else {
-        alert('Failed to send notification');
+        alert(data.message || 'Failed to send notification');
       }
     } catch (error) {
-      alert('Error sending notification');
+      console.error('Send quick reminder error:', error);
+      alert('Error sending notification. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }

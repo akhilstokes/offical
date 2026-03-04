@@ -5,10 +5,15 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Header */
 .dashboard-header {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
-  color: white;
+  background: linear-gradient(
+    135deg,
+    #0f172a 0%,      /* dark navy */
+    #facc15 40%,     /* amber yellow highlight */
+    #fde047 60%,     /* lighter yellow */
+    #334155 100%     /* slate gray */
+  );
+  color: #1e293b; /* dark text for contrast */
   padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;

@@ -122,7 +122,8 @@ const DeliveryBarrelIntake = () => {
         barrelCount: customerInfo.barrelCount,
         taskId: customerInfo.taskId,
         requestId: customerInfo.requestId,
-        arrivalTime: new Date(arrivalTime).toISOString()
+        arrivalTime: new Date(arrivalTime).toISOString(),
+        address: 'Pickup location' // Default address for delivery staff intake
       };
       
       console.log('Submitting barrel intake:', payload);

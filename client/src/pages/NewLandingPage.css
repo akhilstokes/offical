@@ -1075,7 +1075,7 @@
 /* ================= CTA SECTION ================= */
 
 .cta-section-new {
-  padding: 100px 20px;
+  padding: 60px 20px;
   background: linear-gradient(135deg, #111827, #1f2937);
   text-align: center;
   color: #fff;
@@ -1209,7 +1209,7 @@
 .footer-new {
   background-color: #1a202c;
   color: white;
-  padding: 80px 0 30px;
+  padding: 50px 0 30px;
   position: relative;
   z-index: 2;
 }
@@ -1353,7 +1353,7 @@
   padding-top: 30px;
   border-top: 1px solid rgba(255,255,255,0.1);
   text-align: center;
-  margin-top: 40px;
+  margin-top: 20px;
 }
 
 .footer-bottom p {

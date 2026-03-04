@@ -14,6 +14,71 @@ const downloadCSV = (rows, filename = 'chemicals.csv') => {
   const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
 };
 
+const downloadPDF = (rows) => {
+  // Simple PDF generation using window.print
+  const printWindow = window.open('', '_blank');
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Chemical Stock History</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .lot-item { margin: 5px 0; padding: 5px; background: #f9f9f9; border-left: 3px solid #4CAF50; }
+        @media print {
+          button { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Chemical Stock History</h1>
+      <p>Generated on: ${new Date().toLocaleString()}</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Unit</th>
+            <th>On Hand</th>
+            <th>Lots</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(c => `
+            <tr>
+              <td>${c.name}</td>
+              <td>${c.unit || '-'}</td>
+              <td>${c.onHand ?? 0}</td>
+              <td>
+                ${c.lots?.length ? c.lots.map(l => `
+                  <div class="lot-item">
+                    <strong>#${l.lotNo}</strong><br/>
+                    Qty: ${l.quantity}, Cost: ${l.unitCost}<br/>
+                    Received: ${l.receivedAt ? new Date(l.receivedAt).toLocaleDateString() : '-'}<br/>
+                    Expires: ${l.expiresAt ? new Date(l.expiresAt).toLocaleDateString() : '-'}
+                  </div>
+                `).join('') : '—'}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <script>
+        window.onload = function() {
+          window.print();
+        }
+      </script>
+    </body>
+    </html>
+  `;
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
+
 const ChemicalStockHistory = () => {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -27,10 +92,16 @@ const ChemicalStockHistory = () => {
     setLoading(true);
     setError('');
     try {
-      setList(await listChemicals());
-      setAlerts(await chemicalAlerts());
+      const data = await listChemicals();
+      setList(Array.isArray(data) ? data : []);
+      const alertData = await chemicalAlerts();
+      setAlerts(alertData || { low: [], expiring: [] });
     } catch (e) {
-      setError(e?.message || 'Failed to load');
+      console.error('Error loading chemicals:', e);
+      setError(e?.response?.data?.message || e?.message || 'Failed to load chemicals');
+      // Set empty data on error
+      setList([]);
+      setAlerts({ low: [], expiring: [] });
     } finally {
       setLoading(false);
     }
@@ -56,6 +127,9 @@ const ChemicalStockHistory = () => {
           value={filter} 
           onChange={(e) => setFilter(e.target.value)} 
         />
+        <button className="btn btn-secondary" onClick={() => downloadPDF(filtered)}>
+          Export PDF
+        </button>
         <button className="btn btn-secondary" onClick={() => downloadCSV(filtered)}>
           Export CSV
         </button>

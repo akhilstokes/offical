@@ -15,8 +15,16 @@ exports.sendToAllStaff = async (req, res) => {
       role: { $in: ['accountant', 'lab_staff', 'field_worker', 'delivery_staff', 'staff'] }
     }).select('_id role');
     
+    console.log(`Found ${staff.length} staff members to notify`);
+    
     if (staff.length === 0) {
-      return res.status(404).json({ message: 'No staff found' });
+      // Still return success but with a warning
+      return res.json({ 
+        success: true, 
+        message: 'No staff members found in the system',
+        count: 0,
+        warning: 'No recipients available'
+      });
     }
     
     // Create notifications for all staff
@@ -34,10 +42,13 @@ exports.sendToAllStaff = async (req, res) => {
     
     await Notification.insertMany(notifications);
     
+    console.log(`Successfully sent ${notifications.length} notifications`);
+    
     return res.json({ 
       success: true, 
       message: `Notification sent to ${staff.length} staff members`,
-      count: staff.length 
+      count: staff.length,
+      recipientCount: staff.length
     });
   } catch (error) {
     console.error('Send to all staff error:', error);
@@ -57,8 +68,16 @@ exports.sendToRole = async (req, res) => {
     // Get users with specific role
     const users = await User.find({ role }).select('_id role');
     
+    console.log(`Found ${users.length} users with role: ${role}`);
+    
     if (users.length === 0) {
-      return res.status(404).json({ message: `No users found with role: ${role}` });
+      // Still return success but with a warning
+      return res.json({ 
+        success: true, 
+        message: `No users found with role: ${role}`,
+        count: 0,
+        warning: 'No recipients available'
+      });
     }
     
     // Create notifications for all users with this role
@@ -77,10 +96,13 @@ exports.sendToRole = async (req, res) => {
     
     await Notification.insertMany(notifications);
     
+    console.log(`Successfully sent ${notifications.length} notifications to ${role}`);
+    
     return res.json({ 
       success: true, 
       message: `Notification sent to ${users.length} ${role}(s)`,
-      count: users.length 
+      count: users.length,
+      recipientCount: users.length
     });
   } catch (error) {
     console.error('Send to role error:', error);

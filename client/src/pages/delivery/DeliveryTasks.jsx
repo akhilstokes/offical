@@ -133,7 +133,8 @@ const DeliveryTasks = () => {
       const checkInUrl = `/lab/check-in?${qs.toString()}`;
       const role = String(user?.role || '').toLowerCase().replace(/\s+/g,'_');
       if (role !== 'lab') {
-        alert('Only Lab Staff can complete Sample Check-In. You will be asked to log in as Lab to continue.');
+        alert('Only Lab Staff can complete Sample Check-In. Please notify lab staff that the sample has been delivered.');
+        return; // Don't navigate if not lab staff
       }
       navigate(checkInUrl);
     } catch (e) {
@@ -171,7 +172,8 @@ const DeliveryTasks = () => {
     
     const role = String(user?.role || '').toLowerCase().replace(/\s+/g,'_');
     if (role !== 'lab') {
-      alert('Only Lab Staff can complete Sample Check-In. You will be asked to log in as Lab to continue.');
+      alert('Only Lab Staff can complete Sample Check-In. Please notify lab staff that the sample has been delivered.');
+      return; // Don't navigate if not lab staff
     }
     navigate(checkInUrl);
   };

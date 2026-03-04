@@ -156,9 +156,11 @@ import BarrelManagement from "./pages/admin/BarrelManagement";
 import BarrelIssueRegister from "./pages/admin/BarrelIssueRegister";
 import AdminExpenses from "./pages/admin/AdminExpenses";
 import AdminChemicalRequests from "./pages/admin/AdminChemicalRequests";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminRateVerification from "./pages/admin/AdminRateVerification";
 import AdminRateApproval from "./pages/admin/AdminRateApproval";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminProfile from "./pages/admin/AdminProfile";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminPerformance from "./pages/admin/AdminPerformance";
 import AdminHealth from "./pages/admin/AdminHealth";
@@ -1119,6 +1121,16 @@ function App() {
           }
         />
         <Route
+          path="/admin/notifications"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminNotifications />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/rates"
           element={
             <AdminProtectedRoute>
@@ -1153,7 +1165,7 @@ function App() {
           element={
             <AdminProtectedRoute>
               <AdminDashboardLayout>
-                <div style={{padding: '20px'}}><h2>Admin Profile</h2><p>This page is under development.</p></div>
+                <AdminProfile />
               </AdminDashboardLayout>
             </AdminProtectedRoute>
           }
@@ -1172,6 +1184,16 @@ function App() {
         {/* Accountant Routes */}
         <Route
           path="/accountant"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantLayoutAntigravity>
+                <AccountantDashboard />
+              </AccountantLayoutAntigravity>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/dashboard"
           element={
             <AccountantProtectedRoute>
               <AccountantLayoutAntigravity>

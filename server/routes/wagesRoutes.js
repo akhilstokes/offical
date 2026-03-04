@@ -24,4 +24,10 @@ router.put('/payslips/:id', adminOrManager, wagesController.updatePayslip);
 // DELETE /api/wages/payslips/:id - Delete payslip
 router.delete('/payslips/:id', admin, wagesController.deletePayslip);
 
+// GET /api/wages/all - Get all wage entries
+router.get('/all', wagesController.getAllWages);
+
+// POST /api/wages/create - Create wage entry
+router.post('/create', adminOrManager, wagesController.createWage);
+
 module.exports = router;

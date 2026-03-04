@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { listSchedules, upsertSchedule, updateScheduleAssignments, getScheduleByWeek } from '../../services/adminService';
+import './WorkerSchedule.css';
 
 // Helpers
 const iso = (d) => new Date(d).toISOString().slice(0, 10);
@@ -15,22 +16,37 @@ const WorkerSchedule = () => {
   const today = useMemo(() => new Date(), []);
 
   const [weekStart, setWeekStart] = useState(iso(sundayOf(today)));
+  const [weekEnd, setWeekEnd] = useState(() => {
+    const end = sundayOf(today);
+    end.setDate(end.getDate() + 6);
+    return iso(end);
+  });
   
   // Get minimum allowed date (current week start)
   const minDate = useMemo(() => {
     const currentWeekStart = sundayOf(today);
     return iso(currentWeekStart);
   }, [today]);
+  
   const [form, setForm] = useState({
     morningStart: '09:00',
     morningEnd: '17:00',
     eveningStart: '13:00',
     eveningEnd: '21:00',
   });
-  const [assignments, setAssignments] = useState([]); // { staff, shiftType }
+  const [assignments, setAssignments] = useState([]);
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Auto-calculate week end when week start changes
+  useEffect(() => {
+    if (weekStart) {
+      const start = new Date(weekStart);
+      start.setDate(start.getDate() + 6);
+      setWeekEnd(iso(start));
+    }
+  }, [weekStart]);
 
   const fetchList = async () => {
     setLoading(true);
@@ -106,116 +122,171 @@ const WorkerSchedule = () => {
     setAssignments((a) => a.map((x, i) => (i === idx ? { ...x, [key]: val } : x)));
   const removeAssignment = (idx) => setAssignments((a) => a.filter((_, i) => i !== idx));
 
-  return (
-    <div>
-      <h2>Worker Schedule</h2>
+  const createNewSchedule = () => {
+    // Reset to next week's Sunday
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const nextSunday = sundayOf(nextWeek);
+    const nextSaturday = new Date(nextSunday);
+    nextSaturday.setDate(nextSaturday.getDate() + 6);
+    
+    setWeekStart(iso(nextSunday));
+    setWeekEnd(iso(nextSaturday));
+    
+    // Reset form to defaults
+    setForm({
+      morningStart: '09:00',
+      morningEnd: '17:00',
+      eveningStart: '13:00',
+      eveningEnd: '21:00',
+    });
+    setAssignments([]);
+    setError('');
+  };
 
-      <form
-        onSubmit={onUpsert}
-        style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
-      >
-        <div>
-          <label>Week Start (Sunday)</label>
-          <br />
-          <input 
-            type="date" 
-            value={weekStart} 
-            min={minDate}
-            onChange={(e) => setWeekStart(e.target.value)} 
-            required 
-          />
-          <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-            Only current week and future weeks are allowed
+  return (
+    <div className="worker-schedule-container">
+      <div className="schedule-header">
+        <h2>Worker Schedule</h2>
+        <button type="button" onClick={createNewSchedule} className="btn-create-new">
+          + Create New
+        </button>
+      </div>
+
+      <form onSubmit={onUpsert}>
+        {/* Week Selection */}
+        <div className="week-section">
+          <label>Select Week</label>
+          <div className="date-inputs">
+            <div>
+              <label style={{ fontWeight: 'normal', fontSize: '13px' }}>Start Date (Sunday)</label>
+              <input 
+                type="date" 
+                value={weekStart} 
+                min={minDate}
+                onChange={(e) => setWeekStart(e.target.value)} 
+                required
+              />
+            </div>
+            <div>
+              <label style={{ fontWeight: 'normal', fontSize: '13px' }}>End Date (Saturday)</label>
+              <input 
+                type="date" 
+                value={weekEnd} 
+                readOnly
+                style={{ backgroundColor: '#e9ecef' }}
+              />
+            </div>
+          </div>
+          <div className="help-text">
+            Only current week and future weeks are allowed. End date is automatically calculated.
           </div>
         </div>
-        <div>
-          <label>Morning Start</label>
-          <br />
-          <input
-            type="time"
-            value={form.morningStart}
-            onChange={(e) => setForm((s) => ({ ...s, morningStart: e.target.value }))}
-            required
-          />
+
+        {/* Time Settings */}
+        <div className="shift-times-section">
+          <h3>Shift Times</h3>
+          <div className="time-inputs">
+            <div className="time-input-group">
+              <label>Morning Start</label>
+              <input
+                type="time"
+                value={form.morningStart}
+                onChange={(e) => setForm((s) => ({ ...s, morningStart: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="time-input-group">
+              <label>Morning End</label>
+              <input
+                type="time"
+                value={form.morningEnd}
+                onChange={(e) => setForm((s) => ({ ...s, morningEnd: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="time-input-group">
+              <label>Evening Start</label>
+              <input
+                type="time"
+                value={form.eveningStart}
+                onChange={(e) => setForm((s) => ({ ...s, eveningStart: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="time-input-group">
+              <label>Evening End</label>
+              <input
+                type="time"
+                value={form.eveningEnd}
+                onChange={(e) => setForm((s) => ({ ...s, eveningEnd: e.target.value }))}
+                required
+              />
+            </div>
+          </div>
         </div>
-        <div>
-          <label>Morning End</label>
-          <br />
-          <input
-            type="time"
-            value={form.morningEnd}
-            onChange={(e) => setForm((s) => ({ ...s, morningEnd: e.target.value }))}
-            required
-          />
-        </div>
-        <div>
-          <label>Evening Start</label>
-          <br />
-          <input
-            type="time"
-            value={form.eveningStart}
-            onChange={(e) => setForm((s) => ({ ...s, eveningStart: e.target.value }))}
-            required
-          />
-        </div>
-        <div>
-          <label>Evening End</label>
-          <br />
-          <input
-            type="time"
-            value={form.eveningEnd}
-            onChange={(e) => setForm((s) => ({ ...s, eveningEnd: e.target.value }))}
-            required
-          />
-        </div>
-        <div style={{ alignSelf: 'end' }}>
-          <button type="submit">Save Schedule</button>
-        </div>
+
+        <button type="submit" className="btn-save-schedule">
+          Save Schedule
+        </button>
       </form>
 
-      <div style={{ marginTop: 16 }}>
+      <div className="assignments-section">
         <h3>Assignments</h3>
-        <button type="button" onClick={addAssignment}>
-          Add
+        <button type="button" onClick={addAssignment} className="btn-add-assignment">
+          + Add Assignment
         </button>
-        <div style={{ marginTop: 8 }}>
+        <div>
           {assignments.map((a, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+            <div key={idx} className="assignment-item">
               <input
                 placeholder="Staff ID"
                 value={a.staff}
                 onChange={(e) => updateAssignment(idx, 'staff', e.target.value)}
               />
-              <select value={a.shiftType} onChange={(e) => updateAssignment(idx, 'shiftType', e.target.value)}>
+              <select 
+                value={a.shiftType} 
+                onChange={(e) => updateAssignment(idx, 'shiftType', e.target.value)}
+              >
                 <option>Morning</option>
                 <option>Evening</option>
               </select>
-              <button onClick={() => removeAssignment(idx)} type="button">
+              <button onClick={() => removeAssignment(idx)} type="button" className="btn-remove">
                 Remove
               </button>
             </div>
           ))}
-          {!assignments.length && <div style={{ color: '#888' }}>No assignments</div>}
+          {!assignments.length && <div className="no-assignments">No assignments</div>}
         </div>
-        <button type="button" onClick={onAssignmentsSave}>
-          Save Assignments
-        </button>
+        {assignments.length > 0 && (
+          <button type="button" onClick={onAssignmentsSave} className="btn-save-assignments">
+            Save Assignments
+          </button>
+        )}
       </div>
 
-      {error && <div style={{ color: 'tomato', marginTop: 12 }}>{error}</div>}
+      {error && <div className="error-message">{error}</div>}
 
-      <div style={{ marginTop: 24 }}>
-        <h3>Recent Weeks</h3>
+      <div className="history-section">
+        <h3>Schedule History</h3>
         {loading ? (
-          'Loading...'
-        ) : (
-          <ul>
+          <div className="loading-text">Loading...</div>
+        ) : list.length > 0 ? (
+          <div className="history-list">
             {list.map((s) => (
-              <li key={s._id}>
-                {iso(s.weekStart)} — M: {s.morningStart}-{s.morningEnd}, E: {s.eveningStart}-{s.eveningEnd} — Assignments: {s.assignments?.length || 0}
-              </li>
+              <div key={s._id} className="history-item">
+                <div className="history-item-week">Week: {iso(s.weekStart)}</div>
+                <div className="history-item-times">
+                  Morning: {s.morningStart} - {s.morningEnd} | Evening: {s.eveningStart} - {s.eveningEnd}
+                </div>
+                <div className="history-item-assignments">
+                  Assignments: {s.assignments?.length || 0}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
+        ) : (
+          <div className="no-data-text">No schedules found</div>
         )}
       </div>
     </div>

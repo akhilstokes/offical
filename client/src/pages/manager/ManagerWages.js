@@ -8,12 +8,10 @@ const ManagerWages = () => {
   const [message, setMessage] = useState('');
   const [selectedStaff, setSelectedStaff] = useState('');
   const [showWageForm, setShowWageForm] = useState(false);
+  const [editingWage, setEditingWage] = useState(null);
   const [wageForm, setWageForm] = useState({
     staffId: '',
     dailyRate: 0,
-    hoursWorked: 8,
-    overtimeHours: 0,
-    overtimeRate: 1.5,
     date: new Date().toISOString().split('T')[0]
   });
 
@@ -29,19 +27,32 @@ const ManagerWages = () => {
       setLoading(true);
       setError('');
 
-      const [staffRes, wagesRes] = await Promise.all([
-        fetch(`${API_BASE}/api/user-management/staff`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${API_BASE}/api/wages/all`, {
+      // Fetch staff users (field_staff, lab_staff, delivery_staff)
+      const staffRoles = ['field_staff', 'lab_staff', 'delivery_staff'];
+      const staffPromises = staffRoles.map(role =>
+        fetch(`${API_BASE}/api/user-management/staff?role=${role}&limit=100`, {
           headers: { Authorization: `Bearer ${token}` }
         })
+      );
+
+      const [wagesRes, ...staffResponses] = await Promise.all([
+        fetch(`${API_BASE}/api/wages/all`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        ...staffPromises
       ]);
 
-      if (staffRes.ok) {
-        const staffData = await staffRes.json();
-        setStaff(Array.isArray(staffData) ? staffData : []);
+      // Combine all staff from different roles
+      let allStaff = [];
+      for (const response of staffResponses) {
+        if (response.ok) {
+          const data = await response.json();
+          if (data.users && Array.isArray(data.users)) {
+            allStaff = [...allStaff, ...data.users];
+          }
+        }
       }
+      setStaff(allStaff);
 
       if (wagesRes.ok) {
         const wagesData = await wagesRes.json();
@@ -55,6 +66,16 @@ const ManagerWages = () => {
     }
   };
 
+  const handleEditWage = (wage) => {
+    setEditingWage(wage);
+    setWageForm({
+      staffId: wage.staffId,
+      dailyRate: wage.dailyRate || 0,
+      date: wage.date ? new Date(wage.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    });
+    setShowWageForm(true);
+  };
+
   const handleCreateWage = async (e) => {
     e.preventDefault();
     
@@ -64,6 +85,9 @@ const ManagerWages = () => {
     }
 
     try {
+      setError(''); // Clear previous errors
+      console.log('Creating wage with data:', wageForm);
+      
       const response = await fetch(`${API_BASE}/api/wages/create`, {
         method: 'POST',
         headers: {
@@ -73,32 +97,36 @@ const ManagerWages = () => {
         body: JSON.stringify(wageForm)
       });
 
+      const responseData = await response.json().catch(() => null);
+      console.log('Response status:', response.status);
+      console.log('Response data:', responseData);
+
       if (response.ok) {
-        setMessage('Wage record created successfully');
+        setMessage(editingWage ? 'Wage record updated successfully' : 'Wage record created successfully');
         setShowWageForm(false);
+        setEditingWage(null);
         setWageForm({
           staffId: '',
           dailyRate: 0,
-          hoursWorked: 8,
-          overtimeHours: 0,
-          overtimeRate: 1.5,
           date: new Date().toISOString().split('T')[0]
         });
         await fetchData();
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setMessage(''), 3000);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData.message || 'Failed to create wage record');
+        const errorMsg = responseData?.message || `Server error: ${response.status}`;
+        console.error('Error response:', errorMsg);
+        setError(errorMsg);
       }
     } catch (err) {
       console.error('Error creating wage:', err);
-      setError('Failed to create wage record');
+      setError(`Failed to create wage record: ${err.message}`);
     }
   };
 
   const calculateTotalWage = (wage) => {
-    const regularPay = (wage.dailyRate || 0) * (wage.hoursWorked || 8) / 8;
-    const overtimePay = (wage.overtimeHours || 0) * (wage.dailyRate || 0) / 8 * (wage.overtimeRate || 1.5);
-    return regularPay + overtimePay;
+    return wage.dailyRate || 0;
   };
 
   const filteredWages = selectedStaff 
@@ -151,6 +179,9 @@ const ManagerWages = () => {
         alignItems: 'center'
       }}>
         <div style={{ flex: 1, minWidth: 200 }}>
+          <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#374151' }}>
+            Filter by Staff Name
+          </label>
           <select
             value={selectedStaff}
             onChange={(e) => setSelectedStaff(e.target.value)}
@@ -165,41 +196,43 @@ const ManagerWages = () => {
             <option value="">All Staff</option>
             {staff.map(member => (
               <option key={member._id} value={member._id}>
-                {member.name} ({member.role})
+                {member.name}
               </option>
             ))}
           </select>
         </div>
-        <button
-          onClick={() => setShowWageForm(true)}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: 6,
-            fontSize: 14,
-            cursor: 'pointer'
-          }}
-        >
-          Add Wage Entry
-        </button>
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#f3f4f6',
-            color: '#374151',
-            border: '1px solid #d1d5db',
-            borderRadius: 6,
-            fontSize: 14,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.6 : 1
-          }}
-        >
-          Refresh
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+          <button
+            onClick={() => setShowWageForm(true)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 14,
+              cursor: 'pointer'
+            }}
+          >
+            Add Wage Entry
+          </button>
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#f3f4f6',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: 6,
+              fontSize: 14,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1
+            }}
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Wage Form Modal */}
@@ -224,7 +257,7 @@ const ManagerWages = () => {
             width: '90%'
           }}>
             <h3 style={{ marginBottom: 20, fontSize: 20, fontWeight: 600 }}>
-              Add Wage Entry
+              {editingWage ? 'Edit Wage Entry' : 'Add Wage Entry'}
             </h3>
             
             <form onSubmit={handleCreateWage}>
@@ -243,17 +276,18 @@ const ManagerWages = () => {
                     fontSize: 14
                   }}
                   required
+                  disabled={editingWage}
                 >
                   <option value="">Select staff member</option>
                   {staff.map(member => (
                     <option key={member._id} value={member._id}>
-                      {member.name} ({member.role})
+                      {member.name} ({member.role.replace('_', ' ')})
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
                     Daily Rate *
@@ -291,47 +325,18 @@ const ManagerWages = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                    Hours Worked
-                  </label>
-                  <input
-                    type="number"
-                    value={wageForm.hoursWorked}
-                    onChange={(e) => setWageForm(prev => ({ ...prev, hoursWorked: parseFloat(e.target.value) || 8 }))}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: 6,
-                      fontSize: 14
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                    Overtime Hours
-                  </label>
-                  <input
-                    type="number"
-                    value={wageForm.overtimeHours}
-                    onChange={(e) => setWageForm(prev => ({ ...prev, overtimeHours: parseFloat(e.target.value) || 0 }))}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: 6,
-                      fontSize: 14
-                    }}
-                  />
-                </div>
-              </div>
-
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                 <button
                   type="button"
-                  onClick={() => setShowWageForm(false)}
+                  onClick={() => {
+                    setShowWageForm(false);
+                    setEditingWage(null);
+                    setWageForm({
+                      staffId: '',
+                      dailyRate: 0,
+                      date: new Date().toISOString().split('T')[0]
+                    });
+                  }}
                   style={{
                     padding: '8px 16px',
                     backgroundColor: '#f3f4f6',
@@ -356,7 +361,7 @@ const ManagerWages = () => {
                     cursor: 'pointer'
                   }}
                 >
-                  Add Entry
+                  {editingWage ? 'Update Entry' : 'Add Entry'}
                 </button>
               </div>
             </form>
@@ -384,10 +389,10 @@ const ManagerWages = () => {
                 Daily Rate
               </th>
               <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#374151' }}>
-                Hours
-              </th>
-              <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#374151' }}>
                 Total Wage
+              </th>
+              <th style={{ padding: 12, textAlign: 'center', fontWeight: 600, color: '#374151' }}>
+                Actions
               </th>
             </tr>
           </thead>
@@ -419,8 +424,13 @@ const ManagerWages = () => {
                   <tr key={wage._id || index} style={{ borderTop: index > 0 ? '1px solid #e5e7eb' : 'none' }}>
                     <td style={{ padding: 12 }}>
                       <div style={{ fontWeight: 500, color: '#1f2937' }}>
-                        {staffMember?.name || 'Unknown Staff'}
+                        {staffMember?.name || wage.staffName || 'Unknown Staff'}
                       </div>
+                      {staffMember?.role && (
+                        <div style={{ fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
+                          {staffMember.role.replace('_', ' ')}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: 12 }}>
                       <div style={{ color: '#374151' }}>
@@ -433,19 +443,27 @@ const ManagerWages = () => {
                       </div>
                     </td>
                     <td style={{ padding: 12 }}>
-                      <div style={{ color: '#374151' }}>
-                        {wage.hoursWorked || 8}h
-                        {wage.overtimeHours > 0 && (
-                          <span style={{ color: '#ea580c', fontSize: 12, marginLeft: 4 }}>
-                            +{wage.overtimeHours}h OT
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: 12 }}>
                       <div style={{ color: '#16a34a', fontFamily: 'monospace', fontWeight: 600 }}>
                         ₹{totalWage.toLocaleString()}
                       </div>
+                    </td>
+                    <td style={{ padding: 12, textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleEditWage(wage)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#f59e0b',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 4,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          fontWeight: 500
+                        }}
+                        title="Edit wage entry"
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 );

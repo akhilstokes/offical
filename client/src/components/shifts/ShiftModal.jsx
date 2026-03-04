@@ -22,17 +22,31 @@ const ShiftModal = ({ isOpen, onClose, shift, date, assignments, onSave }) => {
   const fetchStaffList = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/api/users?role=staff&limit=100`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      
+      // Fetch staff from all three roles
+      const roles = ['field_staff', 'lab_staff', 'delivery_staff'];
+      const staffPromises = roles.map(role =>
+        fetch(`${API_BASE}/api/user-management/staff?role=${role}&limit=100`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }).then(res => res.ok ? res.json() : { users: [] })
+      );
 
-      if (response.ok) {
-        const data = await response.json();
-        setStaffList(data.users || []);
-      }
+      const results = await Promise.all(staffPromises);
+      
+      // Combine all staff from different roles
+      const allStaff = results.reduce((acc, result) => {
+        return [...acc, ...(result.users || [])];
+      }, []);
+
+      // Remove duplicates based on _id
+      const uniqueStaff = allStaff.filter((staff, index, self) =>
+        index === self.findIndex(s => s._id === staff._id)
+      );
+
+      setStaffList(uniqueStaff);
     } catch (error) {
       console.error('Error fetching staff list:', error);
     }
@@ -404,7 +418,7 @@ const ShiftModal = ({ isOpen, onClose, shift, date, assignments, onSave }) => {
                 <h4>Assign New Staff Member</h4>
                 
                 <div className="form-group">
-                  <label>Staff Member</label>
+                  <label>Filter by Staff Name</label>
                   <select
                     value={assignmentForm.staff}
                     onChange={(e) => setAssignmentForm({...assignmentForm, staff: e.target.value})}
@@ -412,7 +426,7 @@ const ShiftModal = ({ isOpen, onClose, shift, date, assignments, onSave }) => {
                     <option value="">Select staff member...</option>
                     {getAvailableStaff().map(staff => (
                       <option key={staff._id} value={staff._id}>
-                        {staff.name} ({staff.email})
+                        {staff.name} ({staff.role})
                       </option>
                     ))}
                   </select>

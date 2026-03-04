@@ -359,14 +359,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--lab-gray-600);
-  font-weight: 400;
-  font-size: 14px;
+  color: var(--lab-gray-900) !important;
+  font-weight: 500;
+  font-size: 16px;
 }
 
 .lab-breadcrumb i {
   color: var(--lab-primary);
   font-size: 18px;
+}
+
+.lab-breadcrumb span {
+  color: var(--lab-gray-900) !important;
+  font-weight: 500;
 }
 
 .lab-header-right {

@@ -111,12 +111,19 @@ const Profile = () => {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.put(`${API}/api/users/profile`, payload, { headers });
       const updated = res.data.user;
-      // Update local storage and refresh context
-      const current = JSON.parse(localStorage.getItem('user') || '{}');
-      localStorage.setItem('user', JSON.stringify({ ...current, ...updated }));
+      
+      // Update localStorage with merged data
+      const authToken = localStorage.getItem('token');
+      const currentAuth = JSON.parse(localStorage.getItem('auth') || '{}');
+      const mergedUser = { ...currentAuth.user, ...updated };
+      
+      // Update both auth and user in localStorage
+      localStorage.setItem('auth', JSON.stringify({ user: mergedUser, token: authToken }));
+      localStorage.setItem('user', JSON.stringify(mergedUser));
+      
       const nextState = { 
         name: updated.name || form.name, 
-        email: form.email, 
+        email: updated.email || form.email, 
         phoneNumber: updated.phoneNumber || form.phoneNumber, 
         location: updated.location || form.location, 
         address: updated.address || form.address,
@@ -130,7 +137,6 @@ const Profile = () => {
       setOriginalForm(nextState);
       setMessage('Profile updated successfully');
       setEditMode(false);
-      await validateToken();
     } catch (e) {
       setError(e?.response?.data?.message || 'Failed to update profile');
     } finally {
@@ -237,17 +243,20 @@ const Profile = () => {
               </div>
             </div>
             <div className="form-row">
-              <label htmlFor="address">Complete Address</label>
+              <label htmlFor="address">Complete Address (Required for barrel delivery)</label>
               <textarea 
                 id="address" 
                 name="address" 
                 value={form.address} 
                 onChange={handleChange} 
-                placeholder="Enter your complete address (house/building, street, area, city, pincode)" 
+                placeholder="Example: House No. 123, Green Valley Apartments, MG Road, Near City Mall, Kochi, Kerala - 682001" 
                 disabled={!editMode}
-                rows="3"
+                rows="4"
                 style={{ resize: 'vertical', fontFamily: 'inherit' }}
               />
+              <small style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px', display: 'block' }}>
+                Include: House/Building name, Street, Landmark, Area, City, State, Pincode
+              </small>
             </div>
 
             <div className="form-actions">
