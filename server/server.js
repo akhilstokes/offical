@@ -7,7 +7,8 @@ const rateScheduler = require('./services/rateScheduler');
 const http = require('http');
 const setupWebSocketServer = require('./websocketServer');
 
-dotenv.config();
+// Load environment variables from server/.env
+dotenv.config({ path: __dirname + '/.env' });
 
 const app = express();
 
@@ -15,18 +16,33 @@ const app = express();
    CORS CONFIGURATION
 ========================= */
 
+// Allow all localhost origins for development
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5000',
+  process.env.FRONTEND_URL
 ].filter(Boolean);
+
+console.log('🔧 CORS Allowed Origins:', allowedOrigins);
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin (like mobile apps, Postman, or curl)
+    if (!origin) {
+      return callback(null, true);
+    }
 
+    // Allow any localhost origin in development
+    if (origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+
+    // Check against allowed origins list
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.log('❌ CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -81,6 +97,7 @@ app.use('/api/rubber-rates', require('./routes/rubberRateRoutes'));
 app.use('/api/bills', require('./routes/billRoutes'));
 app.use('/api/invoices', require('./routes/invoiceRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
+app.use('/api/purchase-bills', require('./routes/purchaseBillRoutes'));
 
 // Staff and workers
 app.use('/api/staff-invite', require('./routes/staffInviteRoutes'));

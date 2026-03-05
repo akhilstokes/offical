@@ -63,7 +63,7 @@ import AccountantProtectedRoute from "./components/common/AccountantProtectedRou
 import AccountantLayoutAntigravity from "./layouts/AccountantLayoutAntigravity";
 import AccountantDashboard from "./pages/accountant/AccountantDashboard";
 import AccountantLatexVerify from "./pages/accountant/AccountantLatexVerify";
-import AccountantExpenseTracker from "./pages/accountant/AccountantExpenseTracker";
+import AccountantExpenses from "./pages/accountant/AccountantExpenses";
 import AccountantStockMonitor from "./pages/accountant/AccountantStockMonitor";
 import AccountantAttendance from "./pages/accountant/AccountantAttendance";
 import AccountantLeave from "./pages/accountant/AccountantLeave";
@@ -74,6 +74,9 @@ import AccountantVendorLedger from "./pages/accountant/AccountantVendorLedger";
 import AccountantDocuments from "./pages/accountant/AccountantDocuments";
 import AccountantReports from "./pages/accountant/AccountantReports";
 import AccountantAlerts from "./pages/accountant/AccountantAlerts";
+import PurchaseBills from "./pages/accountant/PurchaseBills";
+import PurchaseBillForm from "./pages/accountant/PurchaseBillForm";
+import PurchaseBillView from "./pages/accountant/PurchaseBillView";
 
 // Public Pages
 import HomePage from "./pages/HomePage";
@@ -154,7 +157,7 @@ import ChemicalStockHistory from "./pages/admin/ChemicalStockHistory";
 import AdminCreateBarrel from "./pages/admin/AdminCreateBarrel";
 import BarrelManagement from "./pages/admin/BarrelManagement";
 import BarrelIssueRegister from "./pages/admin/BarrelIssueRegister";
-import AdminExpenses from "./pages/admin/AdminExpenses";
+import ExpenseManagement from "./pages/admin/ExpenseManagement";
 import AdminChemicalRequests from "./pages/admin/AdminChemicalRequests";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminRateVerification from "./pages/admin/AdminRateVerification";
@@ -1104,7 +1107,7 @@ function App() {
           element={
             <AdminProtectedRoute>
               <AdminDashboardLayout>
-                <AdminExpenses />
+                <ExpenseManagement />
               </AdminDashboardLayout>
             </AdminProtectedRoute>
           }
@@ -1206,7 +1209,7 @@ function App() {
           element={
             <AccountantProtectedRoute>
               <AccountantLayoutAntigravity>
-                <AccountantExpenseTracker />
+                <AccountantExpenses />
               </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }
@@ -1257,6 +1260,46 @@ function App() {
             <AccountantProtectedRoute>
               <AccountantLayoutAntigravity>
                 <AccountantBillGeneration />
+              </AccountantLayoutAntigravity>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/purchase-bills"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantLayoutAntigravity>
+                <PurchaseBills />
+              </AccountantLayoutAntigravity>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/purchase-bills/create"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantLayoutAntigravity>
+                <PurchaseBillForm />
+              </AccountantLayoutAntigravity>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/purchase-bills/edit/:id"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantLayoutAntigravity>
+                <PurchaseBillForm />
+              </AccountantLayoutAntigravity>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/purchase-bills/:id"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantLayoutAntigravity>
+                <PurchaseBillView />
               </AccountantLayoutAntigravity>
             </AccountantProtectedRoute>
           }

@@ -1,548 +1,530 @@
 const Expense = require('../models/expenseModel');
-const mongoose = require('mongoose');
+const User = require('../models/userModel');
 
-// Create a new expense
-const createExpense = async (req, res) => {
+// Role-based permissions
+const canCreate = (role) => ['admin', 'manager', 'accountant'].includes(role);
+const canEdit = (role, expense, userId) => {
+    if (role === 'admin') return true;
+    if (role === 'manager' && expense.createdByRole === 'manager') return true;
+    if (role === 'accountant' && expense.createdBy.toString() === userId.toString()) return true;
+    return false;
+};
+const canDelete = (role) => role === 'admin';
+const canApprove = (role) => role === 'admin';
+
+// @desc    Create new expense
+// @route   POST /api/expenses
+// @access  Admin, Manager, Accountant
+exports.createExpense = async (req, res) => {
     try {
-        const {
-            partyName,
-            category,
-            date,
-            description,
-            items,
-            gstEnabled
-        } = req.body;
+        console.log('📝 Create expense request received');
+        console.log('User:', req.user ? req.user.email : 'NOT AUTHENTICATED');
+        console.log('Body:', JSON.stringify(req.body, null, 2));
 
-        // Validate required fields
-        if (!partyName || !category || !items || !Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({
+        if (!req.user) {
+            console.log('❌ No user in request - authentication failed');
+            return res.status(401).json({ 
                 success: false,
-                message: 'Party name, category, and at least one item are required'
+                message: 'Authentication required' 
             });
         }
 
-        // Validate items
-        for (const item of items) {
-            if (!item.description || !item.quantity || !item.amount) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Each item must have description, quantity, and amount'
-                });
-            }
-        }
-
-        // Generate unique expense number
-        let expenseNumber;
-        let isUnique = false;
-        let attempts = 0;
+        const userRole = req.user.role;
+        console.log('User role:', userRole);
         
-        while (!isUnique && attempts < 10) {
-            expenseNumber = Expense.generateExpenseNumber();
-            const existingExpense = await Expense.findOne({ expenseNumber });
-            if (!existingExpense) {
-                isUnique = true;
-            }
-            attempts++;
-        }
-
-        if (!isUnique) {
-            return res.status(500).json({
+        if (!canCreate(userRole)) {
+            console.log('❌ User does not have permission');
+            return res.status(403).json({ 
                 success: false,
-                message: 'Failed to generate unique expense number'
+                message: 'You do not have permission to create expenses' 
             });
         }
 
-        // Create expense
-        const expense = new Expense({
-            expenseNumber,
-            partyName,
-            category,
-            date: date || new Date(),
-            description,
-            items,
-            gstEnabled: gstEnabled || false,
-            createdBy: req.user.id
-        });
+        const expenseData = {
+            ...req.body,
+            createdBy: req.user._id,
+            createdByRole: userRole,
+            history: [{
+                action: 'created',
+                performedBy: req.user._id,
+                performedByName: req.user.name,
+                performedByRole: userRole,
+                timestamp: new Date(),
+                remarks: 'Expense created'
+            }]
+        };
 
-        await expense.save();
+        console.log('Creating expense with data:', JSON.stringify(expenseData, null, 2));
+
+        const expense = await Expense.create(expenseData);
+        console.log('✅ Expense created:', expense.expenseId);
+        
+        await expense.populate('createdBy', 'name email role');
 
         res.status(201).json({
             success: true,
             message: 'Expense created successfully',
             data: expense
         });
-
     } catch (error) {
-        console.error('Error creating expense:', error);
-        res.status(500).json({
+        console.error('❌ Create expense error:', error.message);
+        console.error('Stack:', error.stack);
+        res.status(500).json({ 
             success: false,
-            message: 'Internal server error',
-            error: error.message
+            message: 'Error creating expense', 
+            error: error.message 
         });
     }
 };
 
-// Get all expenses with filtering and pagination
-const getExpenses = async (req, res) => {
+// @desc    Get all expenses with filters
+// @route   GET /api/expenses
+// @access  Admin, Manager, Accountant
+exports.getAllExpenses = async (req, res) => {
     try {
-        const {
-            page = 1,
-            limit = 10,
+        const userRole = req.user.role;
+        const { 
+            category, 
+            status, 
+            startDate, 
+            endDate, 
             search,
-            category,
-            status,
-            dateFrom,
-            dateTo,
-            sortBy = 'createdAt',
+            page = 1,
+            limit = 20,
+            sortBy = 'expenseDate',
             sortOrder = 'desc'
         } = req.query;
 
-        // Build filter object
-        const filter = {};
+        // Build query
+        let query = { isDeleted: false };
 
         // Role-based filtering
-        if (req.user.role === 'accountant') {
-            // Accountants can see all expenses
-        } else if (req.user.role === 'manager') {
-            // Managers can see all expenses
-        } else {
-            // Other users can only see their own expenses
-            filter.createdBy = req.user.id;
-        }
-
-        // Apply additional filters
-        if (search) {
-            filter.$or = [
-                { expenseNumber: { $regex: search, $options: 'i' } },
-                { partyName: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
+        if (userRole === 'accountant') {
+            query.createdBy = req.user._id;
+        } else if (userRole === 'manager') {
+            query.$or = [
+                { createdBy: req.user._id },
+                { createdByRole: 'manager' }
             ];
         }
 
-        if (category) {
-            filter.category = category;
+        // Apply filters
+        if (category) query.category = category;
+        if (status) query.status = status;
+        
+        if (startDate || endDate) {
+            query.expenseDate = {};
+            if (startDate) query.expenseDate.$gte = new Date(startDate);
+            if (endDate) query.expenseDate.$lte = new Date(endDate);
         }
 
-        if (status) {
-            filter.status = status;
+        if (search) {
+            query.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } },
+                { expenseId: { $regex: search, $options: 'i' } }
+            ];
         }
 
-        if (dateFrom || dateTo) {
-            filter.date = {};
-            if (dateFrom) {
-                filter.date.$gte = new Date(dateFrom);
-            }
-            if (dateTo) {
-                filter.date.$lte = new Date(dateTo);
-            }
-        }
+        // Pagination
+        const skip = (page - 1) * limit;
+        const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
-        // Calculate pagination
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        // Build sort object
-        const sort = {};
-        sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-        // Execute query
-        const expenses = await Expense.find(filter)
-            .populate('createdBy', 'name email')
-            .populate('approvedBy', 'name email')
+        const expenses = await Expense.find(query)
+            .populate('createdBy', 'name email role')
+            .populate('approvedBy', 'name email role')
+            .populate('lastModifiedBy', 'name email role')
             .sort(sort)
             .skip(skip)
             .limit(parseInt(limit));
 
-        // Get total count for pagination
-        const total = await Expense.countDocuments(filter);
+        const total = await Expense.countDocuments(query);
 
-        res.json({
-            success: true,
-            data: {
-                expenses,
-                pagination: {
-                    current: parseInt(page),
-                    pages: Math.ceil(total / parseInt(limit)),
-                    total,
-                    limit: parseInt(limit)
+        // Calculate summary statistics
+        const summary = await Expense.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: null,
+                    totalAmount: { $sum: '$amount' },
+                    pendingAmount: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'pending'] }, '$amount', 0]
+                        }
+                    },
+                    paidAmount: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'paid'] }, '$amount', 0]
+                        }
+                    },
+                    approvedAmount: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'approved'] }, '$amount', 0]
+                        }
+                    }
                 }
             }
-        });
+        ]);
 
+        res.status(200).json({
+            success: true,
+            data: expenses,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limit),
+                limit: parseInt(limit)
+            },
+            summary: summary[0] || {
+                totalAmount: 0,
+                pendingAmount: 0,
+                paidAmount: 0,
+                approvedAmount: 0
+            }
+        });
     } catch (error) {
-        console.error('Error fetching expenses:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
+        console.error('Get expenses error:', error);
+        res.status(500).json({ 
+            message: 'Error fetching expenses', 
+            error: error.message 
         });
     }
 };
 
-// Get expense by ID
-const getExpenseById = async (req, res) => {
+// @desc    Get single expense
+// @route   GET /api/expenses/:id
+// @access  Admin, Manager, Accountant
+exports.getExpenseById = async (req, res) => {
     try {
-        const { id } = req.params;
+        const expense = await Expense.findById(req.params.id)
+            .populate('createdBy', 'name email role phoneNumber')
+            .populate('approvedBy', 'name email role')
+            .populate('lastModifiedBy', 'name email role')
+            .populate('history.performedBy', 'name role')
+            .populate('comments.user', 'name role');
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid expense ID'
-            });
-        }
-
-        const expense = await Expense.findById(id)
-            .populate('createdBy', 'name email')
-            .populate('approvedBy', 'name email');
-
-        if (!expense) {
-            return res.status(404).json({
-                success: false,
-                message: 'Expense not found'
-            });
+        if (!expense || expense.isDeleted) {
+            return res.status(404).json({ message: 'Expense not found' });
         }
 
         // Check permissions
-        if (req.user.role !== 'accountant' && req.user.role !== 'manager' && 
-            expense.createdBy._id.toString() !== req.user.id) {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
-            });
+        const userRole = req.user.role;
+        if (userRole === 'accountant' && expense.createdBy._id.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Access denied' });
         }
 
-        res.json({
+        res.status(200).json({
             success: true,
             data: expense
         });
-
     } catch (error) {
-        console.error('Error fetching expense:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
+        console.error('Get expense error:', error);
+        res.status(500).json({ 
+            message: 'Error fetching expense', 
+            error: error.message 
         });
     }
 };
 
-// Update expense
-const updateExpense = async (req, res) => {
+// @desc    Update expense
+// @route   PUT /api/expenses/:id
+// @access  Admin, Manager (own), Accountant (own)
+exports.updateExpense = async (req, res) => {
     try {
-        const { id } = req.params;
-        const updates = req.body;
+        const expense = await Expense.findById(req.params.id);
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid expense ID'
-            });
-        }
-
-        const expense = await Expense.findById(id);
-
-        if (!expense) {
-            return res.status(404).json({
-                success: false,
-                message: 'Expense not found'
-            });
+        if (!expense || expense.isDeleted) {
+            return res.status(404).json({ message: 'Expense not found' });
         }
 
         // Check permissions
-        if (req.user.role !== 'accountant' && req.user.role !== 'manager' && 
-            expense.createdBy.toString() !== req.user.id) {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
+        if (!canEdit(req.user.role, expense, req.user._id)) {
+            return res.status(403).json({ 
+                message: 'You do not have permission to edit this expense' 
             });
         }
 
-        // Don't allow updates to approved expenses unless user is manager/accountant
-        if (expense.status === 'approved' && req.user.role !== 'accountant' && req.user.role !== 'manager') {
-            return res.status(403).json({
-                success: false,
-                message: 'Cannot update approved expense'
-            });
-        }
+        // Track changes
+        const changes = {};
+        Object.keys(req.body).forEach(key => {
+            if (expense[key] !== req.body[key]) {
+                changes[key] = { from: expense[key], to: req.body[key] };
+            }
+        });
 
-        // Update expense
-        Object.assign(expense, updates);
+        // Update fields
+        Object.assign(expense, req.body);
+        expense.lastModifiedBy = req.user._id;
+
+        // Add to history
+        expense.history.push({
+            action: 'updated',
+            performedBy: req.user._id,
+            performedByName: req.user.name,
+            performedByRole: req.user.role,
+            timestamp: new Date(),
+            changes,
+            remarks: req.body.updateRemarks || 'Expense updated'
+        });
+
         await expense.save();
+        await expense.populate('createdBy approvedBy lastModifiedBy', 'name email role');
 
-        res.json({
+        res.status(200).json({
             success: true,
             message: 'Expense updated successfully',
             data: expense
         });
-
     } catch (error) {
-        console.error('Error updating expense:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
+        console.error('Update expense error:', error);
+        res.status(500).json({ 
+            message: 'Error updating expense', 
+            error: error.message 
         });
     }
 };
 
-// Delete expense
-const deleteExpense = async (req, res) => {
+// @desc    Approve/Reject expense
+// @route   PATCH /api/expenses/:id/approve
+// @access  Admin only
+exports.approveExpense = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid expense ID'
+        if (!canApprove(req.user.role)) {
+            return res.status(403).json({ 
+                message: 'Only admins can approve expenses' 
             });
         }
 
-        const expense = await Expense.findById(id);
+        const { action, remarks } = req.body; // action: 'approve' or 'reject'
 
-        if (!expense) {
-            return res.status(404).json({
-                success: false,
-                message: 'Expense not found'
+        const expense = await Expense.findById(req.params.id);
+
+        if (!expense || expense.isDeleted) {
+            return res.status(404).json({ message: 'Expense not found' });
+        }
+
+        if (action === 'approve') {
+            expense.approvalStatus = 'approved';
+            expense.status = 'approved';
+            expense.approvedBy = req.user._id;
+            expense.approvedAt = new Date();
+        } else if (action === 'reject') {
+            expense.approvalStatus = 'rejected';
+            expense.status = 'rejected';
+        }
+
+        expense.history.push({
+            action: action === 'approve' ? 'approved' : 'rejected',
+            performedBy: req.user._id,
+            performedByName: req.user.name,
+            performedByRole: req.user.role,
+            timestamp: new Date(),
+            remarks: remarks || `Expense ${action}d by admin`
+        });
+
+        await expense.save();
+        await expense.populate('createdBy approvedBy', 'name email role');
+
+        res.status(200).json({
+            success: true,
+            message: `Expense ${action}d successfully`,
+            data: expense
+        });
+    } catch (error) {
+        console.error('Approve expense error:', error);
+        res.status(500).json({ 
+            message: 'Error processing approval', 
+            error: error.message 
+        });
+    }
+};
+
+// @desc    Mark expense as paid
+// @route   PATCH /api/expenses/:id/pay
+// @access  Admin, Accountant
+exports.markAsPaid = async (req, res) => {
+    try {
+        const { paidDate, transactionId, paymentMethod, remarks } = req.body;
+
+        const expense = await Expense.findById(req.params.id);
+
+        if (!expense || expense.isDeleted) {
+            return res.status(404).json({ message: 'Expense not found' });
+        }
+
+        expense.status = 'paid';
+        expense.paidDate = paidDate || new Date();
+        if (transactionId) expense.transactionId = transactionId;
+        if (paymentMethod) expense.paymentMethod = paymentMethod;
+
+        expense.history.push({
+            action: 'paid',
+            performedBy: req.user._id,
+            performedByName: req.user.name,
+            performedByRole: req.user.role,
+            timestamp: new Date(),
+            remarks: remarks || 'Payment completed'
+        });
+
+        await expense.save();
+        await expense.populate('createdBy approvedBy', 'name email role');
+
+        res.status(200).json({
+            success: true,
+            message: 'Expense marked as paid',
+            data: expense
+        });
+    } catch (error) {
+        console.error('Mark paid error:', error);
+        res.status(500).json({ 
+            message: 'Error marking expense as paid', 
+            error: error.message 
+        });
+    }
+};
+
+// @desc    Delete expense (soft delete)
+// @route   DELETE /api/expenses/:id
+// @access  Admin only
+exports.deleteExpense = async (req, res) => {
+    try {
+        if (!canDelete(req.user.role)) {
+            return res.status(403).json({ 
+                message: 'Only admins can delete expenses' 
             });
         }
 
-        // Check permissions
-        if (req.user.role !== 'accountant' && req.user.role !== 'manager' && 
-            expense.createdBy.toString() !== req.user.id) {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
-            });
+        const expense = await Expense.findById(req.params.id);
+
+        if (!expense || expense.isDeleted) {
+            return res.status(404).json({ message: 'Expense not found' });
         }
 
-        // Don't allow deletion of approved expenses
-        if (expense.status === 'approved') {
-            return res.status(403).json({
-                success: false,
-                message: 'Cannot delete approved expense'
-            });
-        }
+        expense.isDeleted = true;
+        expense.deletedAt = new Date();
+        expense.deletedBy = req.user._id;
 
-        await Expense.findByIdAndDelete(id);
+        expense.history.push({
+            action: 'cancelled',
+            performedBy: req.user._id,
+            performedByName: req.user.name,
+            performedByRole: req.user.role,
+            timestamp: new Date(),
+            remarks: req.body.remarks || 'Expense deleted'
+        });
 
-        res.json({
+        await expense.save();
+
+        res.status(200).json({
             success: true,
             message: 'Expense deleted successfully'
         });
-
     } catch (error) {
-        console.error('Error deleting expense:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
+        console.error('Delete expense error:', error);
+        res.status(500).json({ 
+            message: 'Error deleting expense', 
+            error: error.message 
         });
     }
 };
 
-// Approve expense (Manager/Accountant only)
-const approveExpense = async (req, res) => {
+// @desc    Add comment to expense
+// @route   POST /api/expenses/:id/comments
+// @access  Admin, Manager, Accountant
+exports.addComment = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { comment } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid expense ID'
-            });
+        const expense = await Expense.findById(req.params.id);
+
+        if (!expense || expense.isDeleted) {
+            return res.status(404).json({ message: 'Expense not found' });
         }
 
-        // Check permissions
-        if (req.user.role !== 'accountant' && req.user.role !== 'manager') {
-            return res.status(403).json({
-                success: false,
-                message: 'Only managers and accountants can approve expenses'
-            });
-        }
+        expense.comments.push({
+            user: req.user._id,
+            userName: req.user.name,
+            userRole: req.user.role,
+            comment,
+            timestamp: new Date()
+        });
 
-        const expense = await Expense.findById(id);
+        await expense.save();
+        await expense.populate('comments.user', 'name role');
 
-        if (!expense) {
-            return res.status(404).json({
-                success: false,
-                message: 'Expense not found'
-            });
-        }
-
-        if (expense.status === 'approved') {
-            return res.status(400).json({
-                success: false,
-                message: 'Expense is already approved'
-            });
-        }
-
-        await expense.approve(req.user.id);
-
-        res.json({
+        res.status(200).json({
             success: true,
-            message: 'Expense approved successfully',
-            data: expense
+            message: 'Comment added successfully',
+            data: expense.comments
         });
-
     } catch (error) {
-        console.error('Error approving expense:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
+        console.error('Add comment error:', error);
+        res.status(500).json({ 
+            message: 'Error adding comment', 
+            error: error.message 
         });
     }
 };
 
-// Reject expense (Manager/Accountant only)
-const rejectExpense = async (req, res) => {
+// @desc    Get expense statistics
+// @route   GET /api/expenses/stats
+// @access  Admin, Manager
+exports.getExpenseStats = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { rejectionReason } = req.body;
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid expense ID'
-            });
-        }
-
-        // Check permissions
-        if (req.user.role !== 'accountant' && req.user.role !== 'manager') {
-            return res.status(403).json({
-                success: false,
-                message: 'Only managers and accountants can reject expenses'
-            });
-        }
-
-        if (!rejectionReason) {
-            return res.status(400).json({
-                success: false,
-                message: 'Rejection reason is required'
-            });
-        }
-
-        const expense = await Expense.findById(id);
-
-        if (!expense) {
-            return res.status(404).json({
-                success: false,
-                message: 'Expense not found'
-            });
-        }
-
-        if (expense.status === 'rejected') {
-            return res.status(400).json({
-                success: false,
-                message: 'Expense is already rejected'
-            });
-        }
-
-        await expense.reject(rejectionReason);
-
-        res.json({
-            success: true,
-            message: 'Expense rejected successfully',
-            data: expense
-        });
-
-    } catch (error) {
-        console.error('Error rejecting expense:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
-        });
-    }
-};
-
-// Get expense statistics
-const getExpenseStats = async (req, res) => {
-    try {
-        const { dateFrom, dateTo } = req.query;
-
-        // Build filter for date range
-        const dateFilter = {};
-        if (dateFrom || dateTo) {
-            if (dateFrom) dateFilter.$gte = new Date(dateFrom);
-            if (dateTo) dateFilter.$lte = new Date(dateTo);
-        }
-
-        const matchStage = {};
-        if (Object.keys(dateFilter).length > 0) {
-            matchStage.date = dateFilter;
-        }
-
-        // Role-based filtering
-        if (req.user.role !== 'accountant' && req.user.role !== 'manager') {
-            matchStage.createdBy = new mongoose.Types.ObjectId(req.user.id);
+        const { startDate, endDate } = req.query;
+        
+        let dateFilter = {};
+        if (startDate || endDate) {
+            dateFilter.expenseDate = {};
+            if (startDate) dateFilter.expenseDate.$gte = new Date(startDate);
+            if (endDate) dateFilter.expenseDate.$lte = new Date(endDate);
         }
 
         const stats = await Expense.aggregate([
-            { $match: matchStage },
+            { $match: { isDeleted: false, ...dateFilter } },
             {
-                $group: {
-                    _id: null,
-                    totalExpenses: { $sum: 1 },
-                    totalAmount: { $sum: '$totalAmount' },
-                    pendingExpenses: {
-                        $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
-                    },
-                    approvedExpenses: {
-                        $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] }
-                    },
-                    rejectedExpenses: {
-                        $sum: { $cond: [{ $eq: ['$status', 'rejected'] }, 1, 0] }
-                    },
-                    totalGST: { $sum: '$gstAmount' }
+                $facet: {
+                    byCategory: [
+                        {
+                            $group: {
+                                _id: '$category',
+                                total: { $sum: '$amount' },
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ],
+                    byStatus: [
+                        {
+                            $group: {
+                                _id: '$status',
+                                total: { $sum: '$amount' },
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ],
+                    overall: [
+                        {
+                            $group: {
+                                _id: null,
+                                totalExpenses: { $sum: '$amount' },
+                                totalCount: { $sum: 1 },
+                                avgExpense: { $avg: '$amount' }
+                            }
+                        }
+                    ]
                 }
             }
         ]);
 
-        // Get category-wise breakdown
-        const categoryStats = await Expense.aggregate([
-            { $match: matchStage },
-            {
-                $group: {
-                    _id: '$category',
-                    count: { $sum: 1 },
-                    totalAmount: { $sum: '$totalAmount' }
-                }
-            },
-            { $sort: { totalAmount: -1 } }
-        ]);
-
-        res.json({
+        res.status(200).json({
             success: true,
-            data: {
-                overview: stats[0] || {
-                    totalExpenses: 0,
-                    totalAmount: 0,
-                    pendingExpenses: 0,
-                    approvedExpenses: 0,
-                    rejectedExpenses: 0,
-                    totalGST: 0
-                },
-                categoryBreakdown: categoryStats
-            }
+            data: stats[0]
         });
-
     } catch (error) {
-        console.error('Error fetching expense stats:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
+        console.error('Get stats error:', error);
+        res.status(500).json({ 
+            message: 'Error fetching statistics', 
+            error: error.message 
         });
     }
-};
-
-module.exports = {
-    createExpense,
-    getExpenses,
-    getExpenseById,
-    updateExpense,
-    deleteExpense,
-    approveExpense,
-    rejectExpense,
-    getExpenseStats
 };

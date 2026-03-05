@@ -1,0 +1,449 @@
+/* Purchase Bill Form - Professional ERP Design */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.purchase-bill-form-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 24px;
+    background: #f5f7fa;
+    min-height: 100vh;
+}
+
+.pbf-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.pbf-title-section h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pbf-title-section h1 i {
+    color: #3b82f6;
+}
+
+.pbf-title-section p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+}
+
+.btn-back {
+    padding: 12px 24px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-back:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.pbf-content {
+    margin-bottom: 24px;
+}
+
+.pbf-section {
+    background: white;
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: #3b82f6;
+    font-size: 20px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+}
+
+.section-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.disabled-input {
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.input-hint {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.input-hint.success {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.input-hint.error {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.input-valid {
+    border-color: #10b981 !important;
+    background: #f0fdf4;
+}
+
+.input-invalid {
+    border-color: #ef4444 !important;
+    background: #fef2f2;
+}
+
+.btn-add-item {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-add-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.items-table {
+    overflow-x: auto;
+}
+
+.items-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.items-table thead {
+    background: #f8fafc;
+}
+
+.items-table th {
+    padding: 12px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.items-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.items-table input,
+.items-table select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.items-table input:focus,
+.items-table select:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.amount-cell {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.btn-remove-item {
+    width: 32px;
+    height: 32px;
+    background: #fee2e2;
+    border: none;
+    border-radius: 6px;
+    color: #991b1b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-remove-item:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 24px;
+}
+
+.summary-left {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.summary-right {
+    position: sticky;
+    top: 24px;
+    height: fit-content;
+}
+
+.summary-panel {
+    background: #f8fafc;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+}
+
+.summary-panel h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 16px 0;
+}
+
+.summary-panel h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 20px 0 12px 0;
+    padding-top: 16px;
+    border-top: 2px solid #e5e7eb;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #64748b;
+}
+
+.summary-row span:last-child {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.summary-total {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px solid #e5e7eb;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.summary-total span {
+    color: #1e293b;
+}
+
+.summary-total span:last-child {
+    color: #3b82f6;
+    font-size: 20px;
+}
+
+.payment-section {
+    margin-top: 16px;
+}
+
+.balance-row {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px solid #e5e7eb;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.balance-amount {
+    color: #ef4444 !important;
+    font-size: 18px !important;
+}
+
+.form-actions {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 28px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-cancel-form {
+    padding: 12px 24px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel-form:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.btn-submit-form {
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-submit-form:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-submit-form:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.loading-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: #64748b;
+}
+
+.loading-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: #3b82f6;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-right {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .section-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .pbf-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .pbf-section {
+        padding: 20px;
+    }
+
+    .items-table {
+        overflow-x: scroll;
+    }
+
+    .items-table table {
+        min-width: 900px;
+    }
+}

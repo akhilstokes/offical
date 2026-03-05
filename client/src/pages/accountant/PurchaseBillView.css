@@ -1,0 +1,617 @@
+/* Purchase Bill View - Professional Invoice Design */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.purchase-bill-view-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 24px;
+    background: #f5f7fa;
+    min-height: 100vh;
+}
+
+.pbv-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.pbv-title-section h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pbv-title-section h1 i {
+    color: #3b82f6;
+}
+
+.pbv-title-section p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+}
+
+.pbv-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-back, .btn-edit, .btn-download {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+}
+
+.btn-back {
+    background: white;
+    border: 1px solid #e5e7eb;
+    color: #475569;
+}
+
+.btn-back:hover {
+    background: #f8fafc;
+}
+
+.btn-edit {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-edit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-download {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-download:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Bill Document */
+.bill-document {
+    background: white;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+}
+
+/* Bill Header with Logo */
+.bill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.company-logo-section {
+    flex-shrink: 0;
+}
+
+.logo-placeholder {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 36px;
+}
+
+.company-details {
+    text-align: right;
+    flex: 1;
+}
+
+.company-details h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 8px 0;
+    letter-spacing: 0.5px;
+}
+
+.company-details p {
+    margin: 4px 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* Horizontal Divider */
+.bill-divider {
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+    margin: 24px 0;
+    border-radius: 2px;
+}
+
+/* Bill Title Section */
+.bill-title-section {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.bill-title-section h2 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 16px 0;
+    letter-spacing: 1px;
+}
+
+.bill-meta {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+}
+
+.meta-item {
+    display: flex;
+    gap: 8px;
+}
+
+.meta-label {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.meta-value {
+    color: #1e293b;
+    font-weight: 700;
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+}
+
+/* Party Information Section */
+.party-info-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.party-box {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    background: #f8fafc;
+}
+
+.party-box h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #cbd5e1;
+}
+
+.party-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.party-table td {
+    padding: 6px 0;
+    font-size: 13px;
+    vertical-align: top;
+}
+
+.party-table .label {
+    color: #64748b;
+    font-weight: 600;
+    width: 110px;
+}
+
+.party-table .value {
+    color: #1e293b;
+    font-weight: 500;
+}
+
+/* Items Table Modern */
+.items-section {
+    margin-bottom: 32px;
+}
+
+.items-table-modern {
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid #1e293b;
+}
+
+.items-table-modern thead {
+    background: #1e293b;
+}
+
+.items-table-modern th {
+    padding: 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-right: 1px solid #475569;
+}
+
+.items-table-modern th:last-child {
+    border-right: none;
+}
+
+.items-table-modern tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.items-table-modern tbody tr:last-child {
+    border-bottom: 2px solid #1e293b;
+}
+
+.items-table-modern td {
+    padding: 12px;
+    font-size: 13px;
+    color: #1e293b;
+    border-right: 1px solid #e5e7eb;
+}
+
+.items-table-modern td:last-child {
+    border-right: none;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Bill Summary Modern */
+.bill-summary-modern {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 24px;
+    margin-bottom: 32px;
+}
+
+.summary-box {
+    width: 400px;
+    border: 2px solid #1e293b;
+    border-radius: 8px;
+    padding: 20px;
+    background: #f8fafc;
+}
+
+.summary-table-modern {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.summary-table-modern td {
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.summary-table-modern td:first-child {
+    color: #64748b;
+    font-weight: 600;
+}
+
+.summary-table-modern td:last-child {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.total-row-modern {
+    border-top: 2px solid #1e293b;
+    padding-top: 12px !important;
+}
+
+.total-row-modern td {
+    padding-top: 12px !important;
+    font-size: 18px !important;
+    color: #1e293b !important;
+}
+
+/* Payment Status Section */
+.payment-status-section {
+    margin-bottom: 32px;
+    padding: 20px;
+    background: #f8fafc;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.payment-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.payment-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.payment-row span:first-child {
+    color: #64748b;
+    font-weight: 600;
+}
+
+.payment-row span:last-child {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.payment-row.balance {
+    border-top: 2px solid #cbd5e1;
+    padding-top: 12px;
+    margin-top: 8px;
+}
+
+.payment-row.balance span {
+    font-size: 16px;
+    color: #ef4444;
+}
+
+.status-badge-modern {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-badge-modern.status-paid {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge-modern.status-partial {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge-modern.status-unpaid {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Signature Section Modern */
+.signature-section-modern {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    margin-top: 48px;
+    margin-bottom: 32px;
+}
+
+.signature-box-modern {
+    text-align: center;
+}
+
+.signature-box-modern > p:first-child {
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.signature-line-modern {
+    width: 100%;
+    height: 60px;
+    border-bottom: 2px solid #1e293b;
+    margin-bottom: 8px;
+}
+
+.signature-name {
+    font-size: 14px;
+    color: #1e293b;
+    font-weight: 700;
+    margin: 4px 0;
+}
+
+.signature-role {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    margin: 4px 0;
+}
+
+/* Footer Note Modern */
+.footer-note-modern {
+    text-align: center;
+    padding-top: 24px;
+    border-top: 2px solid #e5e7eb;
+}
+
+.footer-note-modern p {
+    font-size: 12px;
+    color: #94a3b8;
+    font-style: italic;
+    margin: 0;
+}
+
+.loading-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: #64748b;
+}
+
+.loading-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: #3b82f6;
+}
+
+/* Print Styles */
+@media print {
+    body {
+        background: white;
+    }
+
+    .purchase-bill-view-container {
+        padding: 0;
+        background: white;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .bill-document {
+        box-shadow: none;
+        border-radius: 0;
+        padding: 20px;
+        max-width: 100%;
+    }
+
+    .bill-divider {
+        background: #000;
+    }
+
+    .logo-placeholder {
+        background: #000;
+    }
+
+    .party-box {
+        border-color: #000;
+        background: white;
+    }
+
+    .items-table-modern {
+        border: 2px solid #000;
+    }
+
+    .items-table-modern thead {
+        background: #000;
+    }
+
+    .items-table-modern th {
+        border-right-color: #666;
+    }
+
+    .items-table-modern tbody tr {
+        border-bottom-color: #000;
+    }
+
+    .items-table-modern td {
+        border-right-color: #ccc;
+    }
+
+    .summary-box {
+        border-color: #000;
+        background: white;
+    }
+
+    .total-row-modern {
+        border-top-color: #000;
+    }
+
+    .payment-status-section {
+        border-color: #000;
+        background: white;
+    }
+
+    .signature-line-modern {
+        border-bottom-color: #000;
+    }
+
+    .footer-note-modern {
+        border-top-color: #000;
+    }
+
+    @page {
+        margin: 1cm;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .bill-document {
+        padding: 24px;
+    }
+
+    .bill-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: center;
+    }
+
+    .company-details {
+        text-align: center;
+    }
+
+    .bill-meta {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .party-info-section {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .items-table-modern {
+        font-size: 11px;
+    }
+
+    .items-table-modern th,
+    .items-table-modern td {
+        padding: 8px 6px;
+    }
+
+    .summary-box {
+        width: 100%;
+    }
+
+    .signature-section-modern {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .pbv-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .pbv-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .btn-back, .btn-edit, .btn-download {
+        width: 100%;
+        justify-content: center;
+    }
+}

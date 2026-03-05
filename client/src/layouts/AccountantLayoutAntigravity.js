@@ -103,6 +103,7 @@ const AccountantLayoutAntigravity = ({ children }) => {
             section: 'Billing',
             items: [
                 { to: '/accountant/bill-generation', icon: 'fa-file-invoice-dollar', label: 'Bill Generation' },
+                { to: '/accountant/purchase-bills', icon: 'fa-shopping-cart', label: 'Purchase Bills' },
             ]
         }
     ];
