@@ -1,12 +1,14 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import { LanguageContext } from '../contexts/LanguageContext';
 import './NewLandingPage.css';
 
 const NewLandingPage = () => {
+    const { t } = useContext(LanguageContext);
     const [scrollY, setScrollY] = useState(0);
     const [isVisible, setIsVisible] = useState({});
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -60,6 +62,7 @@ const NewLandingPage = () => {
                 entries.forEach((entry) => {
                     if (entry.isIntersecting) {
                         setIsVisible((prev) => ({ ...prev, [entry.target.id]: true }));
+                        entry.target.classList.add('visible');
                     }
                 });
             },
@@ -109,7 +112,7 @@ const NewLandingPage = () => {
     ];
 
     const stats = [
-        { icon: 'fa-layer-group', number: '6+', label: 'Core Modules' },
+        { icon: 'fa-layer-group', number: '6+', label: t('hero.tag') },
         { icon: 'fa-user-shield', number: 'Role', label: 'Based Access' },
         { icon: 'fa-clock', number: '24/7', label: 'System Availability' }
     ];
@@ -135,14 +138,12 @@ const NewLandingPage = () => {
                         </div>
 
                         <h1 className="hero-title-new animate-title">
-                            Digitize Rubber Manufacturing with{' '}
-                            <span className="text-gradient">Smart ERP Automation</span>
+                            {t('hero.title').split(' ERP')[0]}
+                            <span className="text-gradient"> {t('hero.title').includes('ERP') ? 'ERP ' + t('hero.title').split('ERP ')[1] : t('hero.title').split(' ').slice(2).join(' ')}</span>
                         </h1>
 
                         <p className="hero-description animate-description">
-                            Centralize barrel tracking, billing, inventory, payroll, and reporting
-                            with a powerful ERP system designed specifically for rubber latex
-                            manufacturing operations.
+                            {t('hero.desc')}
                         </p>
 
                         <div className="hero-buttons animate-buttons">
@@ -155,8 +156,8 @@ const NewLandingPage = () => {
 
                         <div className="hero-stats animate-stats">
                             {stats.map((stat, index) => (
-                                <div 
-                                    key={index} 
+                                <div
+                                    key={index}
                                     className="stat-box"
                                     style={{ animationDelay: `${index * 0.1}s` }}
                                 >
@@ -168,8 +169,8 @@ const NewLandingPage = () => {
                         </div>
                     </div>
 
-                    <div 
-                        className="hero-visual-new animate-visual" 
+                    <div
+                        className="hero-visual-new animate-visual"
                         style={{ transform: `translateY(${scrollY * 0.1}px)` }}
                     >
                         <div className="dashboard-mockup-new">
@@ -188,18 +189,18 @@ const NewLandingPage = () => {
                                         }}
                                     />
                                 ))}
-                                
+
                                 <button className="slider-arrow prev" onClick={prevImage} aria-label="Previous image">
                                     <i className="fas fa-chevron-left"></i>
                                 </button>
                                 <button className="slider-arrow next" onClick={nextImage} aria-label="Next image">
                                     <i className="fas fa-chevron-right"></i>
                                 </button>
-                                
+
                                 <div className="slider-dots">
                                     {sliderImages.map((_, index) => (
-                                        <span 
-                                            key={index} 
+                                        <span
+                                            key={index}
                                             className={`slider-dot ${index === currentImageIndex ? 'active' : ''}`}
                                             onClick={() => setCurrentImageIndex(index)}
                                         ></span>
@@ -235,18 +236,14 @@ const NewLandingPage = () => {
                 <div className="who-we-are-container">
                     <div className="who-we-are-content" data-animate>
                         <div className="who-we-are-text">
-                            <h2>Who We Are</h2>
+                            <h2>{t('who.title')}</h2>
                             <p>
-                                The Holy Family Polymers group of companies with its head office in Kooroppada, 
-                                Kottayam have been processing natural rubber for the last 25 years. 
-                                The group's major activity, Holy Family Polymers, is a leading producer of 
-                                centrifuged latex, becoming over the years one of the largest exporters 
-                                of all grades of natural rubber from India.
+                                {t('who.desc')}
                             </p>
                         </div>
                         <div className="who-we-are-action">
                             <Link to="/about" className="btn-learn-more">
-                                <span>Learn more</span>
+                                <span>{t('who.learnmore')}</span>
                                 <i className="fas fa-arrow-circle-right"></i>
                             </Link>
                         </div>
@@ -259,23 +256,17 @@ const NewLandingPage = () => {
                 <div className="container-new">
                     <div className="mission-vision-flex">
                         <div className="mission-item" data-animate>
-                            <h3 className="section-tag-green">Our Mission</h3>
+                            <h3 className="section-tag-green">{t('mission.title')}</h3>
                             <h4>Environmentally -friendly companies</h4>
                             <p>
-                                We are fully conversant with the need for environmental sustainability 
-                                and comply with all the rules and regulations relating to these matters. 
-                                Participating in local society, promoting awareness in the need for 
-                                proper drainage and clean sanitary conditions.
+                                {t('mission.desc')}
                             </p>
                         </div>
                         <div className="vision-item" data-animate>
-                            <h3 className="section-tag-green">Our Vision</h3>
+                            <h3 className="section-tag-green">{t('vision.title')}</h3>
                             <h4>Credibility & Integrity</h4>
                             <p>
-                                We will provide the best possible service to our customers by setting 
-                                the highest standards for our products and people. We believe that 
-                                mutually beneficial relationships will lead to long term partnerships 
-                                with our customers and suppliers.
+                                {t('vision.desc')}
                             </p>
                         </div>
                     </div>
@@ -286,19 +277,18 @@ const NewLandingPage = () => {
             <section className="features-section-new">
                 <div className="container-new">
                     <div className="section-header-new" data-animate id="features-header">
-                        <span className="section-tag-new">Core Modules</span>
+                        <span className="section-tag-new">{t('hero.tag')}</span>
                         <h2 className="section-title-new">
-                            Complete ERP for Rubber Manufacturing
+                            {t('hero.title')}
                         </h2>
                         <p className="section-subtitle-new">
-                            Purpose-built modules to manage latex collection, processing,
-                            workforce, and finance efficiently.
+                            {t('hero.desc')}
                         </p>
                     </div>
 
                     <div className="features-grid-new">
                         {features.map((feature, index) => (
-                            <div 
+                            <div
                                 key={index}
                                 className="feature-card-new"
                                 data-animate

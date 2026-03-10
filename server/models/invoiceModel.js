@@ -18,6 +18,10 @@ const invoiceSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    customerPAN: {
+      type: String,
+      trim: true
+    },
     invoiceDate: {
       type: Date,
       required: true
@@ -31,6 +35,23 @@ const invoiceSchema = new mongoose.Schema(
     vehicleNumber: {
       type: String,
       trim: true
+    },
+    driverName: {
+      type: String,
+      trim: true
+    },
+    driverPhone: {
+      type: String,
+      trim: true
+    },
+    vehicleType: {
+      type: String,
+      enum: ['Company', 'Outside'],
+      default: 'Company'
+    },
+    distance: {
+      type: Number,
+      min: 0
     },
     drc: {
       type: Number,
@@ -55,6 +76,7 @@ const invoiceSchema = new mongoose.Schema(
       description: String,
       quantity: Number,
       unitPrice: Number,
+      rate: Number,
       amount: Number,
       taxRate: Number,
       taxAmount: Number

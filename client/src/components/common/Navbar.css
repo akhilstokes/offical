@@ -5,7 +5,7 @@
   --nav-text: #4b5563;
   --nav-hover: #111827;
   --nav-active: #4f46e5;
-  --nav-height: 72px;
+  --nav-height: 64px;
   --nav-border: #e5e7eb;
   --primary-color: #4f46e5;
   --primary-hover: #4338ca;
@@ -28,6 +28,13 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   background-color: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
+}
+
+.dark-mode .navbar.scrolled,
+.dark-mode .navbar.home-nav {
+  background-color: var(--surface-glass);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .navbar-container {
@@ -128,7 +135,115 @@
   align-items: center;
   justify-content: flex-end;
   flex: 0 0 auto;
-  gap: 12px;
+  gap: 20px;
+}
+
+/* Settings Icons (Theme & Language) */
+.nav-settings-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.nav-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--nav-text);
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-icon-btn:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: var(--nav-hover);
+}
+
+.dark-mode .nav-icon-btn {
+  color: var(--text-default);
+}
+
+.dark-mode .nav-icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-strong);
+}
+
+.nav-lang-menu {
+  position: relative;
+}
+
+.nav-lang-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: -10px;
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--nav-border);
+  animation: dropdownFade 0.2s ease;
+}
+
+.dark-mode .nav-lang-dropdown,
+.dark-mode .profile-dropdown {
+  background: var(--surface-card);
+  border-color: var(--border-subtle);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.lang-item {
+  padding: 10px 16px;
+  color: var(--nav-text);
+  text-decoration: none;
+  display: block;
+  border-radius: 8px;
+  transition: all 0.2s;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-weight: 500;
+}
+
+.dark-mode .lang-item,
+.dark-mode .dropdown-item {
+  color: var(--text-default);
+}
+
+.lang-item:hover,
+.dark-mode .dropdown-item:hover {
+  background-color: #f3f4f6;
+  color: var(--nav-hover);
+}
+
+.dark-mode .lang-item:hover,
+.dark-mode .dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-strong);
+}
+
+.lang-item.active {
+  color: var(--primary-color);
+  background-color: rgba(79, 70, 229, 0.05);
+  font-weight: 600;
+}
+
+.dark-mode .lang-item.active {
+  color: var(--primary-light);
+  background-color: rgba(90, 240, 161, 0.1);
 }
 
 .auth-buttons {
@@ -173,10 +288,21 @@
   border-color: var(--nav-border);
 }
 
+.dark-mode .login-btn {
+  color: var(--text-default);
+  border-color: var(--border-subtle);
+}
+
 .login-btn:hover {
   color: var(--nav-hover);
   border-color: var(--nav-hover);
   background: rgba(0, 0, 0, 0.02);
+}
+
+.dark-mode .login-btn:hover {
+  color: var(--text-strong);
+  border-color: var(--text-subtle);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* Profile Menu */
@@ -229,6 +355,7 @@
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -291,7 +418,7 @@
   .navbar-container {
     padding: 0 32px;
   }
-  
+
   .navbar-menu {
     gap: 32px;
   }
@@ -301,15 +428,15 @@
   .navbar-container {
     padding: 0 24px;
   }
-  
+
   .navbar-menu {
     gap: 24px;
   }
-  
+
   .nav-link {
     font-size: 14px;
   }
-  
+
   .auth-btn {
     padding: 8px 20px;
     font-size: 13px;
@@ -320,24 +447,24 @@
   .navbar {
     height: 64px;
   }
-  
+
   .navbar-container {
     padding: 0 20px;
     gap: 20px;
   }
-  
+
   .navbar-menu {
     display: none;
   }
-  
+
   .company-logo {
     height: 40px;
   }
-  
+
   .auth-buttons {
     gap: 8px;
   }
-  
+
   .auth-btn {
     padding: 8px 16px;
     font-size: 13px;
@@ -348,14 +475,13 @@
   .navbar-container {
     padding: 0 16px;
   }
-  
+
   .company-logo {
     height: 36px;
   }
-  
+
   .auth-btn {
     padding: 7px 14px;
     font-size: 12px;
   }
 }
-

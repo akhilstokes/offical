@@ -12,8 +12,8 @@ const AccountantProtectedRoute = ({ children }) => {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  // Allow accountant and admin roles
-  if (user.role !== 'accountant' && user.role !== 'admin') {
+  // Allow manager, accountant and admin roles
+  if (user.role !== 'manager' && user.role !== 'accountant' && user.role !== 'admin') {
     return <Navigate to="/user" replace />;
   }
 

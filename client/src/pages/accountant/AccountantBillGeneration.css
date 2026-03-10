@@ -65,7 +65,7 @@
         grid-template-columns: 1fr;
         gap: 20px;
     }
-    
+
     .form-column-left,
     .form-column-right {
         gap: 16px;
@@ -77,12 +77,12 @@
         gap: 16px;
         margin-bottom: 24px;
     }
-    
+
     .form-column-left,
     .form-column-right {
         gap: 12px;
     }
-    
+
     .form-group.full-width {
         margin-top: 12px;
     }
@@ -130,8 +130,13 @@
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Modal Styles */
@@ -281,6 +286,7 @@
 .create-bill-btn:hover {
     background: #5b21b6;
 }
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -421,6 +427,31 @@
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.vehicle-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.vehicle-input-row .form-input {
+    flex: 1;
+}
+
+.vehicle-type-select {
+    width: 130px;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    background-color: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.vehicle-type-select:focus {
+    outline: none;
+    border-color: #3b82f6;
 }
 
 .items-table-container {
@@ -806,12 +837,12 @@
     background: white;
 }
 
-.checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+.checkbox-label input[type="checkbox"]:checked+.checkbox-custom {
     background: #6366f1;
     border-color: #6366f1;
 }
 
-.checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
+.checkbox-label input[type="checkbox"]:checked+.checkbox-custom::after {
     content: '✓';
     position: absolute;
     top: 50%;
@@ -883,15 +914,15 @@
         height: 100vh;
         border-radius: 0;
     }
-    
+
     .create-party-content {
         padding: 16px;
     }
-    
+
     .add-party-container {
         padding: 16px;
     }
-    
+
     .selected-party {
         flex-direction: column;
         align-items: flex-start;
@@ -1168,16 +1199,16 @@
         height: 100vh;
         border-radius: 0;
     }
-    
+
     .bank-account-content {
         padding: 16px;
     }
-    
+
     .form-row {
         grid-template-columns: 1fr;
         gap: 16px;
     }
-    
+
     .bank-details-toggle {
         flex-direction: column;
         align-items: flex-start;
@@ -1391,12 +1422,12 @@
     transition: all 0.2s;
 }
 
-.radio-option input[type="radio"]:checked + .radio-custom {
+.radio-option input[type="radio"]:checked+.radio-custom {
     border-color: #6366f1;
     background: #6366f1;
 }
 
-.radio-option input[type="radio"]:checked + .radio-custom::after {
+.radio-option input[type="radio"]:checked+.radio-custom::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -1447,11 +1478,11 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-input:checked + .toggle-slider {
+input:checked+.toggle-slider {
     background-color: #6366f1;
 }
 
-input:checked + .toggle-slider:before {
+input:checked+.toggle-slider:before {
     transform: translateX(24px);
 }
 
@@ -1722,11 +1753,11 @@ input:checked + .toggle-slider:before {
         height: 100vh;
         border-radius: 0;
     }
-    
+
     .create-item-content {
         flex-direction: column;
     }
-    
+
     .item-nav-sidebar {
         width: 100%;
         height: auto;
@@ -1735,17 +1766,17 @@ input:checked + .toggle-slider:before {
         display: flex;
         padding: 16px 0;
     }
-    
+
     .nav-item {
         white-space: nowrap;
         min-width: 150px;
     }
-    
+
     .form-row {
         grid-template-columns: 1fr;
         gap: 16px;
     }
-    
+
     .item-form-content {
         padding: 16px;
     }
@@ -1756,36 +1787,36 @@ input:checked + .toggle-slider:before {
     .accountant-bill-generation {
         padding: 16px;
     }
-    
+
     .bill-gen-header-modern {
         flex-direction: column;
         align-items: stretch;
         gap: 16px;
     }
-    
+
     .bill-gen-header-modern .header-right {
         justify-content: space-between;
     }
-    
+
     .bill-filters {
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
     }
-    
+
     .filter-left {
         flex-direction: column;
     }
-    
+
     .form-grid {
         grid-template-columns: 1fr;
         gap: 16px;
     }
-    
+
     .items-table-container {
         overflow-x: auto;
     }
-    
+
     .modal-container {
         max-width: 95vw;
         margin: 20px;

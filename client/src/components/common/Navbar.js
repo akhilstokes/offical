@@ -1,18 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { LanguageContext } from '../../contexts/LanguageContext';
+import { useContext } from 'react';
 import './Navbar.css';
 
 const Navbar = () => {
     const { isAuthenticated, logout, user } = useAuth();
+    const { language, setLanguage, t } = useContext(LanguageContext);
     const navigate = useNavigate();
 
     const location = useLocation();
 
 
     const [menuOpen, setMenuOpen] = useState(false);
+    const [langOpen, setLangOpen] = useState(false);
     const menuRef = useRef(null);
+    const langRef = useRef(null);
     const [scrolled, setScrolled] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(false);
 
     const isHome = location.pathname === '/';
 
@@ -23,10 +29,33 @@ const Navbar = () => {
             if (menuRef.current && !menuRef.current.contains(e.target)) {
                 setMenuOpen(false);
             }
+            if (langRef.current && !langRef.current.contains(e.target)) {
+                setLangOpen(false);
+            }
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
+
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            setIsDarkMode(true);
+            document.body.classList.add('dark-mode');
+        }
+    }, []);
+
+    const toggleTheme = () => {
+        if (isDarkMode) {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('theme', 'light');
+            setIsDarkMode(false);
+        } else {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('theme', 'dark');
+            setIsDarkMode(true);
+        }
+    };
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 10);
@@ -62,35 +91,78 @@ const Navbar = () => {
                 {/* Navigation Menu */}
                 <div className="navbar-menu">
                     <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                        Home
+                        {t('nav.home')}
                     </NavLink>
-                    
+
                     <NavLink to="/about" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                        About Us
+                        {t('nav.about')}
                     </NavLink>
 
                     <NavLink to="/awards" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                        Awards
+                        {t('nav.awards')}
                     </NavLink>
 
                     <NavLink to="/contact" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                        Contact
+                        {t('nav.contact')}
                     </NavLink>
 
                     <NavLink to="/gallery" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                        Gallery
+                        {t('nav.gallery')}
                     </NavLink>
                 </div>
 
-                {/* Auth Section */}
+                {/* Auth & Settings Section */}
                 <div className="navbar-auth">
+                    {/* Settings Toggles (Theme & Language) */}
+                    <div className="nav-settings-group">
+                        <button
+                            className="nav-icon-btn"
+                            onClick={toggleTheme}
+                            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                        >
+                            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+                        </button>
+
+                        <div className="nav-lang-menu" ref={langRef}>
+                            <button
+                                className="nav-icon-btn"
+                                onClick={() => setLangOpen(!langOpen)}
+                                title="Change Language"
+                            >
+                                <i className="fas fa-globe"></i>
+                            </button>
+                            {langOpen && (
+                                <div className="nav-lang-dropdown">
+                                    <button
+                                        className={`lang-item ${language === 'en' ? 'active' : ''}`}
+                                        onClick={() => { setLanguage('en'); setLangOpen(false); }}
+                                    >
+                                        English
+                                    </button>
+                                    <button
+                                        className={`lang-item ${language === 'ml' ? 'active' : ''}`}
+                                        onClick={() => { setLanguage('ml'); setLangOpen(false); }}
+                                    >
+                                        മലയാളം
+                                    </button>
+                                    <button
+                                        className={`lang-item ${language === 'hi' ? 'active' : ''}`}
+                                        onClick={() => { setLanguage('hi'); setLangOpen(false); }}
+                                    >
+                                        हिन्दी
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     {!isAuthenticated ? (
                         <div className="auth-buttons">
                             <Link to="/register" className="auth-btn signup-btn">
-                                Sign Up
+                                {t('nav.signup')}
                             </Link>
                             <Link to="/login" className="auth-btn login-btn">
-                                Sign In
+                                {t('nav.signin')}
                             </Link>
                         </div>
                     ) : (

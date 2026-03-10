@@ -115,11 +115,11 @@ const ManagerBarrelRequests = () => {
 
       {/* Alerts */}
       {error && (
-        <div style={{ 
-          background: '#fee2e2', 
-          color: '#991b1b', 
-          padding: '16px 20px', 
-          borderRadius: '8px', 
+        <div style={{
+          background: '#fee2e2',
+          color: '#991b1b',
+          padding: '16px 20px',
+          borderRadius: '8px',
           marginBottom: '24px',
           border: '1px solid #fecaca',
           fontSize: '14px'
@@ -128,11 +128,11 @@ const ManagerBarrelRequests = () => {
         </div>
       )}
       {success && (
-        <div style={{ 
-          background: '#d1fae5', 
-          color: '#065f46', 
-          padding: '16px 20px', 
-          borderRadius: '8px', 
+        <div style={{
+          background: '#d1fae5',
+          color: '#065f46',
+          padding: '16px 20px',
+          borderRadius: '8px',
           marginBottom: '24px',
           border: '1px solid #a7f3d0',
           fontSize: '14px'
@@ -143,8 +143,8 @@ const ManagerBarrelRequests = () => {
 
       {/* Filter Buttons */}
       <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        <button 
-          className={filter === 'pending' ? 'btn' : 'btn-secondary'} 
+        <button
+          className={filter === 'pending' ? 'btn' : 'btn-secondary'}
           onClick={() => setFilter('pending')}
           style={{
             padding: '10px 20px',
@@ -160,8 +160,8 @@ const ManagerBarrelRequests = () => {
         >
           Pending ({requests.filter(r => r.status?.toLowerCase() === 'pending').length})
         </button>
-        <button 
-          className={filter === 'approved' ? 'btn' : 'btn-secondary'} 
+        <button
+          className={filter === 'approved' ? 'btn' : 'btn-secondary'}
           onClick={() => setFilter('approved')}
           style={{
             padding: '10px 20px',
@@ -177,8 +177,8 @@ const ManagerBarrelRequests = () => {
         >
           Approved ({requests.filter(r => r.status?.toLowerCase() === 'approved').length})
         </button>
-        <button 
-          className={filter === 'rejected' ? 'btn' : 'btn-secondary'} 
+        <button
+          className={filter === 'rejected' ? 'btn' : 'btn-secondary'}
           onClick={() => setFilter('rejected')}
           style={{
             padding: '10px 20px',
@@ -194,8 +194,8 @@ const ManagerBarrelRequests = () => {
         >
           Rejected ({requests.filter(r => r.status?.toLowerCase() === 'rejected').length})
         </button>
-        <button 
-          className={filter === 'all' ? 'btn' : 'btn-secondary'} 
+        <button
+          className={filter === 'all' ? 'btn' : 'btn-secondary'}
           onClick={() => setFilter('all')}
           style={{
             padding: '10px 20px',
@@ -215,18 +215,18 @@ const ManagerBarrelRequests = () => {
 
       {/* Content Area */}
       {loading ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '60px 20px', 
+        <div style={{
+          textAlign: 'center',
+          padding: '60px 20px',
           color: '#64748b',
           fontSize: '16px'
         }}>
           Loading barrel requests...
         </div>
       ) : filteredRequests.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          color: '#94a3b8', 
+        <div style={{
+          textAlign: 'center',
+          color: '#94a3b8',
           padding: '60px 20px',
           background: 'white',
           borderRadius: '12px',
@@ -241,9 +241,9 @@ const ManagerBarrelRequests = () => {
           </div>
         </div>
       ) : (
-        <div style={{ 
-          background: 'white', 
-          borderRadius: '12px', 
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
           border: '1px solid #e5e7eb',
           overflow: 'hidden',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
@@ -267,9 +267,9 @@ const ManagerBarrelRequests = () => {
                       {r.user?.name || r.user?.email || 'Unknown User'}
                     </td>
                     <td style={{ padding: '20px' }}>
-                      <span style={{ 
-                        fontWeight: '700', 
-                        fontSize: '20px', 
+                      <span style={{
+                        fontWeight: '700',
+                        fontSize: '20px',
                         color: '#3b82f6',
                         background: '#eff6ff',
                         padding: '6px 14px',
@@ -283,13 +283,13 @@ const ManagerBarrelRequests = () => {
                       {r.notes || '-'}
                     </td>
                     <td style={{ padding: '20px', fontSize: '14px', color: '#64748b' }}>
-                      {new Date(r.createdAt).toLocaleDateString()}<br/>
+                      {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '-'}<br />
                       <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                        {new Date(r.createdAt).toLocaleTimeString()}
+                        {r.createdAt ? new Date(r.createdAt).toLocaleTimeString() : ''}
                       </span>
                     </td>
                     <td style={{ padding: '20px' }}>
-                      <span 
+                      <span
                         className={`badge status-${r.status?.toLowerCase() || 'pending'}`}
                         style={{
                           padding: '6px 14px',
@@ -299,14 +299,14 @@ const ManagerBarrelRequests = () => {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           display: 'inline-block',
-                          backgroundColor: 
+                          backgroundColor:
                             r.status?.toLowerCase() === 'approved' ? '#d1fae5' :
-                            r.status?.toLowerCase() === 'rejected' ? '#fee2e2' :
-                            '#fef3c7',
+                              r.status?.toLowerCase() === 'rejected' ? '#fee2e2' :
+                                '#fef3c7',
                           color:
                             r.status?.toLowerCase() === 'approved' ? '#065f46' :
-                            r.status?.toLowerCase() === 'rejected' ? '#991b1b' :
-                            '#92400e'
+                              r.status?.toLowerCase() === 'rejected' ? '#991b1b' :
+                                '#92400e'
                         }}
                       >
                         {r.status || 'Pending'}
@@ -315,12 +315,12 @@ const ManagerBarrelRequests = () => {
                     <td style={{ padding: '20px' }}>
                       {r.status?.toLowerCase() === 'pending' && (
                         <div style={{ display: 'flex', gap: '10px' }}>
-                          <button 
-                            className="btn" 
-                            style={{ 
-                              background: '#10b981', 
-                              color: 'white', 
-                              padding: '8px 16px', 
+                          <button
+                            className="btn"
+                            style={{
+                              background: '#10b981',
+                              color: 'white',
+                              padding: '8px 16px',
                               fontSize: '13px',
                               fontWeight: '600',
                               border: 'none',
@@ -334,12 +334,12 @@ const ManagerBarrelRequests = () => {
                           >
                             ✓ Approve
                           </button>
-                          <button 
-                            className="btn-secondary" 
-                            style={{ 
-                              background: '#ef4444', 
-                              color: 'white', 
-                              padding: '8px 16px', 
+                          <button
+                            className="btn-secondary"
+                            style={{
+                              background: '#ef4444',
+                              color: 'white',
+                              padding: '8px 16px',
                               fontSize: '13px',
                               fontWeight: '600',
                               border: 'none',
@@ -357,12 +357,12 @@ const ManagerBarrelRequests = () => {
                       )}
                       {r.status?.toLowerCase() === 'approved' && (
                         requestedIds.includes(r._id) ? (
-                          <button 
-                            className="btn" 
-                            style={{ 
-                              background: '#d1fae5', 
-                              color: '#065f46', 
-                              padding: '8px 16px', 
+                          <button
+                            className="btn"
+                            style={{
+                              background: '#d1fae5',
+                              color: '#065f46',
+                              padding: '8px 16px',
                               fontSize: '13px',
                               fontWeight: '600',
                               border: '1px solid #a7f3d0',
@@ -375,12 +375,12 @@ const ManagerBarrelRequests = () => {
                             ✓ Requested from Admin
                           </button>
                         ) : (
-                          <button 
-                            className="btn" 
-                            style={{ 
-                              background: '#3b82f6', 
-                              color: 'white', 
-                              padding: '8px 16px', 
+                          <button
+                            className="btn"
+                            style={{
+                              background: '#3b82f6',
+                              color: 'white',
+                              padding: '8px 16px',
                               fontSize: '13px',
                               fontWeight: '600',
                               border: 'none',

@@ -71,6 +71,7 @@ app.post('/api/staff/verify-invite', staffInviteController.verify);
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/user-management', require('./routes/userManagementRoutes'));
+app.use('/api/product-orders', require('./routes/productOrderRoutes'));
 
 // Barrel routes
 app.use('/api/barrels', require('./routes/barrelRoutes'));
@@ -98,6 +99,7 @@ app.use('/api/bills', require('./routes/billRoutes'));
 app.use('/api/invoices', require('./routes/invoiceRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
 app.use('/api/purchase-bills', require('./routes/purchaseBillRoutes'));
+app.use('/api/gst-invoices', require('./routes/gstInvoiceRoutes'));
 
 // Staff and workers
 app.use('/api/staff-invite', require('./routes/staffInviteRoutes'));

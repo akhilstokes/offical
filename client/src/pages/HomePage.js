@@ -1,11 +1,113 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import Navbar from '../components/common/Navbar';
 import './HomePage.css';
 
 const HomePage = () => {
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [darkMode, setDarkMode] = useState(false);
+    const [language, setLanguage] = useState('en');
+
+    useEffect(() => {
+        // Load saved preferences
+        const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+        const savedLanguage = localStorage.getItem('language') || 'en';
+        setDarkMode(savedDarkMode);
+        setLanguage(savedLanguage);
+        
+        if (savedDarkMode) {
+            document.body.classList.add('dark-mode');
+        }
+    }, []);
+
+    const toggleDarkMode = () => {
+        const newMode = !darkMode;
+        setDarkMode(newMode);
+        localStorage.setItem('darkMode', newMode);
+        
+        if (newMode) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+    };
+
+    const changeLanguage = (lang) => {
+        setLanguage(lang);
+        localStorage.setItem('language', lang);
+        // You can add i18n integration here
+    };
+
     return (
         <div className="homepage">
             <Navbar />
+            
+            {/* Settings Button */}
+            <button 
+                className="settings-floating-btn" 
+                onClick={() => setShowSettingsModal(true)}
+                aria-label="Settings"
+            >
+                <i className="fas fa-cog"></i>
+            </button>
+
+            {/* Settings Modal */}
+            {showSettingsModal && (
+                <div className="settings-modal-overlay" onClick={() => setShowSettingsModal(false)}>
+                    <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="settings-modal-header">
+                            <h3>Settings</h3>
+                            <button 
+                                className="close-modal-btn" 
+                                onClick={() => setShowSettingsModal(false)}
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div className="settings-modal-body">
+                            {/* Dark Mode Toggle */}
+                            <div className="setting-item">
+                                <div className="setting-icon-wrapper dark-mode-icon">
+                                    <i className="fas fa-moon"></i>
+                                </div>
+                                <div className="setting-content">
+                                    <h4>Dark Mode</h4>
+                                    <p>Switch between light and dark theme</p>
+                                </div>
+                                <label className="toggle-switch">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={darkMode}
+                                        onChange={toggleDarkMode}
+                                    />
+                                    <span className="toggle-slider"></span>
+                                </label>
+                            </div>
+
+                            {/* Language Selector */}
+                            <div className="setting-item">
+                                <div className="setting-icon-wrapper language-icon">
+                                    <i className="fas fa-globe"></i>
+                                </div>
+                                <div className="setting-content">
+                                    <h4>Language</h4>
+                                    <p>Choose your preferred language</p>
+                                </div>
+                                <select 
+                                    className="language-select"
+                                    value={language}
+                                    onChange={(e) => changeLanguage(e.target.value)}
+                                >
+                                    <option value="en">English</option>
+                                    <option value="ml">മലയാളം (Malayalam)</option>
+                                    <option value="hi">हिन्दी (Hindi)</option>
+                                    <option value="ta">தமிழ் (Tamil)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* Hero Section */}
             <section className="hero-section">

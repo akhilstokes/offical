@@ -98,6 +98,32 @@ const DeliveryAssignedSellRequests = () => {
     }
   };
 
+  const markDeliveredToLab = async (sellRequestId) => {
+    // Extract the actual ID (remove sr_ prefix if present)
+    const actualId = sellRequestId.startsWith('sr_') ? sellRequestId.substring(3) : sellRequestId;
+    
+    setBusyId(sellRequestId);
+    try {
+      const response = await fetch(`${API}/api/sell-requests/${actualId}/delivered-to-lab`, {
+        method: 'PUT',
+        headers: authHeaders()
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(`✅ Successfully delivered to lab!\n\nIntake ID: ${data.intakeId}\nThe lab will now see this in their incoming requests.`);
+        await load(); // Refresh the list
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        setError(errData.message || 'Failed to mark as delivered to lab');
+      }
+    } catch (e) {
+      setError(e?.message || 'Failed to mark as delivered to lab');
+    } finally {
+      setBusyId('');
+    }
+  };
+
   // Filter and sort rows
   const filteredRows = rows
     .filter(row => {
@@ -287,6 +313,21 @@ const DeliveryAssignedSellRequests = () => {
                       <i className="fas fa-check"></i>
                     )}
                     Complete Task
+                  </button>
+                )}
+                {(row.status === 'DELIVER_ASSIGNED' || row.status === 'COLLECTED') && row._id.startsWith('sr_') && (
+                  <button
+                    onClick={() => markDeliveredToLab(row._id)}
+                    disabled={busyId === row._id}
+                    className="btn btn-success"
+                    style={{ backgroundColor: '#10b981' }}
+                  >
+                    {busyId === row._id ? (
+                      <i className="fas fa-spinner fa-spin"></i>
+                    ) : (
+                      <i className="fas fa-flask"></i>
+                    )}
+                    Mark Delivered to Lab
                   </button>
                 )}
                 <button className="btn btn-secondary">

@@ -6,8 +6,11 @@ const invoiceController = require('../controllers/invoiceController');
 // Create invoice (Accountant can create)
 router.post('/', protect, adminManagerAccountant, invoiceController.createInvoice);
 
-// Get all invoices
-router.get('/', protect, invoiceController.getInvoices);
+// Get all invoices (Admin/Manager/Accountant)
+router.get('/', protect, adminManagerAccountant, invoiceController.getInvoices);
+
+// Get my invoices (Customer)
+router.get('/my', protect, invoiceController.getMyInvoices);
 
 // Get specific invoice
 router.get('/:invoiceId', protect, invoiceController.getInvoice);

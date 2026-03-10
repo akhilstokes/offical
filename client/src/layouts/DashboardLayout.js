@@ -84,7 +84,7 @@ const DashboardLayout = ({ children }) => {
           <div className="topbar-divider"></div>
           <div className="topbar-page">{getPageTitle()}</div>
         </div>
-        
+
         <div className="header-actions">
           <button className="support-btn" onClick={() => setShowSupportModal(true)} title="View Support Contacts">
             <i className="fas fa-headset"></i>
@@ -97,7 +97,7 @@ const DashboardLayout = ({ children }) => {
               <div className="notification-badge">{notificationCount}</div>
             )}
           </button>
-          
+
           <button className="profile-btn" onClick={() => navigate('/user/profile')}>
             <i className="fas fa-user-circle"></i>
           </button>
@@ -125,6 +125,10 @@ const DashboardLayout = ({ children }) => {
           <div className="nav-section">
             <h4 className="section-title">ACTIONS</h4>
             <div className="nav-items">
+              <NavLink to="/user/buy-products" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                <span className="nav-label">Buy Products</span>
+              </NavLink>
+
               <NavLink to="/user/sell-barrels" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <span className="nav-label">Sell Barrels</span>
               </NavLink>

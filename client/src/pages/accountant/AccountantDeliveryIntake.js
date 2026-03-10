@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FiTruck, FiPackage, FiUser, FiPhone, FiCalendar, FiRefreshCw, FiPlus } from 'react-icons/fi';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { QRCodeCanvas } from 'qrcode.react';
 import './AccountantDeliveryIntake.css';
 
 const AccountantDeliveryIntake = () => {
@@ -37,7 +40,7 @@ const AccountantDeliveryIntake = () => {
     const [approvedCompanyRate, setApprovedCompanyRate] = useState(null);
     const [loadingRate, setLoadingRate] = useState(false);
 
-    
+
 
     useEffect(() => {
         fetchDeliveries();
@@ -49,25 +52,25 @@ const AccountantDeliveryIntake = () => {
         try {
             const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
             const token = localStorage.getItem('token');
-            
+
             const response = await fetch(`${API_URL}/api/rates/latex/today`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
-                
+
                 // Check if admin rate is valid (within 24-hour window from 4 PM to 4 PM)
                 if (data.admin && data.admin.isValid && data.admin.companyRate) {
                     const companyRate = data.admin.companyRate;
                     setApprovedCompanyRate(companyRate);
-                    
+
                     // Auto-fill market rate with company rate
                     setIntakeForm(prev => ({
                         ...prev,
                         marketRate: companyRate.toString()
                     }));
-                    
+
                     console.log('✓ Auto-filled company rate:', companyRate);
                     console.log('✓ Rate valid from:', data.admin.validFrom);
                     console.log('✓ Rate valid until:', data.admin.validUntil);
@@ -96,7 +99,7 @@ const AccountantDeliveryIntake = () => {
         try {
             // Load pending samples from lab check-ins
             const labPendingSamples = JSON.parse(localStorage.getItem('accountant_pending_samples') || '[]');
-            
+
             // Transform lab data to delivery format - Auto-fill: buyer, phone, barrels, DRC
             const transformedDeliveries = labPendingSamples.map((sample, index) => {
                 // Use DRC from first barrel only (no need to check all barrels)
@@ -108,7 +111,7 @@ const AccountantDeliveryIntake = () => {
                     // Fallback to old single DRC value if exists
                     drcValue = sample.drc;
                 }
-                
+
                 return {
                     id: `lab-${index}`,
                     date: sample.receivedAt ? new Date(sample.receivedAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -132,7 +135,7 @@ const AccountantDeliveryIntake = () => {
                     notes: sample.notes
                 };
             });
-            
+
             setTimeout(() => {
                 setDeliveries(transformedDeliveries);
                 setLoading(false);
@@ -146,7 +149,7 @@ const AccountantDeliveryIntake = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        
+
         // VALIDATION: Market Rate - max 50000, positive only
         if (name === 'marketRate') {
             const rateValue = parseFloat(value);
@@ -161,7 +164,7 @@ const AccountantDeliveryIntake = () => {
                 return;
             }
         }
-        
+
         // VALIDATION: Latex Volume - positive only
         if (name === 'totalKg') {
             const volumeValue = parseFloat(value);
@@ -171,30 +174,30 @@ const AccountantDeliveryIntake = () => {
                 return;
             }
         }
-        
+
         setIntakeForm(prev => {
             const updatedForm = {
                 ...prev,
                 [name]: value
             };
-            
+
             // Auto-calculate if latex volume (totalKg) is entered and we have rate and DRC
             if (name === 'totalKg' && value && parseFloat(value) > 0) {
                 const totalKg = parseFloat(value);
                 const marketRate = parseFloat(prev.marketRate) || 0;
                 const drcPercent = parseFloat(prev.drcPercent) || 0;
-                
+
                 if (marketRate > 0 && drcPercent > 0) {
                     const dryKg = totalKg * (drcPercent / 100);
                     const perKgRate = marketRate / 100;
                     const amount = dryKg * perKgRate;
                     const barrels = parseFloat(prev.barrels) || 0;
                     const perBarrel = barrels > 0 ? amount / barrels : 0;
-                    
+
                     updatedForm.dryKg = dryKg.toFixed(2);
                     updatedForm.amount = amount.toFixed(2);
                     updatedForm.perBarrel = perBarrel.toFixed(2);
-                    
+
                     console.log('✓ Auto-calculated billing:', {
                         volume: totalKg,
                         drc: drcPercent,
@@ -204,24 +207,24 @@ const AccountantDeliveryIntake = () => {
                     });
                 }
             }
-            
+
             // Auto-calculate if market rate is changed and we have volume and DRC
             if (name === 'marketRate' && value && parseFloat(value) > 0) {
                 const marketRate = parseFloat(value);
                 const totalKg = parseFloat(prev.totalKg) || 0;
                 const drcPercent = parseFloat(prev.drcPercent) || 0;
-                
+
                 if (totalKg > 0 && drcPercent > 0) {
                     const dryKg = totalKg * (drcPercent / 100);
                     const perKgRate = marketRate / 100;
                     const amount = dryKg * perKgRate;
                     const barrels = parseFloat(prev.barrels) || 0;
                     const perBarrel = barrels > 0 ? amount / barrels : 0;
-                    
+
                     updatedForm.dryKg = dryKg.toFixed(2);
                     updatedForm.amount = amount.toFixed(2);
                     updatedForm.perBarrel = perBarrel.toFixed(2);
-                    
+
                     console.log('✓ Auto-calculated billing (rate changed):', {
                         volume: totalKg,
                         drc: drcPercent,
@@ -231,7 +234,7 @@ const AccountantDeliveryIntake = () => {
                     });
                 }
             }
-            
+
             return updatedForm;
         });
     };
@@ -249,22 +252,22 @@ const AccountantDeliveryIntake = () => {
             setTimeout(() => setError(''), 3000);
             return;
         }
-        
+
         setIntakeForm(prev => {
             const newBarrelVolumes = {
                 ...prev.barrelVolumes,
                 [barrelIndex]: parseFloat(value) || 0
             };
-            
+
             // Calculate total volume
             const totalVolume = Object.values(newBarrelVolumes).reduce((sum, vol) => sum + vol, 0);
-            
+
             const updatedForm = {
                 ...prev,
                 barrelVolumes: newBarrelVolumes,
                 totalKg: totalVolume.toString()
             };
-            
+
             // Auto-calculate if we have all required data
             if (totalVolume > 0 && prev.marketRate && parseFloat(prev.marketRate) > 0 && prev.drcPercent) {
                 const drcPercent = parseFloat(prev.drcPercent) || 0;
@@ -274,11 +277,11 @@ const AccountantDeliveryIntake = () => {
                 const amount = dryKg * perKgRate;
                 const barrels = parseFloat(prev.barrels) || 0;
                 const perBarrel = barrels > 0 ? amount / barrels : 0;
-                
+
                 updatedForm.dryKg = dryKg.toFixed(2);
                 updatedForm.amount = amount.toFixed(2);
                 updatedForm.perBarrel = perBarrel.toFixed(2);
-                
+
                 console.log('✓ Auto-calculated billing:', {
                     volume: totalVolume,
                     drc: drcPercent,
@@ -287,7 +290,7 @@ const AccountantDeliveryIntake = () => {
                     amount: amount.toFixed(2)
                 });
             }
-            
+
             return updatedForm;
         });
     };
@@ -299,7 +302,7 @@ const AccountantDeliveryIntake = () => {
             setTimeout(() => setError(''), 3000);
             return;
         }
-        
+
         if (!intakeForm.marketRate || parseFloat(intakeForm.marketRate) <= 0) {
             setError('Please enter Market Rate (₹/100KG)');
             setTimeout(() => setError(''), 3000);
@@ -349,7 +352,7 @@ const AccountantDeliveryIntake = () => {
 
             // Save bill to database
             const token = localStorage.getItem('token');
-            
+
             // Find user by phone number
             let userId = null;
             if (intakeForm.phone && intakeForm.phone !== 'N/A' && intakeForm.phone !== '-') {
@@ -362,7 +365,7 @@ const AccountantDeliveryIntake = () => {
                             }
                         }
                     );
-                    
+
                     if (userResponse.ok) {
                         const userData = await userResponse.json();
                         userId = userData.user?._id || userData.userId;
@@ -374,7 +377,7 @@ const AccountantDeliveryIntake = () => {
                     console.log('⚠️ Could not find user by phone:', err.message);
                 }
             }
-            
+
             const billData = {
                 customerName: intakeForm.buyer,
                 customerPhone: intakeForm.phone || 'N/A',
@@ -388,11 +391,11 @@ const AccountantDeliveryIntake = () => {
                 accountantNotes: intakeForm.notes || '',
                 userId: userId // Link bill to user
             };
-            
+
             console.log('🔄 Sending bill creation request...');
             console.log('API URL:', `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/bills`);
             console.log('📤 Bill data being sent:', billData);
-            
+
             const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/bills`, {
                 method: 'POST',
                 headers: {
@@ -411,7 +414,7 @@ const AccountantDeliveryIntake = () => {
                 try {
                     const errorText = await response.text();
                     console.error('❌ Server response text:', errorText);
-                    
+
                     // Try to parse as JSON
                     try {
                         const errorData = JSON.parse(errorText);
@@ -423,7 +426,7 @@ const AccountantDeliveryIntake = () => {
                 } catch (e) {
                     console.error('❌ Could not read error response:', e);
                 }
-                
+
                 throw new Error(errorMessage);
             }
 
@@ -452,7 +455,7 @@ const AccountantDeliveryIntake = () => {
 
             // Update the existing delivery row instead of adding new one
             setDeliveries(prev => prev.map(d => {
-                if (d.id === selectedBill?.id || 
+                if (d.id === selectedBill?.id ||
                     (d.sampleId && d.sampleId === displayBillData.sampleId)) {
                     return {
                         ...d,
@@ -490,7 +493,7 @@ const AccountantDeliveryIntake = () => {
             setSelectedBill(displayBillData);
             setShowBillModal(true);
             setShowAddIntakeModal(false);
-            
+
             setSuccess('Bill generated and sent to manager for verification!');
             setTimeout(() => setSuccess(''), 3000);
 
@@ -503,14 +506,14 @@ const AccountantDeliveryIntake = () => {
 
     const handleVerifyDelivery = (deliveryId) => {
         const delivery = deliveries.find(d => d.id === deliveryId);
-        
+
         // Validation: Check if required fields are filled
         if (!delivery.totalKg || delivery.totalKg <= 0) {
             setError('⚠️ Please enter Latex Volume (Liters) before verifying');
             setTimeout(() => setError(''), 4000);
             return;
         }
-        
+
         if (!delivery.marketRate || delivery.marketRate <= 0) {
             // Auto-use approved company rate if available
             if (approvedCompanyRate && approvedCompanyRate > 0) {
@@ -521,20 +524,20 @@ const AccountantDeliveryIntake = () => {
                 return;
             }
         }
-        
+
         if (!delivery.amount || delivery.amount <= 0) {
             setError('⚠️ Please click Calculate button first to compute the billing amount');
             setTimeout(() => setError(''), 4000);
             return;
         }
-        
+
         // Show bill modal for printing
         setSelectedBill(delivery);
         setShowBillModal(true);
-        
-        setDeliveries(prev => 
-            prev.map(d => 
-                d.id === deliveryId 
+
+        setDeliveries(prev =>
+            prev.map(d =>
+                d.id === deliveryId
                     ? { ...d, status: 'verified' }
                     : d
             )
@@ -572,11 +575,11 @@ const AccountantDeliveryIntake = () => {
             setLoading(true);
             setSelectedBill(delivery);
             setError(''); // Clear previous errors
-            
+
             // Fetch User Bank Details
             const token = localStorage.getItem('token');
             const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-            
+
             let user = null;
 
             // 1. Try fetching by userId if available
@@ -625,13 +628,33 @@ const AccountantDeliveryIntake = () => {
                 console.log('⚠️ No bank details found for this user');
                 setUserBankDetails(null);
             }
-            
+
             setShowPaymentModal(true);
         } catch (err) {
             console.error('❌ Error in handlePayment:', err);
             setError('Failed to load bank details: ' + err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDownloadBill = async () => {
+        try {
+            const element = document.getElementById('printable-bill');
+            if (!element) return;
+
+            const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/png');
+
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+            const margin = 10;
+            pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight - (margin * 2));
+            pdf.save(`Bill_${selectedBill?.buyer || 'Receipt'}.pdf`);
+        } catch (e) {
+            console.error('Error generating PDF:', e);
         }
     };
 
@@ -643,25 +666,28 @@ const AccountantDeliveryIntake = () => {
             setError('');
             const token = localStorage.getItem('token');
             const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-            
-            if (!selectedBill.billId) {
+
+            // Ensure we have a bill ID - if it's a new delivery, it might only have .id (which is billId)
+            const billId = selectedBill.billId || selectedBill.id || selectedBill._id;
+
+            if (!billId) {
                 throw new Error('Missing Bill ID. Please ensure the bill is correctly calculated and saved.');
             }
 
-            console.log(`💸 Processing payment for bill: ${selectedBill.billId}`);
-            
+            console.log(`💸 Processing payment for bill: ${billId}`);
+
             const response = await fetch(
-                `${API_URL}/api/bills/${selectedBill.billId}/approve-pay`,
+                `${API_URL}/api/bills/${billId}/approve-pay`,
                 {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ 
-                        managerNotes: 'Paid by Accountant',
+                    body: JSON.stringify({
+                        managerNotes: 'Paid by Accountant (Immediate)',
                         paymentMethod: selectedBill.paymentMethod || 'Bank Transfer',
-                        bankDetails: userBankDetails
+                        bankDetails: userBankDetails || {}
                     })
                 }
             );
@@ -682,15 +708,18 @@ const AccountantDeliveryIntake = () => {
             if (contentType && contentType.indexOf("application/json") !== -1) {
                 const result = await response.json();
                 console.log('✅ Payment result:', result);
-                
+
                 setSuccess(`✅ Payment processed successfully for ${selectedBill.buyer}!`);
-                setTimeout(() => setSuccess(''), 3000);
-                
-                setShowPaymentModal(false);
-                setUserBankDetails(null);
-                
-                // Refresh list
-                fetchDeliveries();
+
+                // Show success message for a bit then close
+                setTimeout(() => {
+                    setSuccess('');
+                    setShowPaymentModal(false);
+                    setUserBankDetails(null);
+                    // Refresh list to show updated status
+                    fetchDeliveries();
+                }, 2000);
+
             } else {
                 throw new Error('Invalid response from server. Expected JSON but received something else.');
             }
@@ -706,7 +735,7 @@ const AccountantDeliveryIntake = () => {
 
     // Handle inline field changes (without auto-calculation)
     const handleFieldChange = (deliveryId, field, value) => {
-        setDeliveries(prev => 
+        setDeliveries(prev =>
             prev.map(delivery => {
                 if (delivery.id === deliveryId) {
                     return { ...delivery, [field]: parseFloat(value) || 0 };
@@ -726,13 +755,13 @@ const AccountantDeliveryIntake = () => {
                     </h1>
                 </div>
                 <div className="header-right">
-                    <button 
+                    <button
                         className="add-intake-btn"
                         onClick={() => setShowAddIntakeModal(true)}
                     >
                         <FiPlus /> Add Intake
                     </button>
-                    <button 
+                    <button
                         className="refresh-btn"
                         onClick={fetchDeliveries}
                         disabled={loading}
@@ -912,7 +941,7 @@ const AccountantDeliveryIntake = () => {
                         <div className="empty-content">
                             <FiPackage className="empty-icon" />
                             <p>No pending intakes.</p>
-                            <button 
+                            <button
                                 className="add-first-intake-btn"
                                 onClick={() => setShowAddIntakeModal(true)}
                             >
@@ -929,8 +958,8 @@ const AccountantDeliveryIntake = () => {
                     <div className="intake-modal">
                         <div className="intake-modal-header">
                             <h2>Process Billing</h2>
-                            <button 
-                                className="modal-close" 
+                            <button
+                                className="modal-close"
                                 onClick={() => setShowAddIntakeModal(false)}
                             >
                                 ×
@@ -1070,10 +1099,10 @@ const AccountantDeliveryIntake = () => {
                                             backgroundColor: '#fffbeb'
                                         }}
                                     />
-                                    <small style={{ 
-                                        color: '#92400e', 
-                                        fontSize: 11, 
-                                        marginTop: 4, 
+                                    <small style={{
+                                        color: '#92400e',
+                                        fontSize: 11,
+                                        marginTop: 4,
                                         display: 'block'
                                     }}>
                                         Enter total latex volume for all {intakeForm.barrels} barrels
@@ -1082,7 +1111,7 @@ const AccountantDeliveryIntake = () => {
 
                                 <div className="form-group">
                                     <label className="form-label">
-                                        Dry Rubber (KG) 
+                                        Dry Rubber (KG)
                                         <span style={{
                                             marginLeft: '8px',
                                             fontSize: '11px',
@@ -1189,15 +1218,15 @@ const AccountantDeliveryIntake = () => {
                         </div>
 
                         <div className="intake-modal-footer">
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className="calculate-btn-modal"
                                 onClick={handleCalculate}
                             >
                                 Calculate
                             </button>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className="generate-bill-btn"
                                 onClick={handleAddIntake}
                             >
@@ -1217,145 +1246,150 @@ const AccountantDeliveryIntake = () => {
                 }}>
                     <div className="bill-modal">
                         <div className="bill-content" id="printable-bill">
-                            {/* Company Header */}
-                            <div className="bill-header">
-                                {selectedBill.companyLogoUrl && (
-                                    <div className="company-logo">
-                                        <img src={selectedBill.companyLogoUrl} alt="Company Logo" />
-                                    </div>
-                                )}
-                                <h1 className="company-name">
-                                    {selectedBill.companyName || 'HOLY FAMILY POLYMERS'}
-                                </h1>
-                                <p className="company-location">
-                                    {selectedBill.companyAddress || 'Koorppada, Kottayam'}
-                                </p>
-                                {selectedBill.companyGST && (
-                                    <p className="company-gst">GST No: {selectedBill.companyGST}</p>
-                                )}
-                                {selectedBill.companyPhone && (
-                                    <p className="company-contact">Phone: {selectedBill.companyPhone}</p>
-                                )}
-                                {selectedBill.companyEmail && (
-                                    <p className="company-contact">Email: {selectedBill.companyEmail}</p>
-                                )}
-                                <div className="bill-divider"></div>
-                            </div>
-
-                            {/* Bill Info */}
-                            <div className="bill-info-section">
-                                <div className="bill-info-row">
-                                    <div className="bill-info-item">
-                                        <span className="bill-label">Name:</span>
-                                        <span className="bill-value">{selectedBill.buyer}</span>
-                                    </div>
-                                    <div className="bill-info-item">
-                                        <span className="bill-label">Date:</span>
-                                        <span className="bill-value">{new Date(selectedBill.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                            {/* Professional Header with QR */}
+                            <div className="bill-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: '20px', borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
+                                <div className="bill-header-left" style={{ textAlign: 'left' }}>
+                                    <h1 className="company-name" style={{ fontSize: '1.8rem', fontWeight: '700', color: '#111827', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                        {selectedBill.companyName || 'HOLY FAMILY POLYMERS'}
+                                    </h1>
+                                    <p className="company-location" style={{ fontSize: '0.95rem', color: '#6b7280', margin: '4px 0' }}>
+                                        {selectedBill.companyAddress || 'Koorppada, P.O. - 686 502'}
+                                    </p>
+                                    <p className="company-gst" style={{ fontSize: '0.85rem', color: '#6b7280', margin: '2px 0' }}>GST No: {selectedBill.companyGST || '32AAHFH5388M1ZX'}</p>
+                                    <p className="company-contact" style={{ fontSize: '0.85rem', color: '#6b7280', margin: '2px 0' }}>Email: {selectedBill.companyEmail || 'info@holyfamilypolymers.com'}</p>
+                                    <p className="company-phone" style={{ fontSize: '0.85rem', color: '#6b7280', margin: '2px 0' }}>Phone: {selectedBill.companyPhone || '+91 9876543210'}</p>
+                                    <div className="bill-divider" style={{ height: '3px', background: '#3b82f6', width: '120px', margin: '16px 0' }}></div>
+                                </div>
+                                <div className="bill-header-right" style={{ textAlign: 'right' }}>
+                                    <div className="bill-qr-container">
+                                        <QRCodeCanvas
+                                            value={`BILL:${selectedBill.id || selectedBill._id}`}
+                                            size={80}
+                                            level={"H"}
+                                        />
                                     </div>
                                 </div>
-                                <div className="bill-info-row">
-                                    <div className="bill-info-item">
-                                        <span className="bill-label">Phone:</span>
-                                        <span className="bill-value">{selectedBill.phone}</span>
+                            </div>
+
+                            {/* Bill Info Grid */}
+                            <div className="bill-info-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#fafafa', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
+                                <div className="bill-info-column" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div className="bill-info-item" style={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center' }}>
+                                        <span className="bill-label" style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>Name:</span>
+                                        <span className="bill-value" style={{ color: '#111827', fontSize: '0.9rem' }}>{selectedBill.buyer}</span>
                                     </div>
-                                    <div className="bill-info-item">
-                                        <span className="bill-label">Total Barrels:</span>
-                                        <span className="bill-value">{selectedBill.barrels}</span>
+                                    <div className="bill-info-item" style={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center' }}>
+                                        <span className="bill-label" style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>Phone:</span>
+                                        <span className="bill-value" style={{ color: '#111827', fontSize: '0.9rem' }}>{selectedBill.phone}</span>
+                                    </div>
+                                </div>
+                                <div className="bill-info-column" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div className="bill-info-item" style={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center' }}>
+                                        <span className="bill-label" style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>Date:</span>
+                                        <span className="bill-value" style={{ color: '#111827', fontSize: '0.9rem' }}>{new Date(selectedBill.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                    </div>
+                                    <div className="bill-info-item" style={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center' }}>
+                                        <span className="bill-label" style={{ fontWeight: '600', color: '#374151', fontSize: '0.9rem' }}>Total Barrels:</span>
+                                        <span className="bill-value" style={{ color: '#111827', fontSize: '0.9rem' }}>{selectedBill.barrels}</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Bill Table */}
-                            <table className="bill-table">
-                                <thead>
-                                    <tr>
-                                        <th>SI No.</th>
-                                        <th>Qty (Liters)</th>
-                                        <th>DRC %</th>
-                                        <th>Company Rate (₹/100KG)</th>
-                                        <th>Total (₹)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {Array.from({ length: selectedBill.barrels }, (_, index) => (
-                                        <tr key={index}>
-                                            <td>{index + 1}</td>
-                                            <td>{(selectedBill.totalKg / selectedBill.barrels).toFixed(2)}</td>
-                                            <td>{selectedBill.drcPercent}%</td>
-                                            <td>₹{selectedBill.marketRate}</td>
-                                            <td>₹{(selectedBill.amount / selectedBill.barrels).toFixed(2)}</td>
+                            <div className="bill-table-container" style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', marginBottom: '24px' }}>
+                                <table className="bill-table" style={{ width: '100%', borderCollapse: 'collapse', background: '#ffffff' }}>
+                                    <thead style={{ background: '#f8fafc' }}>
+                                        <tr>
+                                            <th style={{ padding: '16px 20px', textAlign: 'left', fontWeight: '700', color: '#4b5563', borderBottom: '1px solid #e5e7eb', fontSize: '0.8rem', textTransform: 'uppercase' }}>SI No.</th>
+                                            <th style={{ padding: '16px 20px', textAlign: 'left', fontWeight: '700', color: '#4b5563', borderBottom: '1px solid #e5e7eb', fontSize: '0.8rem', textTransform: 'uppercase' }}>Qty (Liters)</th>
+                                            <th style={{ padding: '16px 20px', textAlign: 'left', fontWeight: '700', color: '#4b5563', borderBottom: '1px solid #e5e7eb', fontSize: '0.8rem', textTransform: 'uppercase' }}>DRC %</th>
+                                            <th style={{ padding: '16px 20px', textAlign: 'left', fontWeight: '700', color: '#4b5563', borderBottom: '1px solid #e5e7eb', fontSize: '0.8rem', textTransform: 'uppercase' }}>Company Rate (₹/100KG)</th>
+                                            <th style={{ padding: '16px 20px', textAlign: 'left', fontWeight: '700', color: '#4b5563', borderBottom: '1px solid #e5e7eb', fontSize: '0.8rem', textTransform: 'uppercase' }}>Total (₹)</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot>
-                                    <tr className="bill-total-row">
-                                        <td colSpan="4" className="bill-total-label">Total Payment Amount:</td>
-                                        <td className="bill-total-amount">₹{selectedBill.amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {Array.from({ length: selectedBill.barrels }, (_, index) => (
+                                            <tr key={index}>
+                                                <td style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', color: '#1e293b', fontSize: '0.9rem' }}>{index + 1}</td>
+                                                <td style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', color: '#1e293b', fontSize: '0.9rem' }}>{(selectedBill.totalKg / selectedBill.barrels).toFixed(2)}</td>
+                                                <td style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', color: '#1e293b', fontSize: '0.9rem' }}>{selectedBill.drcPercent}%</td>
+                                                <td style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', color: '#1e293b', fontSize: '0.9rem' }}>₹{selectedBill.marketRate}</td>
+                                                <td style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', color: '#1e293b', fontSize: '0.9rem' }}>₹{(selectedBill.amount / selectedBill.barrels).toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+                                <div style={{ background: '#f8fafc', padding: '12px 20px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                                    <span style={{ fontWeight: '700', color: '#4b5563', marginRight: '12px' }}>Total Payment Amount:</span>
+                                    <span style={{ fontWeight: '800', color: '#111827', fontSize: '1.1rem' }}>₹{selectedBill.amount?.toLocaleString('en-IN', { maximumFractionDigits: 2 }) || '0.00'}</span>
+                                </div>
+                            </div>
 
                             {/* Verification Section */}
-                            <div className="bill-verification">
+                            <div className="bill-verification" style={{ display: 'flex', justifyContent: 'space-around', marginTop: '40px', textAlign: 'center' }}>
                                 <div className="verification-box">
-                                    <p className="verification-label">Verified By:</p>
+                                    <p className="verification-label" style={{ fontWeight: '600', color: '#374151', marginBottom: '40px' }}>Verified By:</p>
                                     {selectedBill.accountantSignature ? (
                                         <>
                                             {selectedBill.accountantSignatureUrl ? (
-                                                <img 
-                                                    src={selectedBill.accountantSignatureUrl} 
-                                                    alt="Accountant Signature" 
+                                                <img
+                                                    src={selectedBill.accountantSignatureUrl}
+                                                    alt="Accountant Signature"
                                                     className="signature-image"
+                                                    style={{ maxWidth: '120px', height: 'auto', marginBottom: '8px' }}
                                                 />
                                             ) : (
-                                                <div className="signature-text">{selectedBill.accountantSignature}</div>
+                                                <div className="signature-text" style={{ fontSize: '1.2rem', fontFamily: 'cursive', color: '#1e3a8a', marginBottom: '8px' }}>{selectedBill.accountantSignature}</div>
                                             )}
                                         </>
                                     ) : (
-                                        <div className="signature-line"></div>
+                                        <div className="signature-line" style={{ borderTop: '1px solid #d1d5db', width: '150px', margin: '0 auto 8px auto' }}></div>
                                     )}
-                                    <p className="verification-sublabel">Accountant Signature</p>
+                                    <p className="verification-sublabel" style={{ fontSize: '0.75rem', color: '#6b7280' }}>Accountant Signature</p>
                                 </div>
                                 <div className="verification-box">
-                                    <p className="verification-label">Approved By:</p>
+                                    <p className="verification-label" style={{ fontWeight: '600', color: '#374151', marginBottom: '40px' }}>Approved By:</p>
                                     {selectedBill.managerSignature ? (
                                         <>
                                             {selectedBill.managerSignatureUrl ? (
-                                                <img 
-                                                    src={selectedBill.managerSignatureUrl} 
-                                                    alt="Manager Signature" 
+                                                <img
+                                                    src={selectedBill.managerSignatureUrl}
+                                                    alt="Manager Signature"
                                                     className="signature-image"
+                                                    style={{ maxWidth: '120px', height: 'auto', marginBottom: '8px' }}
                                                 />
                                             ) : (
-                                                <div className="signature-text">{selectedBill.managerSignature}</div>
+                                                <div className="signature-text" style={{ fontSize: '1.2rem', fontFamily: 'cursive', color: '#1e3a8a', marginBottom: '8px' }}>{selectedBill.managerSignature}</div>
                                             )}
                                         </>
                                     ) : (
-                                        <div className="signature-line"></div>
+                                        <div className="signature-line" style={{ borderTop: '1px solid #d1d5db', width: '150px', margin: '0 auto 8px auto' }}></div>
                                     )}
-                                    <p className="verification-sublabel">Manager Signature</p>
+                                    <p className="verification-sublabel" style={{ fontSize: '0.75rem', color: '#6b7280' }}>Manager Signature</p>
                                 </div>
                             </div>
 
                             {/* Bill Footer */}
-                            <div className="bill-footer">
-                                <p>Sample ID: {selectedBill.sampleId || 'N/A'}</p>
-                                <p>Lab Staff: {selectedBill.labStaff || 'N/A'}</p>
-                                <p className="bill-note">This is a computer-generated bill</p>
+                            <div className="bill-footer" style={{ marginTop: '40px', textAlign: 'center', borderTop: '1px solid #f3f4f6', paddingTop: '20px' }}>
+                                <p style={{ margin: '4px 0', color: '#6b7280', fontSize: '0.85rem' }}>Sample ID: {selectedBill.sampleId || 'N/A'}</p>
+                                <p style={{ margin: '4px 0', color: '#6b7280', fontSize: '0.85rem' }}>Lab Staff: {selectedBill.labStaff || 'N/A'}</p>
+                                <p className="bill-note" style={{ fontStyle: 'italic', color: '#9ca3af', fontSize: '0.8rem', marginTop: '12px' }}>This is a computer-generated bill</p>
                             </div>
                         </div>
 
                         {/* Modal Actions */}
                         <div className="bill-modal-actions no-print">
-                            <button 
+                            <button
                                 className="bill-close-btn"
                                 onClick={() => {
                                     // Add the delivery to the list when closing the bill
                                     if (selectedBill && !deliveries.find(d => d.id === selectedBill.id)) {
                                         setDeliveries(prev => [selectedBill, ...prev]);
                                     }
-                                    
+
                                     // Reset form
                                     setIntakeForm({
                                         date: new Date().toISOString().slice(0, 10),
@@ -1370,7 +1404,7 @@ const AccountantDeliveryIntake = () => {
                                         perBarrel: '',
                                         paymentMethod: 'Bank Transfer'
                                     });
-                                    
+
                                     setShowBillModal(false);
                                     setSuccess('Bill generated successfully!');
                                     setTimeout(() => setSuccess(''), 3000);
@@ -1378,12 +1412,23 @@ const AccountantDeliveryIntake = () => {
                             >
                                 Close
                             </button>
-                            <button 
-                                className="bill-print-btn"
-                                onClick={handlePrintBill}
-                            >
-                                Print Bill
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    className="bill-print-btn"
+                                    onClick={handlePrintBill}
+                                    style={{ background: '#f3f4f6', color: '#374151', padding: '10px 20px', borderRadius: '8px', border: '1px solid #d1d5db', fontWeight: '600', cursor: 'pointer' }}
+                                >
+                                    Print Bill
+                                </button>
+                                <button
+                                    className="bill-print-btn"
+                                    onClick={handleDownloadBill}
+                                    style={{ background: '#3b82f6', color: '#ffffff', padding: '10px 20px', borderRadius: '8px', border: 'none', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                >
+                                    <i className="fas fa-file-pdf" style={{ marginRight: '6px' }}></i>
+                                    Download PDF
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1418,7 +1463,7 @@ const AccountantDeliveryIntake = () => {
                             </div>
 
                             <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Beneficiary Banking Details</h3>
-                            
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: '#64748b', fontSize: '14px' }}>Account Holder:</span>
@@ -1444,7 +1489,7 @@ const AccountantDeliveryIntake = () => {
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button 
+                            <button
                                 onClick={() => setShowPaymentModal(false)}
                                 style={{
                                     flex: 1,
@@ -1459,7 +1504,7 @@ const AccountantDeliveryIntake = () => {
                             >
                                 Cancel
                             </button>
-                            <button 
+                            <button
                                 onClick={processFinalPayment}
                                 disabled={loading}
                                 style={{
@@ -1494,13 +1539,13 @@ const AccountantDeliveryIntake = () => {
                         position: 'relative'
                     }}>
                         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                            <div style={{ 
-                                width: '64px', 
-                                height: '64px', 
-                                backgroundColor: '#dcfce7', 
-                                borderRadius: '50%', 
-                                display: 'flex', 
-                                alignItems: 'center', 
+                            <div style={{
+                                width: '64px',
+                                height: '64px',
+                                backgroundColor: '#dcfce7',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
                                 justifyContent: 'center',
                                 margin: '0 auto 16px auto'
                             }}>
@@ -1548,7 +1593,7 @@ const AccountantDeliveryIntake = () => {
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button 
+                            <button
                                 onClick={() => setShowReceiptModal(false)}
                                 style={{
                                     flex: 1,
@@ -1563,7 +1608,7 @@ const AccountantDeliveryIntake = () => {
                             >
                                 Close
                             </button>
-                            <button 
+                            <button
                                 onClick={() => window.print()}
                                 style={{
                                     flex: 1,

@@ -37,6 +37,12 @@ const AccountantDashboard = () => {
       path: '/accountant/attendance'
     },
     {
+      title: 'Product Orders',
+      icon: 'fa-shopping-cart',
+      color: '#f43f5e',
+      path: '/accountant/orders'
+    },
+    {
       title: 'Salaries',
       icon: 'fa-coins',
       color: '#06b6d4',
@@ -53,7 +59,7 @@ const AccountantDashboard = () => {
 
       <div className="simple-grid">
         {quickActions.map((action, index) => (
-          <div 
+          <div
             key={index}
             className="simple-card"
             onClick={() => navigate(action.path)}

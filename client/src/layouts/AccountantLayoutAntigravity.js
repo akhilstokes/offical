@@ -102,6 +102,7 @@ const AccountantLayoutAntigravity = ({ children }) => {
         {
             section: 'Billing',
             items: [
+                { to: '/accountant/orders', icon: 'fa-box-open', label: 'Product Orders' },
                 { to: '/accountant/bill-generation', icon: 'fa-file-invoice-dollar', label: 'Bill Generation' },
                 { to: '/accountant/purchase-bills', icon: 'fa-shopping-cart', label: 'Purchase Bills' },
             ]
@@ -147,7 +148,7 @@ const AccountantLayoutAntigravity = ({ children }) => {
                                     <NavLink
                                         key={itemIndex}
                                         to={item.to}
-                                        className={({ isActive }) => 
+                                        className={({ isActive }) =>
                                             `accountant-nav-item ${isActive ? 'active' : ''}`
                                         }
                                     >

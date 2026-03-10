@@ -4,6 +4,7 @@
   "description": "\"# holyfamilyprojectt\"",
   "main": "index.js",
   "dependencies": {
+    "axios": "^1.13.6",
     "base64-js": "^1.5.1",
     "bcryptjs": "^3.0.2",
     "brotli": "^1.3.3",
@@ -47,7 +48,7 @@
     "test:server": "cd server && npm test",
     "test:client": "cd client && npm test",
     "test:all": "npm run test:server && npm run test:client && npm run test:e2e",
-    "test:comprehensive": "node test-runner.js",
+    "test:comprehensive": "playwright test --reporter=html,json && node tests/e2e/generate-comprehensive-report.js",
     "test:login": "cd client && npm test -- --testPathPattern=LoginPageComprehensive.test.js",
     "test:register": "cd client && npm test -- --testPathPattern=RegisterPageComprehensive.test.js",
     "test:staff": "cd client && npm test -- --testPathPattern=StaffFunctionalityComprehensive.test.js",
@@ -61,7 +62,6 @@
     "test:accountant-crud:headed": "playwright test tests/e2e/accountant-crud.spec.js --headed",
     "test:accountant-crud:ui": "playwright test tests/e2e/accountant-crud.spec.js --ui",
     "test:accountant-crud:report": "node tests/e2e/generate-accountant-report.js && playwright show-report",
-    "test:comprehensive": "playwright test --reporter=html,json && node tests/e2e/generate-comprehensive-report.js",
     "test:comprehensive:open": "npm run test:comprehensive && start COMPREHENSIVE_TEST_REPORT.html"
   },
   "repository": {

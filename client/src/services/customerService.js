@@ -144,20 +144,20 @@ export const getRequests = async (params = {}) => {
 export const createSellBarrelIntake = async ({ name, phone, address, barrelCount, notes, location, locationAccuracy }) => {
   const token = localStorage.getItem('token');
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  const payload = { 
-    customerName: name, 
+  const payload = {
+    customerName: name,
     customerPhone: phone,
     address: address, // Backend expects 'address', not 'customerAddress'
-    barrelCount: Number(barrelCount), 
-    notes 
+    barrelCount: Number(barrelCount),
+    notes
   };
-  
+
   // Add location data if provided
   if (location && locationAccuracy !== undefined) {
     payload.location = location;
     payload.locationAccuracy = locationAccuracy;
   }
-  
+
   const res = await axios.post(`${API}/api/delivery/barrels/intake`, payload, { headers });
   return res.data;
 };
@@ -196,7 +196,23 @@ export const getMyCompanyBarrelsCount = async () => {
     if (typeof data.count === 'number') return data.count;
     if (Array.isArray(data.records)) return data.records.length;
     return 0;
+    return 0;
   } catch {
     return 0;
   }
+};
+
+// --- Product Orders (Wholesale) ---
+export const createProductOrder = async (payload) => {
+  const token = localStorage.getItem('token');
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const res = await axios.post(`${API}/api/product-orders`, payload, { headers });
+  return res.data;
+};
+
+export const getMyProductOrders = async () => {
+  const token = localStorage.getItem('token');
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const res = await axios.get(`${API}/api/product-orders/my-orders`, { headers });
+  return Array.isArray(res.data) ? res.data : [];
 };

@@ -152,8 +152,8 @@ exports.markDeliveredToLab = async (req, res) => {
       return res.status(400).json({ message: 'Invalid request id' });
     }
 
-    // Load document
-    const doc = await SellRequest.findById(id);
+    // Load document with farmer details
+    const doc = await SellRequest.findById(id).populate('farmerId', 'name phoneNumber address');
     if (!doc) return res.status(404).json({ message: 'Request not found' });
 
     // Prevent duplicate/invalid transitions
@@ -173,11 +173,41 @@ exports.markDeliveredToLab = async (req, res) => {
       return res.status(400).json({ message: `Invalid status transition from ${doc.status}` });
     }
 
-    // Update
+    // Update sell request status
     doc.deliveredAt = new Date();
     doc.status = 'DELIVERED_TO_LAB';
     await doc.save();
-    return res.json({ success: true, request: doc });
+
+    // Create DeliveryIntake record for lab to process
+    const DeliveryIntake = require('../models/deliveryIntakeModel');
+    
+    // Calculate barrel count (default to 1 if not specified)
+    const barrelCount = doc.barrelCount || Math.ceil(doc.totalVolumeKg / 50) || 1;
+    
+    const intakeData = {
+      name: doc.farmerId?.name || doc.overrideFarmerName || 'Unknown',
+      phone: doc.farmerId?.phoneNumber || 'N/A',
+      address: doc.farmerId?.address || doc.capturedAddress || 'N/A',
+      barrelCount: barrelCount,
+      notes: doc.collectionNotes || doc.notes || '',
+      status: 'pending',
+      createdBy: userId,
+      userId: doc.farmerId?._id || doc.farmerId,
+      requestId: String(doc._id),
+      arrivalTime: new Date(),
+      location: doc.location,
+      locationAccuracy: doc.locationAccuracy
+    };
+
+    const intake = await DeliveryIntake.create(intakeData);
+    console.log('Created DeliveryIntake record:', intake._id, 'for SellRequest:', doc._id);
+
+    return res.json({ 
+      success: true, 
+      request: doc,
+      intakeId: intake._id,
+      message: 'Delivered to lab and intake request created'
+    });
   } catch (e) {
     console.error('markDeliveredToLab error:', e);
     return res.status(500).json({ message: 'Failed to update status' });

@@ -6,7 +6,11 @@ const { logAudit } = require('../services/auditService');
 // Create Invoice
 exports.createInvoice = async (req, res) => {
   try {
-    const { invoiceNumber, vendor, invoiceDate, dueDate, items, subtotal, taxAmount, totalAmount } = req.body;
+    const {
+      invoiceNumber, vendor, invoiceDate, dueDate, items,
+      subtotal, taxAmount, totalAmount,
+      vehicleNumber, vehicleType, distance, placeOfSupply
+    } = req.body;
 
     // Validate required fields
     if (!invoiceNumber || !vendor || !totalAmount) {
@@ -28,6 +32,10 @@ exports.createInvoice = async (req, res) => {
       subtotal,
       taxAmount,
       totalAmount,
+      vehicleNumber,
+      vehicleType,
+      distance,
+      placeOfSupply,
       createdBy: req.user._id
     });
 
@@ -190,9 +198,45 @@ exports.getInvoice = async (req, res) => {
       return res.status(404).json({ message: 'Invoice not found' });
     }
 
+    // Permission check: Admin/Manager/Accountant or the creator of the invoice
+    const isSpecialist = ['admin', 'manager', 'accountant'].includes(req.user.role);
+    const isCreator = invoice.createdBy._id.toString() === req.user._id.toString();
+
+    if (!isSpecialist && !isCreator) {
+      return res.status(403).json({ message: 'Access denied: You can only view your own bills' });
+    }
+
     res.json({ data: invoice });
   } catch (error) {
     console.error('Error fetching invoice:', error);
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// Get My Invoices (for customers)
+exports.getMyInvoices = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const invoices = await Invoice.find({ createdBy: req.user._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Invoice.countDocuments({ createdBy: req.user._id });
+
+    res.json({
+      data: invoices,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching my invoices:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };

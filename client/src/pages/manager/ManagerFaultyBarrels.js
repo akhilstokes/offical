@@ -69,7 +69,7 @@ function ManagerFaultyBarrels() {
                   <td>{it.damageType}</td>
                   <td>{it.lumbPercent ?? '-'}</td>
                   <td>{it.remarks || '-'}</td>
-                  <td>{new Date(it.createdAt).toLocaleString()}</td>
+                  <td>{it.createdAt ? new Date(it.createdAt).toLocaleString() : '-'}</td>
                   <td>
                     <div className="btn-group">
                       <button className="btn btn-sm" onClick={() => assign(it._id, 'lumb-removal')}>Lumb Removal</button>

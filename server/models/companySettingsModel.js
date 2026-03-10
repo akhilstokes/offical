@@ -68,6 +68,11 @@ const companySettingsSchema = new mongoose.Schema({
     default: 'M142389'
   },
   
+  stateCode: {
+    type: String,
+    default: '32'
+  },
+  
   // Logo
   logoUrl: {
     type: String,
@@ -78,6 +83,11 @@ const companySettingsSchema = new mongoose.Schema({
   bankName: {
     type: String,
     default: 'State Bank of India'
+  },
+  
+  bankBranch: {
+    type: String,
+    default: 'Kooroppada Branch'
   },
   
   accountNumber: {

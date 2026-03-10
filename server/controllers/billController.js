@@ -21,14 +21,14 @@ exports.createBill = async (req, res) => {
 
     // Validate required fields
     if (!customerName || !drcPercent || !barrelCount || !latexVolume || !marketRate) {
-      return res.status(400).json({ 
-        message: 'Missing required fields: customerName, drcPercent, barrelCount, latexVolume, marketRate' 
+      return res.status(400).json({
+        message: 'Missing required fields: customerName, drcPercent, barrelCount, latexVolume, marketRate'
       });
     }
 
     // Fetch company settings
     let companySettings = await CompanySettings.findOne();
-    
+
     // If no company settings exist, create default
     if (!companySettings) {
       companySettings = await CompanySettings.create({
@@ -46,62 +46,84 @@ exports.createBill = async (req, res) => {
     const totalAmount = dryRubber * perKgRate;
     const perBarrelAmount = totalAmount / parseInt(barrelCount);
 
-    // Generate bill number
+    // Generate bill number with retry for race-condition safety
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
-    
-    // Find the last bill number for this month
-    const lastBill = await Bill.findOne({
-      billNumber: new RegExp(`^BILL-${year}${month}-`)
-    }).sort({ billNumber: -1 });
-    
-    let sequence = 1;
-    if (lastBill) {
-      const lastSequence = parseInt(lastBill.billNumber.split('-')[2]);
-      sequence = lastSequence + 1;
-    }
-    
-    const billNumber = `BILL-${year}${month}-${String(sequence).padStart(4, '0')}`;
 
-    // Create bill with company information snapshot
-    const bill = await Bill.create({
-      // Company Information (snapshot)
-      companyName: companySettings.companyName,
-      companyAddress: companySettings.address,
-      companyGST: companySettings.gstNumber,
-      companyPhone: companySettings.phone,
-      companyEmail: companySettings.email,
-      companyLogoUrl: companySettings.logoUrl,
-      
-      // Bill details
-      billNumber,
-      customerName,
-      customerPhone,
-      sampleId,
-      labStaff,
-      drcPercent: parseFloat(drcPercent),
-      barrelCount: parseInt(barrelCount),
-      latexVolume: parseFloat(latexVolume),
-      latexWeight,
-      dryRubber,
-      marketRate: parseFloat(marketRate),
-      perKgRate,
-      totalAmount,
-      perBarrelAmount,
-      createdBy: req.user._id,
-      accountantNotes,
-      userId,
-      status: 'pending',
-      // Auto-add accountant signature
-      accountantSignature: req.user.name || req.user.email,
-      accountantSignatureUrl: req.user.signatureUrl || null
-    });
+    let bill = null;
+    let retries = 3;
+
+    while (retries > 0) {
+      try {
+        // Find the last bill number for this month
+        const lastBill = await Bill.findOne({
+          billNumber: new RegExp(`^BILL-${year}${month}-`)
+        }).sort({ billNumber: -1 });
+
+        let sequence = 1;
+        if (lastBill) {
+          const lastSequence = parseInt(lastBill.billNumber.split('-')[2]);
+          sequence = lastSequence + 1;
+        }
+
+        const billNumber = `BILL-${year}${month}-${String(sequence).padStart(4, '0')}`;
+
+        // Create bill with company information snapshot
+        bill = await Bill.create({
+          // Company Information (snapshot)
+          companyName: companySettings.companyName,
+          companyAddress: companySettings.address,
+          companyGST: companySettings.gstNumber,
+          companyPhone: companySettings.phone,
+          companyEmail: companySettings.email,
+          companyLogoUrl: companySettings.logoUrl,
+
+          // Bill details
+          billNumber,
+          customerName,
+          customerPhone,
+          sampleId,
+          labStaff,
+          drcPercent: parseFloat(drcPercent),
+          barrelCount: parseInt(barrelCount),
+          latexVolume: parseFloat(latexVolume),
+          latexWeight,
+          dryRubber,
+          marketRate: parseFloat(marketRate),
+          perKgRate,
+          totalAmount,
+          perBarrelAmount,
+          createdBy: req.user._id,
+          accountantNotes,
+          userId,
+          status: 'calculated', // Bill is calculated by accountant, ready for manager verification
+          // Auto-add accountant signature
+          accountantSignature: req.user.name || req.user.email,
+          accountantSignatureUrl: req.user.signatureUrl || null
+        });
+
+        console.log(`✅ Bill ${billNumber} created successfully for ${customerName}`);
+        break; // Success, exit retry loop
+      } catch (createError) {
+        // If duplicate key error on billNumber, retry with next sequence
+        if (createError.code === 11000 && createError.keyPattern?.billNumber) {
+          retries--;
+          console.warn(`⚠️ Duplicate bill number, retrying... (${retries} attempts left)`);
+          continue;
+        }
+        throw createError; // Re-throw if it's a different error
+      }
+    }
+
+    if (!bill) {
+      return res.status(500).json({ message: 'Failed to generate unique bill number. Please try again.' });
+    }
 
     // Send notification to all managers
     try {
       const managers = await User.find({ role: 'manager' });
-      
+
       const notifications = managers.map(manager => ({
         userId: manager._id,
         role: 'manager',
@@ -134,9 +156,9 @@ exports.createBill = async (req, res) => {
     });
   } catch (error) {
     console.error('Create bill error:', error);
-    res.status(500).json({ 
-      message: 'Failed to create bill', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to create bill',
+      error: error.message
     });
   }
 };
@@ -145,7 +167,7 @@ exports.createBill = async (req, res) => {
 exports.getAccountantBills = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    
+
     const query = { createdBy: req.user._id };
     if (status) query.status = status;
 
@@ -167,9 +189,9 @@ exports.getAccountantBills = async (req, res) => {
     });
   } catch (error) {
     console.error('Get accountant bills error:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch bills', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to fetch bills',
+      error: error.message
     });
   }
 };
@@ -179,13 +201,13 @@ exports.getManagerPendingBills = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
 
-    const bills = await Bill.find({ status: 'pending' })
+    const bills = await Bill.find({ status: { $in: ['pending', 'calculated'] } })
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit));
 
-    const total = await Bill.countDocuments({ status: 'pending' });
+    const total = await Bill.countDocuments({ status: { $in: ['pending', 'calculated'] } });
 
     res.json({
       success: true,
@@ -196,9 +218,9 @@ exports.getManagerPendingBills = async (req, res) => {
     });
   } catch (error) {
     console.error('Get manager pending bills error:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch pending bills', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to fetch pending bills',
+      error: error.message
     });
   }
 };
@@ -207,7 +229,7 @@ exports.getManagerPendingBills = async (req, res) => {
 exports.getManagerAllBills = async (req, res) => {
   try {
     const { page = 1, limit = 20, status } = req.query;
-    
+
     const query = {};
     if (status && status !== 'all') {
       query.status = status;
@@ -232,9 +254,9 @@ exports.getManagerAllBills = async (req, res) => {
     });
   } catch (error) {
     console.error('Get manager all bills error:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch bills', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to fetch bills',
+      error: error.message
     });
   }
 };
@@ -246,14 +268,14 @@ exports.verifyBill = async (req, res) => {
     const { managerNotes } = req.body;
 
     const bill = await Bill.findById(id);
-    
+
     if (!bill) {
       return res.status(404).json({ message: 'Bill not found' });
     }
 
     if (bill.status !== 'pending') {
-      return res.status(400).json({ 
-        message: 'Bill is not in pending status' 
+      return res.status(400).json({
+        message: 'Bill is not in pending status'
       });
     }
 
@@ -261,7 +283,7 @@ exports.verifyBill = async (req, res) => {
     bill.verifiedBy = req.user._id;
     bill.verifiedAt = new Date();
     if (managerNotes) bill.managerNotes = managerNotes;
-    
+
     // Auto-add manager signature
     bill.managerSignature = req.user.name || req.user.email;
     bill.managerSignatureUrl = req.user.signatureUrl || null;
@@ -279,9 +301,9 @@ exports.verifyBill = async (req, res) => {
     });
   } catch (error) {
     console.error('Verify bill error:', error);
-    res.status(500).json({ 
-      message: 'Failed to verify bill', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to verify bill',
+      error: error.message
     });
   }
 };
@@ -293,20 +315,20 @@ exports.rejectBill = async (req, res) => {
     const { rejectionReason } = req.body;
 
     if (!rejectionReason) {
-      return res.status(400).json({ 
-        message: 'Rejection reason is required' 
+      return res.status(400).json({
+        message: 'Rejection reason is required'
       });
     }
 
     const bill = await Bill.findById(id);
-    
+
     if (!bill) {
       return res.status(404).json({ message: 'Bill not found' });
     }
 
     if (bill.status !== 'pending') {
-      return res.status(400).json({ 
-        message: 'Bill is not in pending status' 
+      return res.status(400).json({
+        message: 'Bill is not in pending status'
       });
     }
 
@@ -328,9 +350,9 @@ exports.rejectBill = async (req, res) => {
     });
   } catch (error) {
     console.error('Reject bill error:', error);
-    res.status(500).json({ 
-      message: 'Failed to reject bill', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to reject bill',
+      error: error.message
     });
   }
 };
@@ -339,12 +361,12 @@ exports.rejectBill = async (req, res) => {
 exports.getUserBills = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    
-    const query = { 
+
+    const query = {
       userId: req.user._id,
       status: { $in: ['manager_verified', 'approved', 'paid'] }
     };
-    
+
     if (status) query.status = status;
 
     const bills = await Bill.find(query)
@@ -365,9 +387,9 @@ exports.getUserBills = async (req, res) => {
     });
   } catch (error) {
     console.error('Get user bills error:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch bills', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to fetch bills',
+      error: error.message
     });
   }
 };
@@ -393,9 +415,9 @@ exports.getBillById = async (req, res) => {
     });
   } catch (error) {
     console.error('Get bill by ID error:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch bill', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to fetch bill',
+      error: error.message
     });
   }
 };
@@ -404,7 +426,7 @@ exports.getBillById = async (req, res) => {
 exports.getAllBills = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    
+
     const query = {};
     if (status) query.status = status;
 
@@ -428,9 +450,9 @@ exports.getAllBills = async (req, res) => {
     });
   } catch (error) {
     console.error('Get all bills error:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch bills', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to fetch bills',
+      error: error.message
     });
   }
 };
@@ -442,14 +464,14 @@ exports.approveAndPayBill = async (req, res) => {
     const { managerNotes, paymentMethod, paymentReference, bankDetails } = req.body;
 
     const bill = await Bill.findById(id);
-    
+
     if (!bill) {
       return res.status(404).json({ message: 'Bill not found' });
     }
 
-    // Manager/Accountant can approve from 'pending' or 'manager_verified' or 'calculated'
+    // Manager/Accountant can approve from 'pending', 'calculated', or 'manager_verified'
     if (!['pending', 'manager_verified', 'calculated'].includes(bill.status)) {
-      // Allow if it's already calculated but just status is different
+      return res.status(400).json({ message: `Cannot approve a bill with status '${bill.status}'` });
     }
 
     bill.status = 'paid';
@@ -458,7 +480,7 @@ exports.approveAndPayBill = async (req, res) => {
     bill.paymentDate = new Date();
     bill.paymentMethod = paymentMethod || 'Bank Transfer';
     bill.paymentReference = paymentReference || `PAY-${Date.now()}`;
-    
+
     // Snapshot bank details if provided, or fetch from linked user if available
     if (bankDetails) {
       bill.paymentBankName = bankDetails.bankName || bankDetails.paymentBankName;
@@ -478,7 +500,7 @@ exports.approveAndPayBill = async (req, res) => {
         console.warn('⚠️ Could not fetch user bank details for snapshot:', err.message);
       }
     }
-    
+
     if (managerNotes) bill.managerNotes = managerNotes;
 
     await bill.save();
@@ -496,9 +518,9 @@ exports.approveAndPayBill = async (req, res) => {
     });
   } catch (error) {
     console.error('Approve and pay bill error:', error);
-    res.status(500).json({ 
-      message: 'Failed to approve and pay bill', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to approve and pay bill',
+      error: error.message
     });
   }
 };

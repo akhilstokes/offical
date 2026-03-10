@@ -1,0 +1,23 @@
+/* Reuse styles from AccountantInvoiceView but with user-friendly tweaks */
+@import '../accountant/AccountantInvoiceView.css';
+
+.user-view .paper-header h1 {
+    color: #4f46e5;
+    /* Use a more "user" friendly primary color */
+}
+
+.user-view .ctrl-btn.back {
+    background: #4f46e5;
+    color: white;
+}
+
+.user-view .ctrl-btn.back:hover {
+    background: #4338ca;
+}
+
+@media print {
+    .user-view .invoice-paper {
+        box-shadow: none !important;
+        border: none !important;
+    }
+}

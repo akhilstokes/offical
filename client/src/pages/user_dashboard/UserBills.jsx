@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { QRCodeCanvas } from 'qrcode.react';
 import './userDashboardTheme.css';
 
 const UserBills = () => {
@@ -6,40 +9,50 @@ const UserBills = () => {
   const [loading, setLoading] = useState(true);
   const [selectedBill, setSelectedBill] = useState(null);
   const [showBillModal, setShowBillModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('sales'); // 'sales', 'purchases', or 'gst-invoices'
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const pageSize = 10;
 
   useEffect(() => {
     loadBills();
-  }, [page]);
+  }, [page, activeTab]);
 
   const loadBills = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      console.log('🔐 Token:', token ? 'Present' : 'Missing');
-      
-      const apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/bills/user/my-bills?page=${page}&limit=${pageSize}`;
-      console.log('📡 Fetching bills from:', apiUrl);
-      
+
+      let apiUrl;
+      if (activeTab === 'sales') {
+        apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/bills/user/my-bills?page=${page}&limit=${pageSize}`;
+      } else if (activeTab === 'purchases') {
+        apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/invoices/my?page=${page}&limit=${pageSize}`;
+      } else if (activeTab === 'gst-invoices') {
+        apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/gst-invoices/user/my-invoices?page=${page}&limit=${pageSize}`;
+      }
+
       const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      console.log('📊 Response status:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Bills received:', data.bills?.length || 0);
-        console.log('📋 Bills data:', data);
-        setBills(data.bills || []);
-        setTotal(data.total || 0);
+        if (activeTab === 'sales') {
+          setBills(data.bills || []);
+          setTotal(data.total || 0);
+        } else if (activeTab === 'purchases') {
+          // Invoice API returns { success, invoices, count } or just an array
+          const items = data.invoices || (Array.isArray(data) ? data : []);
+          setBills(items);
+          setTotal(data.count || items.length);
+        } else if (activeTab === 'gst-invoices') {
+          setBills(data.invoices || []);
+          setTotal(data.count || 0);
+        }
       } else {
-        const errorData = await response.text();
-        console.error('❌ API Error:', response.status, errorData);
         setBills([]);
         setTotal(0);
       }
@@ -52,8 +65,38 @@ const UserBills = () => {
     }
   };
 
-  const handlePrintBill = () => {
-    window.print();
+  const handlePrintBill = async () => {
+    try {
+      const element = document.getElementById('printable-bill');
+      if (!element) return;
+
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      // Calculate top margin to center if preferred, or just 0
+      const margin = 10;
+      pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight - (margin * 2));
+      pdf.save(`Bill_${selectedBill?.billNumber || selectedBill?.invoiceNumber || 'Receipt'}.pdf`);
+    } catch (e) {
+      console.error('Error generating PDF:', e);
+    }
+  };
+
+  const downloadGSTInvoicePDF = async (invoiceId) => {
+    try {
+      // Use user-accessible route for downloading GST invoices
+      const printWindow = window.open(`/user/invoice/print/${invoiceId}?download=true`, '_blank');
+      if (printWindow) {
+        printWindow.focus();
+      }
+    } catch (error) {
+      console.error('Error downloading GST invoice:', error);
+      alert('Failed to download GST invoice PDF');
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -62,11 +105,12 @@ const UserBills = () => {
       'approved': { bg: '#dbeafe', color: '#1e40af', text: 'Approved' },
       'paid': { bg: '#d1fae5', color: '#065f46', text: 'Paid' },
       'pending': { bg: '#fef3c7', color: '#92400e', text: 'Pending' },
-      'rejected': { bg: '#fee2e2', color: '#991b1b', text: 'Rejected' }
+      'rejected': { bg: '#fee2e2', color: '#991b1b', text: 'Rejected' },
+      'delivered': { bg: '#d1fae5', color: '#065f46', text: 'Delivered' }
     };
 
-    const config = statusConfig[status] || statusConfig['pending'];
-    
+    const config = statusConfig[status.toLowerCase()] || statusConfig['pending'];
+
     return (
       <span style={{
         display: 'inline-block',
@@ -85,30 +129,90 @@ const UserBills = () => {
   return (
     <div className="transactions-page" style={{ paddingLeft: '20px', paddingRight: '20px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header Section */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 0.5rem 0' }}>
-          <i className="fas fa-file-invoice-dollar" style={{ color: '#8b5cf6' }}></i>
-          Bills
-        </h1>
-        <p style={{ color: '#64748b', margin: 0 }}>
-          View bills verified by manager
-        </p>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 0.5rem 0' }}>
+            <i className="fas fa-file-invoice-dollar" style={{ color: '#8b5cf6' }}></i>
+            Financial Documents
+          </h1>
+          <p style={{ color: '#64748b', margin: 0 }}>
+            {activeTab === 'sales' ? 'View bills from your rubber sales' : 
+             activeTab === 'purchases' ? 'View invoices from your product purchases' :
+             'View GST invoices and download PDFs'}
+          </p>
+        </div>
+
+        {/* Tab Switcher */}
+        <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', gap: '4px' }}>
+          <button
+            onClick={() => { setActiveTab('sales'); setPage(1); }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'sales' ? 'white' : 'transparent',
+              color: activeTab === 'sales' ? '#4f46e5' : '#64748b',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: activeTab === 'sales' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            Rubber Sales
+          </button>
+          <button
+            onClick={() => { setActiveTab('purchases'); setPage(1); }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'purchases' ? 'white' : 'transparent',
+              color: activeTab === 'purchases' ? '#4f46e5' : '#64748b',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: activeTab === 'purchases' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            Product Purchases
+          </button>
+          <button
+            onClick={() => { setActiveTab('gst-invoices'); setPage(1); }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'gst-invoices' ? 'white' : 'transparent',
+              color: activeTab === 'gst-invoices' ? '#4f46e5' : '#64748b',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: activeTab === 'gst-invoices' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            GST Invoices
+          </button>
+        </div>
       </div>
 
       {/* Content Section */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '4rem' }}>
           <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: '#8b5cf6' }}></i>
-          <p style={{ marginTop: '1rem', color: '#64748b' }}>Loading bills...</p>
+          <p style={{ marginTop: '1rem', color: '#64748b' }}>Loading {activeTab === 'sales' ? 'bills' : activeTab === 'purchases' ? 'invoices' : 'GST invoices'}...</p>
         </div>
       ) : bills.length === 0 ? (
         <div className="dash-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <div style={{ width: '64px', height: '64px', background: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
-            <i className="fas fa-file-invoice" style={{ fontSize: '1.75rem', color: '#94a3b8' }}></i>
+            <i className={activeTab === 'sales' ? "fas fa-leaf" : activeTab === 'purchases' ? "fas fa-shopping-bag" : "fas fa-file-invoice-dollar"} style={{ fontSize: '1.75rem', color: '#94a3b8' }}></i>
           </div>
-          <h3 style={{ fontSize: '1.25rem', color: '#1e293b', margin: '0 0 0.5rem 0' }}>No Bills Found</h3>
+          <h3 style={{ fontSize: '1.25rem', color: '#1e293b', margin: '0 0 0.5rem 0' }}>No {activeTab === 'sales' ? 'Sales' : activeTab === 'purchases' ? 'Orders' : 'Invoices'} Found</h3>
           <p style={{ color: '#64748b', maxWidth: '400px', margin: '0 auto' }}>
-            You don't have any bills yet. Bills will appear here once they are verified by the manager.
+            {activeTab === 'sales'
+              ? "You don't have any rubber sale bills yet."
+              : activeTab === 'purchases' 
+              ? "You haven't placed any product orders yet."
+              : "No GST invoices found for your account."}
           </p>
         </div>
       ) : (
@@ -116,31 +220,53 @@ const UserBills = () => {
           <div className="table-wrap">
             <table className="table">
               <thead>
-                <tr>
-                  <th>Bill No.</th>
-                  <th>Date</th>
-                  <th>Barrels</th>
-                  <th>DRC %</th>
-                  <th>Amount (₹)</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
-                </tr>
+                {activeTab === 'sales' ? (
+                  <tr>
+                    <th>Bill No.</th>
+                    <th>Date</th>
+                    <th>Barrels</th>
+                    <th>DRC %</th>
+                    <th>Amount (₹)</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                ) : activeTab === 'purchases' ? (
+                  <tr>
+                    <th>Invoice No.</th>
+                    <th>Date</th>
+                    <th>Items</th>
+                    <th>Total (₹)</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <th>Invoice No.</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Taxable (₹)</th>
+                    <th>Total (₹)</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                )}
               </thead>
               <tbody>
-                {bills.map(bill => (
-                  <tr key={bill._id}>
+                {bills.map(item => (
+                  <tr key={item._id}>
                     <td>
                       <span style={{
                         display: 'inline-block',
                         padding: '4px 10px',
-                        background: '#f3e8ff',
-                        color: '#7c3aed',
+                        background: activeTab === 'sales' ? '#f3e8ff' : activeTab === 'purchases' ? '#e0f2fe' : '#fef3c7',
+                        color: activeTab === 'sales' ? '#7c3aed' : activeTab === 'purchases' ? '#0369a1' : '#92400e',
                         borderRadius: '6px',
                         fontFamily: 'monospace',
                         fontSize: '12px',
                         fontWeight: '600'
                       }}>
-                        {bill.billNumber}
+                        {activeTab === 'sales' ? item.billNumber : item.invoiceNumber}
                       </span>
                     </td>
                     <td>
@@ -149,36 +275,80 @@ const UserBills = () => {
                           <i className="fas fa-calendar-day" style={{ fontSize: '0.8rem' }}></i>
                         </div>
                         <span style={{ fontWeight: '500' }}>
-                          {new Date(bill.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {new Date(item.createdAt || item.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                       </div>
                     </td>
-                    <td>
-                      <span style={{ fontWeight: '600' }}>{bill.barrelCount}</span>
-                    </td>
-                    <td>
-                      <span>{bill.drcPercent}%</span>
-                    </td>
+                    {activeTab === 'sales' ? (
+                      <>
+                        <td><span style={{ fontWeight: '600' }}>{item.barrelCount}</span></td>
+                        <td><span>{item.drcPercent}%</span></td>
+                      </>
+                    ) : activeTab === 'purchases' ? (
+                      <td>
+                        <span style={{ fontWeight: '500', fontSize: '14px' }}>
+                          {item.items?.length || 0} Item(s)
+                        </span>
+                      </td>
+                    ) : (
+                      <>
+                        <td>
+                          <span style={{ fontWeight: '500', fontSize: '14px' }}>
+                            {item.customerName}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: '500', fontSize: '14px' }}>
+                            {item.items?.length || 0} Item(s)
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ color: '#dc2626', fontWeight: '600', fontSize: '14px' }}>
+                            ₹{item.taxableValue?.toLocaleString('en-IN', { maximumFractionDigits: 2 }) || '0.00'}
+                          </span>
+                        </td>
+                      </>
+                    )}
                     <td>
                       <span style={{ color: '#16a34a', fontWeight: '700', fontSize: '15px' }}>
-                        ₹{bill.totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        ₹{(activeTab === 'gst-invoices' ? item.grandTotal : item.totalAmount)?.toLocaleString('en-IN', { maximumFractionDigits: 2 }) || '0.00'}
                       </span>
                     </td>
                     <td>
-                      {getStatusBadge(bill.status)}
+                      {getStatusBadge(item.status)}
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button 
-                        className="btn-secondary" 
-                        onClick={() => {
-                          setSelectedBill(bill);
-                          setShowBillModal(true);
-                        }}
-                        style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
-                      >
-                        <i className="fas fa-file-pdf" style={{ marginRight: '6px', color: '#ef4444' }}></i>
-                        Download as PDF
-                      </button>
+                      {activeTab === 'sales' ? (
+                        <button
+                          className="btn-secondary"
+                          onClick={() => {
+                            setSelectedBill(item);
+                            setShowBillModal(true);
+                          }}
+                          style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                        >
+                          <i className="fas fa-file-pdf" style={{ marginRight: '6px', color: '#ef4444' }}></i>
+                          Download as PDF
+                        </button>
+                      ) : activeTab === 'purchases' ? (
+                        <button
+                          className="btn-secondary"
+                          onClick={() => window.open(`/user/invoices/${item._id}`, '_blank')}
+                          style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap', color: '#0284c7' }}
+                        >
+                          <i className="fas fa-eye" style={{ marginRight: '6px' }}></i>
+                          View Invoice
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-secondary"
+                          onClick={() => downloadGSTInvoicePDF(item._id)}
+                          style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap', color: '#dc2626' }}
+                        >
+                          <i className="fas fa-file-pdf" style={{ marginRight: '6px' }}></i>
+                          Download PDF
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -215,125 +385,121 @@ const UserBills = () => {
 
       {/* Bill Modal */}
       {showBillModal && selectedBill && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
+        <div className="modal-overlay" onClick={(e) => {
+          if (e.target.className === 'modal-overlay') setShowBillModal(false);
         }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '900px',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
-          }}>
-            <div style={{ padding: '40px' }} id="printable-bill">
-              {/* Company Header */}
-              <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#1a1a1a', margin: '0 0 8px 0', letterSpacing: '1px' }}>
-                  HOLY FAMILY POLYMERS
-                </h1>
-                <p style={{ fontSize: '16px', color: '#666', margin: '0 0 15px 0' }}>
-                  Koorppada, Kottayam
-                </p>
-                <div style={{ height: '3px', background: 'linear-gradient(to right, #4f46e5, #7c3aed)', margin: '15px auto', width: '200px' }}></div>
+          <div className="bill-modal">
+            <div className="bill-content" id="printable-bill">
+              {/* Professional Header with QR */}
+              <div className="bill-header">
+                <div className="bill-header-left">
+                  <h1 className="company-name">HOLY FAMILY POLYMERS</h1>
+                  <p className="company-location">Koorppada, P.O. - 686 502</p>
+                  <p className="company-gst">GST No: 32AAHFH5388M1ZX</p>
+                  <p className="company-contact">Email: info@holyfamilypolymers.com</p>
+                  <p className="company-phone">Phone: +91 9876543210</p>
+                  <div className="bill-divider"></div>
+                </div>
+                <div className="bill-header-right">
+                  <div className="bill-qr-container">
+                    <QRCodeCanvas
+                      value={`BILL:${selectedBill.billNumber || selectedBill.invoiceNumber || selectedBill._id}`}
+                      size={80}
+                      level={"H"}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Bill Info */}
-              <div style={{ marginBottom: '30px', padding: '20px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <span style={{ fontWeight: '600', color: '#374151' }}>Bill No:</span>
-                    <span style={{ color: '#1f2937', fontWeight: '500' }}>{selectedBill.billNumber}</span>
+              {/* Bill Info Grid */}
+              <div className="bill-info-section">
+                <div className="bill-info-column">
+                  <div className="bill-info-item">
+                    <span className="bill-label">Name:</span>
+                    <span className="bill-value">{selectedBill.customerName || selectedBill.buyer || 'N/A'}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <span style={{ fontWeight: '600', color: '#374151' }}>Date:</span>
-                    <span style={{ color: '#1f2937', fontWeight: '500' }}>
-                      {new Date(selectedBill.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
-                    </span>
+                  <div className="bill-info-item">
+                    <span className="bill-label">Phone:</span>
+                    <span className="bill-value">{selectedBill.customerPhone || selectedBill.phone || 'N/A'}</span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <span style={{ fontWeight: '600', color: '#374151' }}>Customer:</span>
-                    <span style={{ color: '#1f2937', fontWeight: '500' }}>{selectedBill.customerName}</span>
+                <div className="bill-info-column">
+                  <div className="bill-info-item">
+                    <span className="bill-label">Date:</span>
+                    <span className="bill-value">{new Date(selectedBill.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <span style={{ fontWeight: '600', color: '#374151' }}>Phone:</span>
-                    <span style={{ color: '#1f2937', fontWeight: '500' }}>{selectedBill.customerPhone}</span>
+                  <div className="bill-info-item">
+                    <span className="bill-label">Total Barrels:</span>
+                    <span className="bill-value">{selectedBill.barrelCount || selectedBill.barrels || 'N/A'}</span>
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <span style={{ fontWeight: '600', color: '#374151' }}>Total Barrels:</span>
-                  <span style={{ color: '#1f2937', fontWeight: '500' }}>{selectedBill.barrelCount}</span>
                 </div>
               </div>
 
               {/* Bill Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px', border: '2px solid #e5e7eb' }}>
-                <thead style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', color: 'white' }}>
-                  <tr>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>SI No.</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>Qty (Liters)</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>DRC %</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>Rate (₹/100KG)</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>Total (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: selectedBill.barrelCount }, (_, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '12px', color: '#374151', fontSize: '14px' }}>{index + 1}</td>
-                      <td style={{ padding: '12px', color: '#374151', fontSize: '14px' }}>
-                        {(selectedBill.latexVolume / selectedBill.barrelCount).toFixed(2)}
-                      </td>
-                      <td style={{ padding: '12px', color: '#374151', fontSize: '14px' }}>{selectedBill.drcPercent}%</td>
-                      <td style={{ padding: '12px', color: '#374151', fontSize: '14px' }}>₹{selectedBill.marketRate}</td>
-                      <td style={{ padding: '12px', color: '#374151', fontSize: '14px' }}>
-                        ₹{selectedBill.perBarrelAmount.toFixed(2)}
-                      </td>
+              <div className="bill-table-container">
+                <table className="bill-table">
+                  <thead>
+                    <tr>
+                      <th>SI No.</th>
+                      <th>Qty (Liters)</th>
+                      <th>DRC %</th>
+                      <th>Company Rate (₹/100KG)</th>
+                      <th>Total (₹)</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot style={{ background: '#f3f4f6', borderTop: '3px solid #4f46e5' }}>
-                  <tr>
-                    <td colSpan="4" style={{ padding: '16px 12px', fontWeight: '700', fontSize: '16px', textAlign: 'right', color: '#1f2937' }}>
-                      Total Payment Amount:
-                    </td>
-                    <td style={{ padding: '16px 12px', fontWeight: '700', fontSize: '18px', color: '#059669' }}>
-                      ₹{selectedBill.totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: selectedBill.barrelCount || 1 }, (_, index) => (
+                      <tr key={index}>
+                        <td>{index + 1}</td>
+                        <td>{((selectedBill.latexVolume || 0) / (selectedBill.barrelCount || 1)).toFixed(2)}</td>
+                        <td>{selectedBill.drcPercent}%</td>
+                        <td>₹{selectedBill.marketRate || 0}</td>
+                        <td>₹{((selectedBill.totalAmount || 0) / (selectedBill.barrelCount || 1)).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-              {/* Footer */}
-              <div style={{ textAlign: 'center', paddingTop: '20px', borderTop: '2px solid #e5e7eb', color: '#6b7280', fontSize: '13px' }}>
-                <p style={{ margin: '5px 0' }}>Thank you for your business!</p>
-                <p style={{ fontStyle: 'italic', color: '#9ca3af', marginTop: '15px' }}>This is a computer-generated bill</p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px 20px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                  <span style={{ fontWeight: '700', color: '#4b5563', marginRight: '12px' }}>Total Payment Amount:</span>
+                  <span style={{ fontWeight: '800', color: '#111827', fontSize: '1.1rem' }}>₹{(selectedBill.totalAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              {/* Verification Section */}
+              <div className="bill-verification" style={{ display: 'flex', justifyContent: 'space-around', marginTop: '40px', textAlign: 'center' }}>
+                <div className="verification-box">
+                  <p className="verification-label" style={{ fontWeight: '600', color: '#374151', marginBottom: '40px' }}>Verified By:</p>
+                  <div className="signature-line" style={{ borderTop: '1px solid #d1d5db', width: '150px', margin: '0 auto 8px auto' }}></div>
+                  <p className="verification-sublabel" style={{ fontSize: '0.75rem', color: '#6b7280' }}>Accountant Signature</p>
+                </div>
+                <div className="verification-box">
+                  <p className="verification-label" style={{ fontWeight: '600', color: '#374151', marginBottom: '40px' }}>Approved By:</p>
+                  <div className="signature-line" style={{ borderTop: '1px solid #d1d5db', width: '150px', margin: '0 auto 8px auto' }}></div>
+                  <p className="verification-sublabel" style={{ fontSize: '0.75rem', color: '#6b7280' }}>Manager Signature</p>
+                </div>
+              </div>
+
+              {/* Bill Footer */}
+              <div className="bill-footer" style={{ marginTop: '40px', textAlign: 'center', borderTop: '1px solid #f3f4f6', paddingTop: '20px' }}>
+                <p style={{ margin: '4px 0', color: '#6b7280', fontSize: '0.85rem' }}>Sample ID: {selectedBill.sampleId || 'N/A'}</p>
+                <p style={{ margin: '4px 0', color: '#6b7280', fontSize: '0.85rem' }}>Lab Staff: {selectedBill.labStaff || 'N/A'}</p>
+                <p className="bill-note" style={{ fontStyle: 'italic', color: '#9ca3af', fontSize: '0.8rem', marginTop: '12px' }}>This is a computer-generated bill</p>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '20px', background: '#f9fafb', borderTop: '1px solid #e5e7eb' }} className="no-print">
-              <button 
-                className="btn-secondary"
+            <div className="bill-modal-actions no-print">
+              <button
+                className="btn-secondary bill-close-btn"
                 onClick={() => setShowBillModal(false)}
               >
                 Close
               </button>
-              <button 
-                className="btn"
+              <button
+                className="btn bill-print-btn"
                 onClick={handlePrintBill}
               >
                 <i className="fas fa-file-pdf" style={{ marginRight: '8px' }}></i>

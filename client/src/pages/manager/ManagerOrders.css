@@ -1,0 +1,474 @@
+.manager-orders-container {
+    padding: 24px;
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+.manager-orders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.manager-orders-header h2 {
+    font-size: 1.5rem;
+    color: #0f172a;
+    margin: 0;
+}
+
+.manager-orders-header p {
+    color: #64748b;
+    margin: 4px 0 0 0;
+}
+
+.refresh-btn {
+    padding: 10px 16px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #475569;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+    background: #f1f5f9;
+}
+
+.error-alert {
+    background: #fef2f2;
+    color: #991b1b;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #ef4444;
+}
+
+.orders-table-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.orders-table th {
+    background: #f1f5f9;
+    padding: 16px;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.orders-table td {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.date-cell strong,
+.customer-cell strong,
+.product-cell strong {
+    display: block;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.date-cell span,
+.customer-cell span,
+.product-cell span {
+    display: block;
+    color: #64748b;
+    font-size: 0.8125rem;
+    margin-top: 2px;
+}
+
+.address-tooltip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+    cursor: help;
+}
+
+.price-text {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.payment-badge {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.status-pill {
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.assign-btn {
+    background: #7c3aed;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.assign-btn:hover {
+    background: #6d28d9;
+}
+
+.assign-action {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.assign-action select {
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.8125rem;
+}
+
+.assign-action button {
+    padding: 6px 10px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.assign-action button.cancel {
+    background: #ef4444;
+}
+
+.assigned-staff {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #0f172a;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.assigned-staff i {
+    color: #3b82f6;
+}
+
+.action-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.delivered-btn,
+.cancel-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delivered-btn {
+    color: #10b981;
+    background: #ecfdf5;
+}
+
+.delivered-btn:hover {
+    background: #10b981;
+    color: white;
+}
+
+.invoice-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #e0e7ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #4f46e5;
+    background: #eef2ff;
+}
+
+.invoice-btn:hover {
+    background: #4f46e5;
+    color: white;
+    transform: scale(1.1);
+}
+
+.cancel-btn {
+    color: #ef4444;
+    background: #fef2f2;
+}
+
+.cancel-btn:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.no-orders {
+    text-align: center;
+    padding: 60px 0;
+    color: #94a3b8;
+}
+
+.manager-orders-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 0;
+    color: #64748b;
+    gap: 16px;
+}
+
+.manager-orders-loading i {
+    font-size: 2rem;
+    color: #7c3aed;
+}
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: white;
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.tab-btn:hover {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.tab-btn.active {
+    background: #3b82f6;
+    color: white;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Invoice specific cells */
+.invoice-cell strong {
+    display: block;
+    color: #1e293b;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+.invoice-cell span {
+    display: block;
+    color: #64748b;
+    font-size: 0.8125rem;
+    margin-top: 2px;
+}
+
+.items-cell strong {
+    display: block;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.items-cell span {
+    display: block;
+    color: #64748b;
+    font-size: 0.8125rem;
+    margin-top: 2px;
+}
+
+.gstin {
+    font-size: 0.75rem !important;
+    color: #3b82f6 !important;
+    background: #eff6ff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px !important;
+    display: inline-block !important;
+}
+
+.tax-text {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.total-text {
+    color: #059669;
+    font-weight: 700;
+    font-size: 1.1em;
+}
+
+/* Action buttons for invoices */
+.pdf-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #fecaca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+.pdf-btn:hover {
+    background: #dc2626;
+    color: white;
+    transform: scale(1.1);
+}
+
+.view-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #374151;
+    background: #f9fafb;
+}
+
+.view-btn:hover {
+    background: #374151;
+    color: white;
+    transform: scale(1.1);
+}
+
+.edit-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #e0e7ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #4f46e5;
+    background: #eef2ff;
+}
+
+.edit-btn:hover {
+    background: #4f46e5;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tab-navigation {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .tab-btn {
+        justify-content: flex-start;
+        padding: 16px 20px;
+    }
+    
+    .orders-table {
+        font-size: 0.875rem;
+    }
+    
+    .orders-table th,
+    .orders-table td {
+        padding: 12px 8px;
+    }
+    
+    .action-btns {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .action-btns button {
+        width: 28px;
+        height: 28px;
+    }
+}
+/* Send button styling */
+.send-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #d1fae5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #059669;
+    background: #ecfdf5;
+}
+
+.send-btn:hover {
+    background: #059669;
+    color: white;
+    transform: scale(1.1);
+}

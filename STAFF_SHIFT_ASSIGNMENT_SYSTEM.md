@@ -1,4 +1,4 @@
-# Staff Shift Assignment System - Production Ready
+ Staff Shift Assignment System - Production Ready
 
 ## Overview
 Enterprise-grade staff-to-shift assignment system for Holy Family Polymers rubber manufacturing company. This system allows managers to assign multiple staff members to shifts with conflict detection and attendance tracking.

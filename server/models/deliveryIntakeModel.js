@@ -13,7 +13,7 @@ const deliveryIntakeSchema = new mongoose.Schema({
   barrelCount: { type: Number, required: true, min: 0 },
   notes: { type: String },
   companyBarrel: { type: String },
-  status: { type: String, enum: ['pending', 'manager_verified', 'approved', 'rejected', 'billed'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'assigned', 'manager_verified', 'approved', 'rejected', 'billed'], default: 'pending' },
   pricePerBarrel: { type: Number },
   totalAmount: { type: Number },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

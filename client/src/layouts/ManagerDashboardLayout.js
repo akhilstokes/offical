@@ -96,8 +96,10 @@ const ManagerDashboardLayout = ({ children }) => {
     if (path.includes('/shifts')) return { title: 'Shift Planning', subtitle: 'Plan staff shifts', icon: 'fa-clock' };
     if (path.includes('/shift-management')) return { title: 'Shift Management', subtitle: 'Manage staff shifts and assignments', icon: 'fa-calendar-alt' };
     if (path.includes('/sell-requests')) return { title: 'Sell Requests', subtitle: 'Manage sell requests', icon: 'fa-handshake' };
-    if (path.includes('/barrel-allocation')) return { title: 'Barrel Allocation', subtitle: 'Allocate barrels', icon: 'fa-boxes' };
-    if (path.includes('/returned-barrels')) return { title: 'Returned Barrels', subtitle: 'Track returned barrels', icon: 'fa-undo' };
+    if (path.includes('/barrel-allocation')) return { title: 'Barrel Allocation', subtitle: 'Allocate barrels to users', icon: 'fa-boxes' };
+    if (path.includes('/barrel-requests')) return { title: 'Barrel Requests', subtitle: 'Manage user barrel requests', icon: 'fa-clipboard-list' };
+    if (path.includes('/returned-barrels')) return { title: 'Returned Barrels', subtitle: 'Track barrels returned by staff', icon: 'fa-undo' };
+    if (path.includes('/faulty-barrels')) return { title: 'Faulty Barrels', subtitle: 'Manage damaged or faulty barrels', icon: 'fa-exclamation-triangle' };
     if (path.includes('/bill-verification')) return { title: 'Bill Verification', subtitle: 'Verify pending bills', icon: 'fa-file-invoice-dollar' };
     if (path.includes('/wages')) return { title: 'Wages', subtitle: 'Manage staff wages', icon: 'fa-money-bill-wave' };
     if (path.includes('/staff-salary')) return { title: 'Staff Salary', subtitle: 'Handle staff salaries', icon: 'fa-coins' };
@@ -122,16 +124,25 @@ const ManagerDashboardLayout = ({ children }) => {
       ]
     },
     {
+      section: 'Barrel Management',
+      items: [
+        { to: '/manager/barrel-requests', icon: 'fa-clipboard-list', label: 'Barrel Requests' },
+        { to: '/manager/barrel-allocation', icon: 'fa-boxes', label: 'Barrel Allocation' },
+        { to: '/manager/returned-barrels', icon: 'fa-undo', label: 'Returned Barrels' },
+        { to: '/manager/faulty-barrels', icon: 'fa-exclamation-triangle', label: 'Faulty Barrels' },
+      ]
+    },
+    {
       section: 'Inventory & Space',
       items: [
         { to: '/manager/hanger-space', icon: 'fa-warehouse', label: 'Hanger Space' },
         { to: '/manager/stock', icon: 'fa-boxes', label: 'Stock Management' },
-        { to: '/manager/returned-barrels', icon: 'fa-undo', label: 'Returned Barrels' },
       ]
     },
     {
       section: 'Business & Finance',
       items: [
+        { to: '/manager/orders', icon: 'fa-shopping-cart', label: 'Product Orders' },
         { to: '/manager/sell-requests', icon: 'fa-handshake', label: 'Sell Requests' },
         { to: '/manager/bill-verification', icon: 'fa-file-invoice-dollar', label: 'Bill Verification' },
         { to: '/manager/wages', icon: 'fa-money-bill-wave', label: 'Wages' },
@@ -152,7 +163,7 @@ const ManagerDashboardLayout = ({ children }) => {
   return (
     <div className="manager-dashboard-container">
       {/* Sidebar Overlay for Mobile */}
-      <div 
+      <div
         className={`manager-sidebar-overlay ${mobileMenuOpen ? 'active' : ''}`}
         onClick={() => setMobileMenuOpen(false)}
       />
@@ -170,7 +181,7 @@ const ManagerDashboardLayout = ({ children }) => {
               <span>Control Panel</span>
             </div>
           </div>
-          <button 
+          <button
             className="sidebar-toggle"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           >
@@ -200,7 +211,7 @@ const ManagerDashboardLayout = ({ children }) => {
                   <NavLink
                     key={itemIndex}
                     to={item.to}
-                    className={({ isActive }) => 
+                    className={({ isActive }) =>
                       `manager-nav-item ${isActive ? 'active' : ''}`
                     }
                   >
@@ -229,13 +240,13 @@ const ManagerDashboardLayout = ({ children }) => {
         {/* Top Header */}
         <header className="manager-top-header">
           <div className="manager-header-left">
-            <button 
+            <button
               className="manager-mobile-toggle"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <i className="fas fa-bars"></i>
             </button>
-            
+
             <div className="manager-page-title">
               <div className="manager-page-icon">
                 <i className={`fas ${pageInfo.icon}`}></i>
@@ -249,7 +260,7 @@ const ManagerDashboardLayout = ({ children }) => {
 
           <div className="manager-header-right">
             {/* Notifications */}
-            <button 
+            <button
               className="manager-notification-btn"
               onClick={() => navigate('/manager/notifications')}
               aria-label="Notifications"
