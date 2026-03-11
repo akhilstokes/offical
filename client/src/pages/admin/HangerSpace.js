@@ -10,6 +10,14 @@ const HangerSpace = () => {
   const [bulkRange, setBulkRange] = useState({ block: 'B', fromCol: 1, toCol: 10, status: 'vacant' });
   const [loading, setLoading] = useState(false);
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 1, max = 10) => {
+    if (value === '') return '';
+    const num = parseInt(value);
+    if (isNaN(num) || num < min || num > max) return '';
+    return value;
+  };
+
   const statusMap = useMemo(() => {
     const m = new Map();
     slots.forEach(slot => {
@@ -183,7 +191,10 @@ const HangerSpace = () => {
               min="1" 
               max="10" 
               value={bulkRange.fromCol} 
-              onChange={e => setBulkRange({...bulkRange, fromCol: e.target.value})}
+              onChange={e => {
+                const validated = validateNumberInput(e.target.value, 1, 10);
+                setBulkRange({...bulkRange, fromCol: validated === '' ? 1 : parseInt(validated)});
+              }}
               placeholder="From"
             />
             <input 
@@ -191,7 +202,10 @@ const HangerSpace = () => {
               min="1" 
               max="10" 
               value={bulkRange.toCol} 
-              onChange={e => setBulkRange({...bulkRange, toCol: e.target.value})}
+              onChange={e => {
+                const validated = validateNumberInput(e.target.value, 1, 10);
+                setBulkRange({...bulkRange, toCol: validated === '' ? 10 : parseInt(validated)});
+              }}
               placeholder="To"
             />
             <select value={bulkRange.status} onChange={e => setBulkRange({...bulkRange, status: e.target.value})}>

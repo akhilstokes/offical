@@ -252,57 +252,77 @@
   align-items: center;
 }
 
-.auth-btn {
+.nav-btn-premium {
   padding: 10px 24px;
-  border-radius: 8px;
+  border-radius: 12px;
   text-decoration: none;
   font-weight: 600;
   font-size: 14px;
-  transition: all 0.2s ease;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   white-space: nowrap;
-  border: 2px solid transparent;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   letter-spacing: -0.01em;
+  position: relative;
+  overflow: hidden;
 }
 
-.signup-btn {
-  background: var(--primary-color);
+.nav-signup-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
   color: #ffffff;
-  border-color: var(--primary-color);
+  border: none;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
 }
 
-.signup-btn:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+.nav-signup-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.login-btn {
-  background: transparent;
-  color: var(--nav-text);
-  border-color: var(--nav-border);
+.nav-signup-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
 }
 
-.dark-mode .login-btn {
-  color: var(--text-default);
-  border-color: var(--border-subtle);
+.nav-signup-btn:hover::after {
+  opacity: 1;
 }
 
-.login-btn:hover {
-  color: var(--nav-hover);
-  border-color: var(--nav-hover);
-  background: rgba(0, 0, 0, 0.02);
+.nav-login-btn {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  color: #1e293b;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
 }
 
-.dark-mode .login-btn:hover {
-  color: var(--text-strong);
-  border-color: var(--text-subtle);
+.nav-login-btn:hover {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.dark-mode .nav-login-btn {
   background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .nav-login-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 /* Profile Menu */

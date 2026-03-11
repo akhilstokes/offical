@@ -130,7 +130,7 @@ const RegisterPage = () => {
 
         <Link to="/" className="back-home">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           Home
         </Link>
@@ -174,18 +174,18 @@ const RegisterPage = () => {
           {errors.general && (
             <div className="alert alert-error">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
-                <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2" />
+                <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2" />
               </svg>
               {errors.general}
             </div>
           )}
-          
+
           {successMessage && (
             <div className="alert alert-success">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               {successMessage}
             </div>
@@ -208,7 +208,7 @@ const RegisterPage = () => {
               {isValidName(name) && (
                 <span className="field-success">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
               )}
@@ -228,7 +228,7 @@ const RegisterPage = () => {
               {isValidEmail(email) && (
                 <span className="field-success">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
               )}
@@ -249,7 +249,7 @@ const RegisterPage = () => {
               {isValidPhone(phoneNumber) && (
                 <span className="field-success">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
               )}
@@ -270,7 +270,7 @@ const RegisterPage = () => {
               {isValidAddress(address) && (
                 <span className="field-success">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
               )}
@@ -294,7 +294,7 @@ const RegisterPage = () => {
               {isValidPassword(password) && (
                 <span className="field-success">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
               )}
@@ -315,7 +315,7 @@ const RegisterPage = () => {
               {isPasswordMatch(password, confirmPassword) && (
                 <span className="field-success">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
               )}
@@ -327,7 +327,7 @@ const RegisterPage = () => {
               {isLoading ? 'Creating Account...' : 'Create Account'}
               {!isLoading && (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </button>
@@ -336,7 +336,7 @@ const RegisterPage = () => {
           {/* Footer Links */}
           <div className="auth-footer">
             <div className="signup-prompt">
-              Already have an account? 
+              Already have an account?
               <Link to="/login" state={returnTo ? { from: returnTo } : undefined} className="link-primary">
                 Sign in
               </Link>

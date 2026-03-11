@@ -13,6 +13,14 @@ const BillCalculator = () => {
   const [marketRate, setMarketRate] = useState('');
   const [rateErr, setRateErr] = useState('');
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0, max = Infinity) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min || num > max) return '';
+    return value;
+  };
+
   const computed = useMemo(() => {
     const v = parseFloat(volume);
     const d = parseFloat(drc);
@@ -77,16 +85,25 @@ const BillCalculator = () => {
       <div style={{ display: 'grid', gap: 12 }}>
         <label>
           Latex Volume (L)
-          <input type="number" min={0} step="0.01" value={volume} onChange={(e) => setVolume(e.target.value)} />
+          <input type="number" min={0} step="0.01" value={volume} onChange={(e) => {
+            const validated = validateNumberInput(e.target.value, 0);
+            setVolume(validated);
+          }} />
         </label>
         <label>
           DRC (%)
-          <input type="number" min={0} max={100} step="0.01" value={drc} onChange={(e) => setDrc(e.target.value)} />
+          <input type="number" min={0} max={100} step="0.01" value={drc} onChange={(e) => {
+            const validated = validateNumberInput(e.target.value, 0, 100);
+            setDrc(validated);
+          }} />
         </label>
         <label>
           Market Rate (per kg of DRC)
           <div style={{ display: 'flex', gap: 8 }}>
-            <input type="number" min={0} step="0.01" value={marketRate} onChange={(e) => setMarketRate(e.target.value)} />
+            <input type="number" min={0} step="0.01" value={marketRate} onChange={(e) => {
+              const validated = validateNumberInput(e.target.value, 0);
+              setMarketRate(validated);
+            }} />
             <button className="btn" type="button" onClick={loadRate}>Use Live Rate</button>
           </div>
           {rateErr && <div style={{ color: '#fca5a5' }}>{rateErr}</div>}

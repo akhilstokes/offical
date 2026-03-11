@@ -316,6 +316,15 @@ const ExpenseManagement = () => {
     };
 
     const handleItemChange = (index, field, value) => {
+        // Validate number fields
+        if (field === 'rate' || field === 'quantity') {
+            const num = parseFloat(value);
+            // Reject if not a valid number or negative
+            if (value !== '' && (isNaN(num) || num < 0)) {
+                return;
+            }
+        }
+        
         setFormData(prev => ({
             ...prev,
             items: prev.items.map((item, i) => 

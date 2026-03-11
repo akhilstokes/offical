@@ -16,6 +16,14 @@ const SubmitRequest = () => {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Validate number input - only positive numbers allowed
+    const validateNumberInput = (value, min = 0, max = 100) => {
+        if (value === '') return '';
+        const num = parseFloat(value);
+        if (isNaN(num) || num < min || num > max) return '';
+        return value;
+    };
+
     useEffect(() => {
         const loadAssigned = async () => {
             setAssignedLoading(true);
@@ -39,9 +47,20 @@ const SubmitRequest = () => {
     }, []);
 
     const handleInputChange = (field, value) => {
+        let v = value;
+        
+        // Validate numeric fields
+        if (field === 'quantity') {
+            const validated = validateNumberInput(v, 0);
+            v = validated;
+        } else if (field === 'drcPercentage') {
+            const validated = validateNumberInput(v, 0, 100);
+            v = validated;
+        }
+        
         setFormData(prev => ({
             ...prev,
-            [field]: value
+            [field]: v
         }));
     };
 

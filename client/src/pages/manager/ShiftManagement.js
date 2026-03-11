@@ -27,6 +27,14 @@ const ShiftManagement = () => {
   });
   const [stats, setStats] = useState({});
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0, max = Infinity) => {
+    if (value === '') return '';
+    const num = parseInt(value);
+    if (isNaN(num) || num < min || num > max) return '';
+    return value;
+  };
+
   const loadShifts = useCallback(async () => {
     try {
       const res = await fetch(`${base}/api/shifts`, {
@@ -556,7 +564,10 @@ const ShiftManagement = () => {
                     type="number"
                     className="form-control"
                     value={shiftForm.gracePeriod}
-                    onChange={(e) => setShiftForm(prev => ({ ...prev, gracePeriod: parseInt(e.target.value) || 5 }))}
+                    onChange={(e) => {
+                      const validated = validateNumberInput(e.target.value, 0, 60);
+                      setShiftForm(prev => ({ ...prev, gracePeriod: validated === '' ? 5 : parseInt(validated) }));
+                    }}
                     min="0"
                     max="60"
                   />

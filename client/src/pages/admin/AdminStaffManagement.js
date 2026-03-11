@@ -111,6 +111,21 @@ const AdminStaffManagement = () => {
         setShowModal(true);
     };
 
+    const handleNumberInput = (value, min = 0) => {
+        // Allow empty string for clearing the field
+        if (value === '') return '';
+        
+        const num = parseFloat(value);
+        
+        // Reject if not a valid number
+        if (isNaN(num)) return '';
+        
+        // Reject if negative
+        if (num < min) return '';
+        
+        return value;
+    };
+
     const handleSaveStaff = async () => {
         if (!staffForm.name || !staffForm.experience || !staffForm.baseSalary) {
             setError('Please fill all required fields');
@@ -451,7 +466,10 @@ const AdminStaffManagement = () => {
                                     type="number"
                                     className="form-input"
                                     value={staffForm.experience}
-                                    onChange={(e) => setStaffForm({...staffForm, experience: e.target.value})}
+                                    onChange={(e) => {
+                                        const validated = handleNumberInput(e.target.value, 0);
+                                        setStaffForm({...staffForm, experience: validated});
+                                    }}
                                     placeholder="e.g., 5"
                                     min="0"
                                     max="50"
@@ -463,7 +481,10 @@ const AdminStaffManagement = () => {
                                     type="number"
                                     className="form-input"
                                     value={staffForm.baseSalary}
-                                    onChange={(e) => setStaffForm({...staffForm, baseSalary: e.target.value})}
+                                    onChange={(e) => {
+                                        const validated = handleNumberInput(e.target.value, 0);
+                                        setStaffForm({...staffForm, baseSalary: validated});
+                                    }}
                                     placeholder="e.g., 25000"
                                     min="0"
                                 />

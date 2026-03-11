@@ -106,13 +106,38 @@ const AdminExpenses = () => {
         }));
     };
 
+    // Validate number input - only positive numbers allowed
+    const validateNumberInput = (value, min = 0) => {
+        if (value === '') return '';
+        const num = parseFloat(value);
+        if (isNaN(num) || num < min) return '';
+        return value;
+    };
+
     // Handle item changes
     const handleItemChange = (index, field, value) => {
         const updatedItems = [...formData.items];
-        updatedItems[index] = {
-            ...updatedItems[index],
-            [field]: field === 'quantity' || field === 'amount' ? parseFloat(value) || 0 : value
-        };
+        
+        // Validate quantity and amount fields
+        if (field === 'quantity') {
+            const validated = validateNumberInput(value, 1);
+            updatedItems[index] = {
+                ...updatedItems[index],
+                [field]: validated === '' ? 1 : parseFloat(validated)
+            };
+        } else if (field === 'amount') {
+            const validated = validateNumberInput(value, 0);
+            updatedItems[index] = {
+                ...updatedItems[index],
+                [field]: validated === '' ? 0 : parseFloat(validated)
+            };
+        } else {
+            updatedItems[index] = {
+                ...updatedItems[index],
+                [field]: value
+            };
+        }
+        
         setFormData(prev => ({
             ...prev,
             items: updatedItems

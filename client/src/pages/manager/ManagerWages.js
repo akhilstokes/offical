@@ -18,6 +18,14 @@ const ManagerWages = () => {
   const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   const token = localStorage.getItem('token');
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -295,7 +303,10 @@ const ManagerWages = () => {
                   <input
                     type="number"
                     value={wageForm.dailyRate}
-                    onChange={(e) => setWageForm(prev => ({ ...prev, dailyRate: parseFloat(e.target.value) || 0 }))}
+                    onChange={(e) => {
+                      const validated = validateNumberInput(e.target.value, 0);
+                      setWageForm(prev => ({ ...prev, dailyRate: validated === '' ? 0 : parseFloat(validated) }));
+                    }}
                     style={{
                       width: '100%',
                       padding: '8px 12px',

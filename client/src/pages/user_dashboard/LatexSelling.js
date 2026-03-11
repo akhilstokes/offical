@@ -58,17 +58,20 @@ const LatexSelling = () => {
 
     const handleInputChange = (field, value) => {
         let v = value;
-        if (field === 'quantity' || field === 'drcPercentage') {
-            // strip leading minus for numeric inputs
-            v = String(v).replace(/^-/, '');
-        }
-        if (field === 'drcPercentage') {
-            const n = parseFloat(v);
-            if (!isNaN(n)) {
-                if (n < 0) v = '0';
-                if (n > 100) v = '100';
+        
+        // Validate numeric fields - only positive numbers
+        if (field === 'quantity') {
+            const num = parseFloat(v);
+            if (v !== '' && (isNaN(num) || num < 0)) return;
+        } else if (field === 'drcPercentage') {
+            const num = parseFloat(v);
+            if (v !== '' && (isNaN(num) || num < 0 || num > 100)) return;
+            if (!isNaN(num)) {
+                if (num < 0) v = '0';
+                if (num > 100) v = '100';
             }
         }
+        
         setFormData(prev => ({
             ...prev,
             [field]: v

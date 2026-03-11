@@ -1,6 +1,40 @@
-/* ============================= */
-/*        GLOBAL RESET           */
-/* ============================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Brand Palette - Refined */
+  --primary-deep: #064e3b;
+  /* Deep Forest Green */
+  --primary-main: #10b981;
+  /* Emeral Green */
+  --secondary-brand: #1e3a8a;
+  /* Royal Blue */
+  --accent-gold: #fbbf24;
+  /* Warm Gold */
+
+  /* Neutral Palette */
+  --bg-prime: #f8fafc;
+  --bg-card: #ffffff;
+  --text-main: #0f172a;
+  --text-sub: #4b5563;
+  --text-muted: #9ca3af;
+  --border-line: rgba(226, 232, 240, 0.8);
+
+  /* Glassmorphism - Enhanced */
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-blur: blur(16px);
+  --glass-border: rgba(255, 255, 255, 0.3);
+
+  /* Shadows - Layered & Premium */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+
+  /* Gradients */
+  --grad-primary: linear-gradient(135deg, #064e3b 0%, #10b981 100%);
+  --grad-premium: linear-gradient(135deg, #1e3a8a 0%, #10b981 100%);
+  --grad-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+}
 
 *,
 *::before,
@@ -19,15 +53,20 @@ html {
 }
 
 body {
-  font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont,
-    'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-
-  background-color: #ffffff;
-  color: #001e2b;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-prime);
+  color: var(--text-main);
   line-height: 1.6;
+  overflow-x: hidden;
+}
 
-  overflow-x: hidden;   /* Prevent horizontal scroll */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Outfit', sans-serif;
 }
 
 /* ============================= */

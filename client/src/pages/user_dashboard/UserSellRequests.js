@@ -16,6 +16,14 @@ const UserSellRequests = () => {
   const [geo, setGeo] = useState({ lat: null, lng: null, accuracy: null });
   const [geoStatus, setGeoStatus] = useState('');
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   const safeDate = (d) => {
     if (!d) return '-';
     try { const dt = new Date(d); return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleString(); } catch { return '-'; }
@@ -90,7 +98,10 @@ const UserSellRequests = () => {
       <form onSubmit={submit} style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, maxWidth:720 }}>
         <div>
           <label>Volume (Kg)</label>
-          <input type="number" min="1" step="0.01" value={form.totalVolumeKg} onChange={e=>setForm(s=>({ ...s, totalVolumeKg:e.target.value }))} required />
+          <input type="number" min="1" step="0.01" value={form.totalVolumeKg} onChange={e => {
+            const validated = validateNumberInput(e.target.value, 0);
+            setForm(s => ({ ...s, totalVolumeKg: validated }));
+          }} required />
         </div>
         <div style={{ gridColumn:'1 / -1' }}>
           <label>Notes</label>

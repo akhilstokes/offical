@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { createProductOrder } from '../../services/customerService';
 import './BuyProducts.css';
 
@@ -64,6 +65,23 @@ const BuyProducts = () => {
         address: '',
         panNumber: ''
     });
+
+    const location = useLocation();
+
+    // Validate number input - only positive numbers allowed
+    const validateNumberInput = (value, min = 1) => {
+        if (value === '') return '';
+        const num = parseInt(value);
+        if (isNaN(num) || num < min) return '';
+        return value;
+    };
+
+    useEffect(() => {
+        if (location.state?.selectedProduct) {
+            setFormData(prev => ({ ...prev, productType: location.state.selectedProduct }));
+            // Optional: scroll to form if needed, but usually the page load is enough
+        }
+    }, [location.state]);
     const [submitting, setSubmitting] = useState(false);
     const [err, setErr] = useState('');
     const [success, setSuccess] = useState('');
@@ -135,7 +153,7 @@ const BuyProducts = () => {
         try {
             // Simulate PAN validation API call
             await new Promise(resolve => setTimeout(resolve, 1500));
-            
+
             // For demo purposes, accept any valid format PAN
             setPanValidated(true);
             setSuccess('PAN validated successfully! You can now proceed with payment.');
@@ -288,7 +306,10 @@ const BuyProducts = () => {
                                     type="number"
                                     min="1"
                                     value={formData.quantity}
-                                    onChange={e => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                                    onChange={e => {
+                                        const validated = validateNumberInput(e.target.value, 1);
+                                        setFormData({ ...formData, quantity: validated === '' ? 1 : parseInt(validated) });
+                                    }}
                                     className="modern-input"
                                     placeholder="Enter required quantity"
                                 />
@@ -380,11 +401,11 @@ const BuyProducts = () => {
                                 </span>
                             </div>
 
-                            <button 
-                                type="submit" 
-                                disabled={submitting || !panValidated} 
-                                className="place-order-btn-large" 
-                                style={{ 
+                            <button
+                                type="submit"
+                                disabled={submitting || !panValidated}
+                                className="place-order-btn-large"
+                                style={{
                                     background: panValidated ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : '#94a3b8',
                                     cursor: panValidated ? 'pointer' : 'not-allowed',
                                     opacity: panValidated ? 1 : 0.6

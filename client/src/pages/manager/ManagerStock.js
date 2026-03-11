@@ -21,6 +21,14 @@ const ManagerStock = () => {
   const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   const token = localStorage.getItem('token');
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   useEffect(() => {
     fetchStock();
   }, []);
@@ -326,9 +334,9 @@ const ManagerStock = () => {
                     type="number"
                     value={form.quantity}
                     onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      if (value <= 10000) {
-                        setForm(prev => ({ ...prev, quantity: value }));
+                      const validated = validateNumberInput(e.target.value, 0);
+                      if (validated === '' || parseFloat(validated) <= 10000) {
+                        setForm(prev => ({ ...prev, quantity: validated === '' ? 0 : parseFloat(validated) }));
                         setError('');
                       } else {
                         setError('Quantity cannot exceed 10,000');
@@ -482,9 +490,9 @@ const ManagerStock = () => {
                   type="number"
                   value={editForm.quantity}
                   onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0;
-                    if (value <= 10000) {
-                      setEditForm({ quantity: value });
+                    const validated = validateNumberInput(e.target.value, 0);
+                    if (validated === '' || parseFloat(validated) <= 10000) {
+                      setEditForm({ quantity: validated === '' ? 0 : parseFloat(validated) });
                       setError('');
                     } else {
                       setError('Quantity cannot exceed 10,000');

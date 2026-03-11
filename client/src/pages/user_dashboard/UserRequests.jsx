@@ -13,6 +13,14 @@ const UserRequests = () => {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 1, max = 50) => {
+    if (value === '') return '';
+    const num = parseInt(value);
+    if (isNaN(num) || num < min || num > max) return '';
+    return value;
+  };
+
   const load = async () => {
     setLoading(true);
     try { setItems(await getRequests()); }
@@ -101,7 +109,10 @@ const UserRequests = () => {
               <div style={{ marginTop: '20px' }}>
                 <label>
                   Quantity (Max: 50 barrels)
-                  <input type="number" min={1} max={50} step={1} value={barrel.quantity} onChange={e => setBarrel({ ...barrel, quantity: e.target.value })} placeholder="Enter quantity" />
+                  <input type="number" min={1} max={50} step={1} value={barrel.quantity} onChange={e => {
+                    const validated = validateNumberInput(e.target.value, 1, 50);
+                    setBarrel({ ...barrel, quantity: validated === '' ? 1 : parseInt(validated) });
+                  }} placeholder="Enter quantity" />
                 </label>
                 <label>
                   Notes (optional)

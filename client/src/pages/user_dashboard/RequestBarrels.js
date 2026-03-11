@@ -18,6 +18,14 @@ const RequestBarrels = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [requestId, setRequestId] = useState('');
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 1, max = 100) => {
+    if (value === '') return '';
+    const num = parseInt(value);
+    if (isNaN(num) || num < min || num > max) return '';
+    return value;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -127,7 +135,10 @@ const RequestBarrels = () => {
                   min="1"
                   max="10"
                   value={formData.quantity}
-                  onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                  onChange={(e) => {
+                    const validated = validateNumberInput(e.target.value, 1, 10);
+                    setFormData({...formData, quantity: validated === '' ? 1 : parseInt(validated)});
+                  }}
                   placeholder="Enter quantity (1-10)"
                   required
                 />

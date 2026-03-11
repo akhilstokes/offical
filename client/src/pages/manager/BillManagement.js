@@ -23,6 +23,14 @@ const BillManagement = () => {
     adminNotes: ''
   });
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   const loadBills = useCallback(async () => {
     try {
       setLoading(true);
@@ -382,7 +390,10 @@ const BillManagement = () => {
                   type="number"
                   className="form-control"
                   value={actionForm.approvedAmount}
-                  onChange={(e) => setActionForm(prev => ({ ...prev, approvedAmount: e.target.value }))}
+                  onChange={(e) => {
+                    const validated = validateNumberInput(e.target.value, 0);
+                    setActionForm(prev => ({ ...prev, approvedAmount: validated }));
+                  }}
                   placeholder={selectedBill.requestedAmount}
                   min="0"
                   step="0.01"

@@ -7,7 +7,7 @@ const ContactPage = () => {
     return (
         <div className="contact-page">
             <Navbar />
-            
+
             <section className="contact-content">
                 <div className="container">
                     <div className="contact-info-center">
@@ -15,7 +15,7 @@ const ContactPage = () => {
                             <h1>Contact Us</h1>
                             <h2>Holy Family Polymers</h2>
                         </div>
-                        
+
                         <div className="contact-info-blocks">
                             <div className="contact-block">
                                 <h3>Office :-</h3>

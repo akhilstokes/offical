@@ -11,6 +11,14 @@ const CreateBarrelStock = () => {
   const [createdBarrels, setCreatedBarrels] = useState([]);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   const generateBarrelId = (index, batchName) => {
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
@@ -100,7 +108,10 @@ const CreateBarrelStock = () => {
                 min="1"
                 max="1000"
                 value={formData.quantity}
-                onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                onChange={(e) => {
+                  const validated = validateNumberInput(e.target.value, 1);
+                  setFormData({...formData, quantity: validated});
+                }}
                 placeholder="Enter number of barrels to create"
                 required
               />

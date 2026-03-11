@@ -1,86 +1,279 @@
-.awards-page {
-    background-color: #fcfcfc;
-    min-height: 100vh;
-    font-family: 'Inter', sans-serif;
+/* AwardsPage.css - Premium Redesign */
+
+.awards-redesign-root {
+    background: var(--bg-prime);
+    padding-top: var(--navbar-height, 85px);
+    overflow-x: hidden;
 }
 
-.awards-banner {
-    width: 100%;
-    height: 350px;
+/* ================= AWARDS HERO ================= */
+
+.awards-hero-modern {
+    padding: 8rem 0 6rem;
+    background: var(--bg-card);
+    text-align: center;
+    position: relative;
     overflow: hidden;
-    margin-top: 80px;
+    background: radial-gradient(circle at top, rgba(16, 185, 129, 0.05), transparent 70%);
 }
 
-.banner-image-container {
-    width: 100%;
-    height: 100%;
+.prestige-tag {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--primary-main);
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1.5rem;
 }
 
-.banner-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.awards-content-section {
-    padding: 60px 0;
-}
-
-.awards-title {
-    font-size: 3rem;
-    color: #003366;
-    margin-bottom: 50px;
+.awards-hero-content h1 {
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
     font-weight: 800;
-    text-align: left;
+    color: var(--text-main);
+    margin-bottom: 1.5rem;
+    line-height: 1.1;
 }
 
-.awards-certificates-grid {
+.text-gold {
+    background: linear-gradient(135deg, #b8860b 0%, #daa520 50%, #ffd700 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+}
+
+.awards-hero-content p {
+    font-size: 1.125rem;
+    color: var(--text-sub);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ================= MUSEUM GRID ================= */
+
+.awards-gallery-section {
+    padding: 6rem 0;
+    background: var(--bg-prime);
+}
+
+.awards-museum-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
 }
 
-.certificate-card {
-    background: white;
-    padding: 15px;
+.award-museum-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.card-frame {
+    position: relative;
+    padding: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-line);
+    box-shadow: var(--shadow-md);
+    border-radius: 16px;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    margin-bottom: 2rem;
+    width: 100%;
+}
+
+.frame-border {
+    padding: 8px;
+    background: linear-gradient(135deg, rgba(218, 165, 32, 0.2), rgba(218, 165, 32, 0.05));
     border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: 1px solid rgba(218, 165, 32, 0.3);
+}
+
+.frame-inner {
+    background: var(--bg-card);
+    padding: 10px;
+    border-radius: 4px;
+    line-height: 0;
+    overflow: hidden;
+}
+
+.diploma-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 2px;
+    transition: transform 0.5s ease;
+}
+
+.award-seal {
+    position: absolute;
+    bottom: -25px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #daa520, #b8860b);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+    border: 3px solid var(--bg-card);
+    z-index: 2;
+}
+
+.award-museum-card:hover .card-frame {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-premium);
+    border-color: rgba(218, 165, 32, 0.3);
+}
+
+.award-museum-card:hover .diploma-image {
+    transform: scale(1.05);
+}
+
+.award-caption {
+    width: 100%;
+}
+
+.award-year-tag {
+    font-weight: 800;
+    font-size: 1.125rem;
+    color: var(--primary-deep);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.award-caption h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: var(--text-main);
+}
+
+.award-org {
+    color: var(--text-sub);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ================= PRESTIGE STATS ================= */
+
+.prestige-stats {
+    padding: 6rem 0;
+    background: var(--grad-primary);
+    color: white;
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.stat-unit {
+    text-align: center;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     transition: transform 0.3s ease;
 }
 
-.certificate-card:hover {
+.stat-unit:hover {
     transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.15);
 }
 
-.certificate-image-wrapper {
-    width: 100%;
-    aspect-ratio: 4/3;
-    overflow: hidden;
-    border: 1px solid #eee;
-    margin-bottom: 15px;
+.stat-val {
+    display: block;
+    font-size: 4rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-secondary);
+    background: linear-gradient(135deg, #ffffff, rgba(255, 255, 255, 0.7));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-.certificate-image {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background-color: #f9f9f9;
-}
-
-.certificate-info h3 {
-    font-size: 1rem;
-    color: #444;
-    text-align: center;
+.stat-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     font-weight: 600;
+    opacity: 0.9;
+}
+
+/* ================= REVEAL ================= */
+
+[data-reveal] {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-reveal].reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Dark Mode Overrides */
+body.dark-mode .awards-redesign-root,
+body.dark-mode .awards-gallery-section {
+    background: var(--bg-prime);
+}
+
+body.dark-mode .awards-hero-modern {
+    background: radial-gradient(circle at top, rgba(16, 185, 129, 0.05), transparent 70%);
+}
+
+body.dark-mode .card-frame,
+body.dark-mode .frame-inner,
+body.dark-mode .award-seal {
+    background: var(--bg-card);
+    border-color: var(--border-line);
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 900px) {
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 @media (max-width: 768px) {
-    .awards-banner {
-        height: 200px;
+    .awards-hero-modern {
+        padding: 6rem 0 4rem;
     }
-    
-    .awards-title {
-        font-size: 2.2rem;
-        margin-bottom: 30px;
+
+    .awards-hero-content h1 {
+        font-size: 2.5rem;
+    }
+
+    .awards-museum-grid {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+    }
+
+    .stats-row {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-val {
+        font-size: 3rem;
     }
 }

@@ -8,6 +8,14 @@ const InventoryPage = () => {
   const [issue, setIssue] = useState({ category: 'barrel', title: '', description: '' });
   const [message, setMessage] = useState('');
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 1) => {
+    if (value === '') return '';
+    const num = parseInt(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   const counts = useMemo(() => {
     const total = barrels.length;
     const inUse = barrels.filter(b => b.status === 'in-use').length;
@@ -68,7 +76,10 @@ const InventoryPage = () => {
           <input
             type="number"
             value={reqQty}
-            onChange={(e) => setReqQty(e.target.value.replace(/^-/, ''))}
+            onChange={(e) => {
+              const validated = validateNumberInput(e.target.value, 1);
+              setReqQty(validated === '' ? '' : parseInt(validated));
+            }}
             className="form-control"
             placeholder="Quantity"
             style={{ width: 160 }}

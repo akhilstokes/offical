@@ -98,6 +98,7 @@ import HistoryPage from "./pages/HistoryPage";
 import GalleryPage from "./pages/GalleryPage";
 import AwardsPage from "./pages/AwardsPage";
 import LandingPage from "./pages/LandingPage";
+import ProductsPage from "./pages/ProductsPage";
 
 // Auth Pages
 import LoginPage from "./pages/auth/LoginPage";
@@ -199,6 +200,7 @@ function App() {
             <Route path="/gallery" element={<GalleryPage />} />
             <Route path="/awards" element={<AwardsPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/products" element={<ProductsPage />} />
           </Route>
 
           {/* Auth Routes */}

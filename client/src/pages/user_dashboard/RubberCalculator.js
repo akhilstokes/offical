@@ -33,9 +33,13 @@ const RubberCalculator = () => {
         // Sanitize negatives for numeric fields used in calculators
         const numericFields = new Set(['wetWeight','dryWeight','moistureContent','mass','volume','density','rubberWeight','pricePerKg','totalCost','length','width','height','diameter','radius']);
         let v = value;
+        
         if (numericFields.has(field)) {
-            v = String(v).replace(/^-/, '');
+            // Reject negative numbers
+            const num = parseFloat(v);
+            if (v !== '' && (isNaN(num) || num < 0)) return;
         }
+        
         setFormData(prev => ({
             ...prev,
             [field]: v

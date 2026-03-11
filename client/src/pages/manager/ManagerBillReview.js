@@ -24,6 +24,14 @@ const ManagerBillReview = () => {
   const token = localStorage.getItem('token');
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   const loadBills = async () => {
     setLoading(true);
     setError('');
@@ -444,7 +452,10 @@ const BillRow = ({ bill, isSelected, onToggleSelection, onApprove, onReject, for
                   <input 
                     type="number" 
                     value={approvedAmount}
-                    onChange={(e) => setApprovedAmount(e.target.value)}
+                    onChange={(e) => {
+                      const validated = validateNumberInput(e.target.value, 0);
+                      setApprovedAmount(validated);
+                    }}
                     style={{ width: '100%', padding: 8, border: '1px solid #d1d5db', borderRadius: 4 }}
                   />
                 </div>

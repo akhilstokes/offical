@@ -109,6 +109,10 @@ const Navbar = () => {
                     <NavLink to="/gallery" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                         {t('nav.gallery')}
                     </NavLink>
+
+                    <NavLink to="/products" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                        {t('nav.products')}
+                    </NavLink>
                 </div>
 
                 {/* Auth & Settings Section */}
@@ -158,10 +162,10 @@ const Navbar = () => {
 
                     {!isAuthenticated ? (
                         <div className="auth-buttons">
-                            <Link to="/register" className="auth-btn signup-btn">
+                            <Link to="/register" className="nav-btn-premium nav-signup-btn">
                                 {t('nav.signup')}
                             </Link>
-                            <Link to="/login" className="auth-btn login-btn">
+                            <Link to="/login" className="nav-btn-premium nav-login-btn">
                                 {t('nav.signin')}
                             </Link>
                         </div>

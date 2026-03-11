@@ -95,6 +95,14 @@ const SellBarrels = () => {
     );
   };
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 1, max = Infinity) => {
+    if (value === '') return '';
+    const num = parseInt(value);
+    if (isNaN(num) || num < min || num > max) return '';
+    return value;
+  };
+
   const handleSubmit = async () => {
     setError('');
     setSuccess('');
@@ -650,7 +658,10 @@ const SellBarrels = () => {
                   min="1"
                   max={myCompanyBarrels}
                   value={formData.barrelCount}
-                  onChange={(e) => setFormData({ ...formData, barrelCount: e.target.value })}
+                  onChange={(e) => {
+                    const validated = validateNumberInput(e.target.value, 1, myCompanyBarrels);
+                    setFormData({ ...formData, barrelCount: validated === '' ? 1 : parseInt(validated) });
+                  }}
                   style={{
                     width: '100%',
                     padding: '10px 12px',

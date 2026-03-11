@@ -20,7 +20,14 @@ const AdminStaff = () => {
   const [showStaffIdOnly, setShowStaffIdOnly] = useState(false);
   const [viewMode, setViewMode] = useState('invites'); // 'invites' or 'records'
 
-  // Helpers
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   const noSpaces = (v) => String(v || '').replace(/\s+/g, '');
   const sanitizePhone = (v) => {
     const s = String(v || '').replace(/\s+/g, '');
@@ -447,7 +454,10 @@ const AdminStaff = () => {
             <input 
               type="number" 
               value={form.experience}
-              onChange={(e)=>setForm({ ...form, experience: e.target.value })} 
+              onChange={(e) => {
+                const validated = validateNumberInput(e.target.value, 0);
+                setForm({ ...form, experience: validated });
+              }}
               placeholder="e.g., 5" 
               min="0"
               max="50"
@@ -459,7 +469,10 @@ const AdminStaff = () => {
             <input 
               type="number" 
               value={form.experience}
-              onChange={(e)=>setForm({ ...form, experience: e.target.value })} 
+              onChange={(e) => {
+                const validated = validateNumberInput(e.target.value, 0);
+                setForm({ ...form, experience: validated });
+              }}
               placeholder="e.g., 5" 
               min="0"
               max="50"

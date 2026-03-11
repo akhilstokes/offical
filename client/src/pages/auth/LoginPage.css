@@ -10,7 +10,7 @@
 /* Left Side - Branding */
 .login-brand-side {
   flex: 1;
-  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+  background: linear-gradient(135deg, #064e3b 0%, #10b981 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -172,14 +172,14 @@
 
 .forgot-link {
   font-size: 13px;
-  color: #FF6B6B;
+  color: #10B981;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
 }
 
 .forgot-link:hover {
-  color: #FF8E53;
+  color: #064e3b;
 }
 
 .input-group {
@@ -205,8 +205,8 @@
 
 .input-group input:focus {
   outline: none;
-  border-color: #FF6B6B;
-  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+  border-color: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 /* Icon Positioning - Updated */
@@ -228,7 +228,7 @@
 .signin-button {
   width: 100%;
   padding: 14px 24px;
-  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+  background: linear-gradient(135deg, #064e3b 0%, #10b981 100%);
   color: #ffffff;
   border: none;
   border-radius: 10px;
@@ -241,12 +241,12 @@
   justify-content: center;
   gap: 8px;
   margin-top: 24px;
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .signin-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
 .signin-button:active {
@@ -269,7 +269,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Divider */
@@ -303,7 +305,7 @@
   margin-bottom: 24px;
 }
 
-.google-signin > div {
+.google-signin>div {
   width: 100% !important;
 }
 
@@ -328,7 +330,7 @@
 }
 
 .signup-link-text {
-  color: #FF6B6B;
+  color: #10B981;
   text-decoration: none;
   font-weight: 600;
   margin-left: 6px;
@@ -336,7 +338,7 @@
 }
 
 .signup-link-text:hover {
-  color: #FF8E53;
+  color: #064e3b;
   text-decoration: underline;
 }
 
@@ -345,11 +347,11 @@
   .login-brand-side {
     padding: 40px;
   }
-  
+
   .brand-text h1 {
     font-size: 56px;
   }
-  
+
   .login-form-side {
     padding: 40px;
   }
@@ -359,38 +361,38 @@
   .login-page-split {
     flex-direction: column;
   }
-  
+
   .login-brand-side {
     min-height: 300px;
     padding: 40px 20px;
   }
-  
+
   .brand-text h1 {
     font-size: 48px;
     writing-mode: horizontal-tb;
     transform: none;
   }
-  
+
   .brand-logo {
     margin-bottom: 30px;
   }
-  
+
   .brand-logo-img {
     width: 80px;
   }
-  
+
   .login-form-side {
     padding: 40px 20px;
   }
-  
+
   .login-form-container {
     max-width: 100%;
   }
-  
+
   .form-header h2 {
     font-size: 28px;
   }
-  
+
   .decoration-1,
   .decoration-2,
   .decoration-3 {
@@ -403,25 +405,25 @@
     min-height: 250px;
     padding: 30px 20px;
   }
-  
+
   .brand-text h1 {
     font-size: 36px;
   }
-  
+
   .brand-text p {
     font-size: 16px;
   }
-  
+
   .form-header h2 {
     font-size: 24px;
   }
-  
+
   .input-group input {
     padding: 12px 14px;
     padding-right: 44px;
     font-size: 14px;
   }
-  
+
   .signin-button {
     padding: 12px 20px;
     font-size: 14px;

@@ -56,7 +56,7 @@ class RateScheduler {
     try {
       console.log('Fetching rates from rubber board...');
       const rates = await this.fetchRubberBoardRates();
-      
+
       if (rates && rates.length > 0) {
         await this.storeRates(rates);
         this.fetchCount++;
@@ -80,7 +80,7 @@ class RateScheduler {
           console.log(`Stored ${fallback.length} last-known rate(s) after failure`);
           await this.storeRates(fallback);
         }
-      } catch {}
+      } catch { }
     }
   }
 
@@ -97,14 +97,14 @@ class RateScheduler {
     let fetchedUrl = null;
 
     const requestWithRetries = async (url) => {
-      const attempts = [15000, 22000, 30000]; // timeouts per attempt
+      const attempts = [10000, 15000]; // Reduce timeouts to fail faster
       for (let i = 0; i < attempts.length; i++) {
         try {
           const response = await axios.get(url, {
             timeout: attempts[i],
-            maxRedirects: 5,
+            maxRedirects: 2,
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0 Safari/537.36',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
               'Accept-Language': 'en-US,en;q=0.9'
             },
@@ -114,7 +114,7 @@ class RateScheduler {
             return response.data;
           }
         } catch (e) {
-          console.log(`Attempt ${i+1} failed for ${url}: ${e.message}`);
+          // Silently catch error to prevent log spam when site blocks bots
         }
       }
       return null;
@@ -127,14 +127,12 @@ class RateScheduler {
         html = data;
         fetchedUrl = url;
         break;
-      } else {
-        console.log(`Failed to fetch from ${url}: stream/timeout or bad response`);
       }
     }
 
     if (!html) {
-      // Return empty to trigger fallback rather than throwing hard
-      console.log('All candidate URLs failed; will fallback to last-known rates');
+      // Provide a clean generic message without spamming all candidate failures
+      console.log('Unable to reach Rubber Board (WAF/Timeout). Falling back to last-known rates.');
       return [];
     }
 
@@ -144,7 +142,7 @@ class RateScheduler {
     // Look for latex rates in tables
     $('tr').each((_, el) => {
       const text = $(el).text().trim();
-      
+
       // Check for latex 60% rate
       if (/latex\s*\(60\%?\)/i.test(text)) {
         const cells = $(el).find('td,th').map((i, td) => $(td).text().trim()).get();

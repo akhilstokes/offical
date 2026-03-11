@@ -19,6 +19,14 @@ const BarrelRegistration = () => {
   const [loading, setLoading] = useState(false);
   const [registeredBarrels, setRegisteredBarrels] = useState([]);
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   // Get current date in readable format
   const getCurrentDate = () => {
     return new Date().toLocaleDateString('en-IN', {
@@ -191,7 +199,10 @@ const BarrelRegistration = () => {
                     id="quantity"
                     name="quantity"
                     value={formData.quantity}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      const validated = validateNumberInput(e.target.value, 1);
+                      setFormData(prev => ({...prev, quantity: validated === '' ? 1 : parseInt(validated)}));
+                    }}
                     min="1"
                     max="100"
                     required

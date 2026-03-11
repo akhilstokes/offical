@@ -142,6 +142,14 @@ const BarrelManagement = () => {
     return `BRL-${year}-${nextNumber}`;
   };
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   const handleRegistrationSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -484,7 +492,10 @@ const BarrelManagement = () => {
                   <input
                     type="number"
                     value={registrationForm.quantity}
-                    onChange={(e) => setRegistrationForm(prev => ({...prev, quantity: parseInt(e.target.value)}))}
+                    onChange={(e) => {
+                      const validated = validateNumberInput(e.target.value, 1);
+                      setRegistrationForm(prev => ({...prev, quantity: validated === '' ? 1 : parseInt(validated)}));
+                    }}
                     min="1"
                     max="100"
                     required

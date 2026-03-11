@@ -16,6 +16,14 @@ const ManagerRateUpdate = () => {
   const [fetchingOfficial, setFetchingOfficial] = useState(false);
   const todayISO = new Date().toISOString().split('T')[0];
 
+  // Validate number input - only positive numbers allowed
+  const validateNumberInput = (value, min = 0) => {
+    if (value === '') return '';
+    const num = parseFloat(value);
+    if (isNaN(num) || num < min) return '';
+    return value;
+  };
+
   useEffect(() => {
     // Set default date to today
     const today = new Date().toISOString().split('T')[0];
@@ -117,7 +125,14 @@ const ManagerRateUpdate = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    
+    // Validate numeric fields
+    if (name === 'companyRate' || name === 'marketRate') {
+      const validated = validateNumberInput(value, 0);
+      setForm(prev => ({ ...prev, [name]: validated }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const formatDate = (dateString) => {

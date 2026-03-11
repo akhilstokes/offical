@@ -21,7 +21,7 @@ const LoginPage = () => {
         setFormData({ ...formData, [name]: value });
         if (error) setError('');
     };
-    
+
     const navigatePostLogin = (loggedInUser) => {
         if (loggedInUser && loggedInUser.role === 'lab') {
             if (returnTo && String(returnTo).startsWith('/lab')) {
@@ -56,11 +56,11 @@ const LoginPage = () => {
         try {
             setLoading(true);
             setError('');
-            
+
             if (!credentialResponse?.credential) {
                 throw new Error('No credential received from Google');
             }
-            
+
             const res = await googleSignIn(credentialResponse.credential);
             navigatePostLogin(res?.user);
         } catch (err) {
@@ -77,7 +77,7 @@ const LoginPage = () => {
         try {
             setLoading(true);
             setError('');
-            
+
             const res = await login(email, password);
             navigatePostLogin(res.user);
         } catch (err) {
@@ -116,7 +116,7 @@ const LoginPage = () => {
                     {error && (
                         <div className="error-alert">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                             </svg>
                             {error}
                         </div>
@@ -126,23 +126,23 @@ const LoginPage = () => {
                         <div className="form-field">
                             <label htmlFor="email">Email Address</label>
                             <div className="input-group">
-                                <input 
+                                <input
                                     id="email"
-                                    type="email" 
-                                    name="email" 
-                                    value={email} 
+                                    type="email"
+                                    name="email"
+                                    value={email}
                                     onChange={handleChange}
                                     placeholder="hello@example.com"
-                                    required 
+                                    required
                                 />
                                 <span className="input-icon">
                                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                        <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                        <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                     </svg>
                                 </span>
                             </div>
                         </div>
-                        
+
                         <div className="form-field">
                             <div className="field-header">
                                 <label htmlFor="password">Password</label>
@@ -151,24 +151,24 @@ const LoginPage = () => {
                                 </Link>
                             </div>
                             <div className="input-group">
-                                <input 
+                                <input
                                     id="password"
                                     type="password"
-                                    name="password" 
-                                    value={password} 
+                                    name="password"
+                                    value={password}
                                     onChange={handleChange}
                                     placeholder="••••••••"
                                     required
                                 />
                                 <span className="input-icon">
                                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                        <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path d="M12.93 5.93A10 10 0 0012 6c-4.478 0-8.268 2.943-9.543 7a9.97 9.97 0 001.563 3.029m5.858.908a3 3 0 114.243-4.243M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path d="M12.93 5.93A10 10 0 0012 6c-4.478 0-8.268 2.943-9.543 7a9.97 9.97 0 001.563 3.029m5.858.908a3 3 0 114.243-4.243M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                 </span>
                             </div>
                         </div>
-                        
+
                         <button className="signin-button" type="submit" disabled={loading}>
                             {loading ? (
                                 <>
@@ -179,7 +179,7 @@ const LoginPage = () => {
                                 <>
                                     Sign In
                                     <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+                                        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>
                                 </>
                             )}
@@ -206,7 +206,7 @@ const LoginPage = () => {
                     </div>
 
                     <div className="signup-prompt">
-                        Don't have an account? 
+                        Don't have an account?
                         <Link to="/register" className="signup-link-text">Sign up for free</Link>
                     </div>
                 </div>
