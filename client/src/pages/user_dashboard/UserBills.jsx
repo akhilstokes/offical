@@ -9,7 +9,7 @@ const UserBills = () => {
   const [loading, setLoading] = useState(true);
   const [selectedBill, setSelectedBill] = useState(null);
   const [showBillModal, setShowBillModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('sales'); // 'sales', 'purchases', or 'gst-invoices'
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'sales', 'purchases', or 'gst-invoices'
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const pageSize = 10;
@@ -22,39 +22,96 @@ const UserBills = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const headers = { 'Authorization': `Bearer ${token}` };
 
-      let apiUrl;
-      if (activeTab === 'sales') {
-        apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/bills/user/my-bills?page=${page}&limit=${pageSize}`;
-      } else if (activeTab === 'purchases') {
-        apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/invoices/my?page=${page}&limit=${pageSize}`;
-      } else if (activeTab === 'gst-invoices') {
-        apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/gst-invoices/user/my-invoices?page=${page}&limit=${pageSize}`;
-      }
+      if (activeTab === 'all') {
+        // Fetch all three sources concurrently
+        const [salesRes, purchasesRes, gstRes] = await Promise.all([
+          fetch(`${baseUrl}/api/bills/user/my-bills?limit=100`, { headers }),
+          fetch(`${baseUrl}/api/invoices/my?limit=100`, { headers }),
+          fetch(`${baseUrl}/api/gst-invoices/user/my-invoices?limit=100`, { headers })
+        ]);
+        const [salesData, purchasesDataRaw, gstData] = await Promise.all([
+          salesRes.ok ? salesRes.json() : { bills: [] },
+          purchasesRes.ok ? purchasesRes.json() : { data: [] },
+          gstRes.ok ? gstRes.json() : { invoices: [] }
+        ]);
 
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+        const purchasesItems = purchasesDataRaw?.data || purchasesDataRaw?.invoices || (Array.isArray(purchasesDataRaw) ? purchasesDataRaw : []);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (activeTab === 'sales') {
-          setBills(data.bills || []);
-          setTotal(data.total || 0);
-        } else if (activeTab === 'purchases') {
-          // Invoice API returns { success, invoices, count } or just an array
-          const items = data.invoices || (Array.isArray(data) ? data : []);
-          setBills(items);
-          setTotal(data.count || items.length);
-        } else if (activeTab === 'gst-invoices') {
-          setBills(data.invoices || []);
-          setTotal(data.count || 0);
-        }
+        console.log('📦 Data Summary:', { 
+          salesCount: salesData?.bills?.length || 0, 
+          purchasesCount: purchasesItems?.length || 0, 
+          gstCount: gstData?.invoices?.length || 0 
+        });
+
+        // Normalize data with safety checks
+        const normalizedSales = (salesData?.bills || []).map(b => ({
+          ...b,
+          id: b._id,
+          itemType: 'sale',
+          refNo: b.billNumber || 'SAL-000',
+          date: b.createdAt || b.date || new Date(),
+          amount: b.totalAmount || 0
+        }));
+
+        const normalizedPurchases = (purchasesItems || []).map(p => ({
+          ...p,
+          id: p._id,
+          itemType: 'purchase',
+          refNo: p.invoiceNumber || 'PUR-000',
+          date: p.createdAt || p.invoiceDate || new Date(),
+          amount: p.totalAmount || 0
+        }));
+
+        const normalizedGst = (gstData?.invoices || []).map(g => ({
+          ...g,
+          id: g._id,
+          itemType: 'gst',
+          refNo: g.invoiceNumber || 'GST-000',
+          date: g.invoiceDate || g.createdAt || new Date(),
+          amount: g.grandTotal || 0
+        }));
+
+        // Merge all and sort by date descending
+        const allItems = [...normalizedSales, ...normalizedPurchases, ...normalizedGst]
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        setTotal(allItems.length);
+        // Manual pagination for the merged 'all' list
+        const start = (page - 1) * pageSize;
+        setBills(allItems.slice(start, start + pageSize));
+
       } else {
-        setBills([]);
-        setTotal(0);
+        let apiUrl;
+        if (activeTab === 'sales') {
+          apiUrl = `${baseUrl}/api/bills/user/my-bills?page=${page}&limit=${pageSize}`;
+        } else if (activeTab === 'purchases') {
+          apiUrl = `${baseUrl}/api/invoices/my?page=${page}&limit=${pageSize}`;
+        } else if (activeTab === 'gst-invoices') {
+          apiUrl = `${baseUrl}/api/gst-invoices/user/my-invoices?page=${page}&limit=${pageSize}`;
+        }
+
+        const response = await fetch(apiUrl, { headers });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (activeTab === 'sales') {
+            setBills((data.bills || []).map(b => ({ ...b, itemType: 'sale' })));
+            setTotal(data.total || 0);
+          } else if (activeTab === 'purchases') {
+            const items = data.data || data.invoices || (Array.isArray(data) ? data : []);
+            setBills(items.map(i => ({ ...i, itemType: 'purchase' })));
+            setTotal(data.pagination?.total || data.count || items.length);
+          } else if (activeTab === 'gst-invoices') {
+            setBills((data.invoices || []).map(i => ({ ...i, itemType: 'gst' })));
+            setTotal(data.count || 0);
+          }
+        } else {
+          setBills([]);
+          setTotal(0);
+        }
       }
     } catch (e) {
       console.error('❌ Error loading bills:', e);
@@ -109,7 +166,7 @@ const UserBills = () => {
       'delivered': { bg: '#d1fae5', color: '#065f46', text: 'Delivered' }
     };
 
-    const config = statusConfig[status.toLowerCase()] || statusConfig['pending'];
+    const config = statusConfig[status?.toLowerCase()] || statusConfig['pending'];
 
     return (
       <span style={{
@@ -136,7 +193,8 @@ const UserBills = () => {
             Financial Documents
           </h1>
           <p style={{ color: '#64748b', margin: 0 }}>
-            {activeTab === 'sales' ? 'View bills from your rubber sales' : 
+            {activeTab === 'all' ? 'All your transactions in one place' :
+             activeTab === 'sales' ? 'View bills from your rubber sales' : 
              activeTab === 'purchases' ? 'View invoices from your product purchases' :
              'View GST invoices and download PDFs'}
           </p>
@@ -144,6 +202,22 @@ const UserBills = () => {
 
         {/* Tab Switcher */}
         <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', gap: '4px' }}>
+          <button
+            onClick={() => { setActiveTab('all'); setPage(1); }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'all' ? 'white' : 'transparent',
+              color: activeTab === 'all' ? '#4f46e5' : '#64748b',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: activeTab === 'all' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            All History
+          </button>
           <button
             onClick={() => { setActiveTab('sales'); setPage(1); }}
             style={{
@@ -199,16 +273,18 @@ const UserBills = () => {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '4rem' }}>
           <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: '#8b5cf6' }}></i>
-          <p style={{ marginTop: '1rem', color: '#64748b' }}>Loading {activeTab === 'sales' ? 'bills' : activeTab === 'purchases' ? 'invoices' : 'GST invoices'}...</p>
+          <p style={{ marginTop: '1rem', color: '#64748b' }}>Loading {activeTab === 'all' ? 'history' : activeTab === 'sales' ? 'bills' : activeTab === 'purchases' ? 'invoices' : 'GST invoices'}...</p>
         </div>
       ) : bills.length === 0 ? (
         <div className="dash-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <div style={{ width: '64px', height: '64px', background: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
             <i className={activeTab === 'sales' ? "fas fa-leaf" : activeTab === 'purchases' ? "fas fa-shopping-bag" : "fas fa-file-invoice-dollar"} style={{ fontSize: '1.75rem', color: '#94a3b8' }}></i>
           </div>
-          <h3 style={{ fontSize: '1.25rem', color: '#1e293b', margin: '0 0 0.5rem 0' }}>No {activeTab === 'sales' ? 'Sales' : activeTab === 'purchases' ? 'Orders' : 'Invoices'} Found</h3>
+          <h3 style={{ fontSize: '1.25rem', color: '#1e293b', margin: '0 0 0.5rem 0' }}>No {activeTab === 'all' ? 'Transactions' : activeTab === 'sales' ? 'Sales' : activeTab === 'purchases' ? 'Orders' : 'Invoices'} Found</h3>
           <p style={{ color: '#64748b', maxWidth: '400px', margin: '0 auto' }}>
-            {activeTab === 'sales'
+            {activeTab === 'all'
+              ? "You don't have any financial transaction history yet."
+              : activeTab === 'sales'
               ? "You don't have any rubber sale bills yet."
               : activeTab === 'purchases' 
               ? "You haven't placed any product orders yet."
@@ -220,7 +296,16 @@ const UserBills = () => {
           <div className="table-wrap">
             <table className="table">
               <thead>
-                {activeTab === 'sales' ? (
+                {activeTab === 'all' ? (
+                  <tr>
+                    <th>Ref No.</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Amount (₹)</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                ) : activeTab === 'sales' ? (
                   <tr>
                     <th>Bill No.</th>
                     <th>Date</th>
@@ -253,105 +338,120 @@ const UserBills = () => {
                 )}
               </thead>
               <tbody>
-                {bills.map(item => (
-                  <tr key={item._id}>
-                    <td>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '4px 10px',
-                        background: activeTab === 'sales' ? '#f3e8ff' : activeTab === 'purchases' ? '#e0f2fe' : '#fef3c7',
-                        color: activeTab === 'sales' ? '#7c3aed' : activeTab === 'purchases' ? '#0369a1' : '#92400e',
-                        borderRadius: '6px',
-                        fontFamily: 'monospace',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
-                        {activeTab === 'sales' ? item.billNumber : item.invoiceNumber}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '32px', height: '32px', background: '#f8fafc', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-                          <i className="fas fa-calendar-day" style={{ fontSize: '0.8rem' }}></i>
-                        </div>
-                        <span style={{ fontWeight: '500' }}>
-                          {new Date(item.createdAt || item.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </span>
-                      </div>
-                    </td>
-                    {activeTab === 'sales' ? (
-                      <>
-                        <td><span style={{ fontWeight: '600' }}>{item.barrelCount}</span></td>
-                        <td><span>{item.drcPercent}%</span></td>
-                      </>
-                    ) : activeTab === 'purchases' ? (
+                {bills.map(item => {
+                  const type = item.itemType || (item.billNumber ? 'sale' : item.customerName ? 'gst' : 'purchase');
+                  return (
+                    <tr key={item._id}>
                       <td>
-                        <span style={{ fontWeight: '500', fontSize: '14px' }}>
-                          {item.items?.length || 0} Item(s)
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '4px 10px',
+                          background: type === 'sale' ? '#f3e8ff' : type === 'purchase' ? '#e0f2fe' : '#fef3c7',
+                          color: type === 'sale' ? '#7c3aed' : type === 'purchase' ? '#0369a1' : '#92400e',
+                          borderRadius: '6px',
+                          fontFamily: 'monospace',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          {item.billNumber || item.invoiceNumber}
                         </span>
                       </td>
-                    ) : (
-                      <>
+                      {activeTab === 'all' && (
                         <td>
-                          <span style={{ fontWeight: '500', fontSize: '14px' }}>
-                            {item.customerName}
+                          <span style={{ 
+                            fontSize: '12px', 
+                            fontWeight: '600', 
+                            textTransform: 'uppercase',
+                            color: type === 'sale' ? '#8b5cf6' : type === 'purchase' ? '#3b82f6' : '#f59e0b'
+                          }}>
+                            {type === 'sale' ? 'Rubber Sale' : type === 'purchase' ? 'Purchase' : 'GST Invoice'}
                           </span>
                         </td>
+                      )}
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '32px', height: '32px', background: '#f8fafc', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                            <i className="fas fa-calendar-day" style={{ fontSize: '0.8rem' }}></i>
+                          </div>
+                          <span style={{ fontWeight: '500' }}>
+                            {new Date(item.createdAt || item.invoiceDate || item.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </td>
+                      {activeTab === 'sales' ? (
+                        <>
+                          <td><span style={{ fontWeight: '600' }}>{item.barrelCount}</span></td>
+                          <td><span>{item.drcPercent}%</span></td>
+                        </>
+                      ) : activeTab === 'purchases' ? (
                         <td>
                           <span style={{ fontWeight: '500', fontSize: '14px' }}>
                             {item.items?.length || 0} Item(s)
                           </span>
                         </td>
-                        <td>
-                          <span style={{ color: '#dc2626', fontWeight: '600', fontSize: '14px' }}>
-                            ₹{item.taxableValue?.toLocaleString('en-IN', { maximumFractionDigits: 2 }) || '0.00'}
-                          </span>
-                        </td>
-                      </>
-                    )}
-                    <td>
-                      <span style={{ color: '#16a34a', fontWeight: '700', fontSize: '15px' }}>
-                        ₹{(activeTab === 'gst-invoices' ? item.grandTotal : item.totalAmount)?.toLocaleString('en-IN', { maximumFractionDigits: 2 }) || '0.00'}
-                      </span>
-                    </td>
-                    <td>
-                      {getStatusBadge(item.status)}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      {activeTab === 'sales' ? (
-                        <button
-                          className="btn-secondary"
-                          onClick={() => {
-                            setSelectedBill(item);
-                            setShowBillModal(true);
-                          }}
-                          style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
-                        >
-                          <i className="fas fa-file-pdf" style={{ marginRight: '6px', color: '#ef4444' }}></i>
-                          Download as PDF
-                        </button>
-                      ) : activeTab === 'purchases' ? (
-                        <button
-                          className="btn-secondary"
-                          onClick={() => window.open(`/user/invoices/${item._id}`, '_blank')}
-                          style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap', color: '#0284c7' }}
-                        >
-                          <i className="fas fa-eye" style={{ marginRight: '6px' }}></i>
-                          View Invoice
-                        </button>
-                      ) : (
-                        <button
-                          className="btn-secondary"
-                          onClick={() => downloadGSTInvoicePDF(item._id)}
-                          style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap', color: '#dc2626' }}
-                        >
-                          <i className="fas fa-file-pdf" style={{ marginRight: '6px' }}></i>
-                          Download PDF
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      ) : activeTab === 'gst-invoices' ? (
+                        <>
+                          <td>
+                            <span style={{ fontWeight: '500', fontSize: '14px' }}>
+                              {item.customerName}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: '500', fontSize: '14px' }}>
+                              {item.items?.length || 0} Item(s)
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ color: '#dc2626', fontWeight: '600', fontSize: '14px' }}>
+                              ₹{item.taxableValue?.toLocaleString('en-IN', { maximumFractionDigits: 2 }) || '0.00'}
+                            </span>
+                          </td>
+                        </>
+                      ) : null}
+                      <td>
+                        <span style={{ color: '#16a34a', fontWeight: '700', fontSize: '15px' }}>
+                          ₹{(item.grandTotal || item.totalAmount || item.amount)?.toLocaleString('en-IN', { maximumFractionDigits: 2 }) || '0.00'}
+                        </span>
+                      </td>
+                      <td>
+                        {getStatusBadge(item.status)}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        {type === 'sale' ? (
+                          <button
+                            className="btn-secondary"
+                            onClick={() => {
+                              setSelectedBill(item);
+                              setShowBillModal(true);
+                            }}
+                            style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                          >
+                            <i className="fas fa-file-pdf" style={{ marginRight: '6px', color: '#ef4444' }}></i>
+                            Download PDF
+                          </button>
+                        ) : type === 'purchase' ? (
+                          <button
+                            className="btn-secondary"
+                            onClick={() => window.open(`/user/invoices/${item._id}`, '_blank')}
+                            style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap', color: '#0284c7' }}
+                          >
+                            <i className="fas fa-eye" style={{ marginRight: '6px' }}></i>
+                            View Invoice
+                          </button>
+                        ) : (
+                          <button
+                            className="btn-secondary"
+                            onClick={() => downloadGSTInvoicePDF(item._id)}
+                            style={{ padding: '6px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap', color: '#dc2626' }}
+                          >
+                            <i className="fas fa-file-pdf" style={{ marginRight: '6px' }}></i>
+                            Download PDF
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

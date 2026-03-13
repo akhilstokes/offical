@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const ManagerProfile = () => {
-  const { validateToken } = useAuth();
+  const { validateToken, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -179,8 +179,8 @@ const ManagerProfile = () => {
           <div className="value">{form.location || '--'}</div>
         </div>
         <div className="summary-item">
-          <div className="label">Status</div>
-          <div className="value status-active">Active</div>
+          <div className="label">Role</div>
+          <div className="value status-active">{user?.role ? user.role.replace(/_/g, ' ') : 'System Manager'}</div>
         </div>
       </aside>
 

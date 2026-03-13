@@ -185,6 +185,13 @@ const LabDashboardLayout = ({ children }) => {
                   {user?.role ? user.role.replace('_', ' ') : 'Lab Staff'}
                 </span>
               </div>
+              <button
+                className="lab-logout-btn"
+                onClick={handleLogout}
+                title="Sign out"
+              >
+                <i className="fas fa-sign-out-alt"></i>
+              </button>
             </div>
           </div>
         )}
@@ -306,14 +313,6 @@ const LabDashboardLayout = ({ children }) => {
               
               {menuOpen && (
                 <div className="lab-profile-dropdown">
-                  <NavLink 
-                    to="/lab/dashboard" 
-                    className="lab-dropdown-item"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <i className="fas fa-home"></i>
-                    <span>Dashboard</span>
-                  </NavLink>
                   <button 
                     className="lab-dropdown-item lab-dropdown-item--logout"
                     onClick={handleLogout}

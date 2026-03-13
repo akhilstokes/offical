@@ -1,8 +1,26 @@
-.hanger-container {
+.hanger-page {
   padding: 24px;
   background: #0f172a;
-  border-radius: 12px;
+  min-height: calc(100vh - 80px);
   color: #e2e8f0;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+/* outer wrapper: left labels + Block A + gap + Block B + right labels */
+.hanger-wrap {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.hanger-container {
+  background: #0f172a; /* Kept for card-like background */
+  border-radius: 12px;
+  padding: 24px; /* Kept for inner padding */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Added for depth */
 }
 
 .hanger-header {
@@ -38,7 +56,8 @@
   gap: 12px;
 }
 
-.header-actions button {
+/* General button style */
+.btn {
   padding: 8px 16px;
   background: #4f46e5;
   color: white;
@@ -49,14 +68,17 @@
   transition: background 0.2s;
 }
 
-.header-actions button:hover {
+.btn:hover {
   background: #4338ca;
 }
 
-.header-actions button:disabled {
+.btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+
+
 
 .hanger-grid {
   display: flex;
@@ -106,7 +128,7 @@
   color: #cbd5e1;
 }
 
-.row-labels div {
+.row-label { /* Renamed from .row-labels div */
   height: 32px;
   display: flex;
   align-items: center;
@@ -126,7 +148,25 @@
 
 .hanger-row {
   display: flex;
+  /* Each row should render slots horizontally (columns), not stacked vertically */
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+}
+
+/* horizontal strip of slots inside each row */
+.row-cells {
+  display: flex;
+  flex-direction: row;
   gap: 8px;
+}
+
+/* vertical gap divider between Block A and Block B */
+.hanger-gap {
+  width: 28px;
+  flex-shrink: 0;
+  border-left: 2px dashed #334155;
+  margin: 0 4px;
 }
 
 .slot {
@@ -143,7 +183,8 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
-.slot.vacant {
+.slot.vacant,
+.slot.free {
   background: #10b981;
 }
 
@@ -159,11 +200,17 @@
   background: #f59e0b;
 }
 
+/* Highlight range selection without changing slot status colors */
+.slot.in-range {
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.9), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 .controls-section {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
+  margin-top: 32px; /* Added some top margin for separation */
 }
 
 .control-card {
@@ -200,26 +247,12 @@
   width: 80px;
 }
 
-.control-inputs button {
-  padding: 8px 16px;
-  background: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s;
-}
-
-.control-inputs button:hover {
-  background: #4338ca;
-}
-
 .legend {
   display: flex;
   gap: 24px;
   justify-content: center;
   flex-wrap: wrap;
+  margin-top: 24px; /* Added some top margin for separation */
 }
 
 .legend-item {
@@ -234,6 +267,7 @@
   width: 24px;
   height: 24px;
   cursor: default;
+  box-shadow: none; /* Remove shadow for legend slots */
 }
 
 .legend-item .slot:hover {

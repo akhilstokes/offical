@@ -3,19 +3,19 @@ import './HangerSpace.css';
 import { listHangerSpaces, seedHangerGrid, setHangerSpaceStatus, bulkSetHangerSpaceStatus } from '../../services/adminService';
 
 const ROWS = ['D','E','F','G','H','I','J','K','L'];
+// Column letters correspond to the grid columns (D-M)
+const COLUMN_LETTERS = Array.from({ length: 10 }, (_, i) => String.fromCharCode('D'.charCodeAt(0) + i));
 
 const HangerSpace = () => {
   const [slots, setSlots] = useState([]);
   const [bulk, setBulk] = useState({ block: 'B', status: 'vacant' });
-  const [bulkRange, setBulkRange] = useState({ block: 'B', fromCol: 1, toCol: 10, status: 'vacant' });
+  const [bulkRange, setBulkRange] = useState({ block: 'B', fromCol: COLUMN_LETTERS[0], toCol: COLUMN_LETTERS[COLUMN_LETTERS.length - 1], status: 'vacant' });
+  const [highlightRange, setHighlightRange] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Validate number input - only positive numbers allowed
-  const validateNumberInput = (value, min = 1, max = 10) => {
-    if (value === '') return '';
-    const num = parseInt(value);
-    if (isNaN(num) || num < min || num > max) return '';
-    return value;
+  const letterToCol = (letter) => {
+    const idx = COLUMN_LETTERS.indexOf(letter);
+    return idx >= 0 ? idx + 1 : 1;
   };
 
   const statusMap = useMemo(() => {
@@ -87,17 +87,12 @@ const HangerSpace = () => {
   };
 
   const applyRange = async () => {
-    const from = Math.max(1, Number(bulkRange.fromCol));
-    const to = Math.max(from, Number(bulkRange.toCol));
-    const ids = slots.filter(s => s.block === bulkRange.block && s.col >= from && s.col <= to).map(s => s._id);
-    if (!ids.length || !window.confirm(`Set ${ids.length} slots to ${bulkRange.status}?`)) return;
-    
-    try {
-      await bulkSetHangerSpaceStatus(ids, bulkRange.status);
-      await load();
-    } catch (e) {
-      alert(e.message);
-    }
+    // Highlight the selected range instead of changing status/colors.
+    setHighlightRange({
+      block: bulkRange.block,
+      fromCol: bulkRange.fromCol,
+      toCol: bulkRange.toCol
+    });
   };
 
   return (
@@ -121,7 +116,7 @@ const HangerSpace = () => {
         <div className="grid-header">
           <div className="spacer"></div>
           <div className="column-labels-container">
-            {['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].map(col => (
+            {COLUMN_LETTERS.map(col => (
               <div key={col} className="col-label">{col}</div>
             ))}
           </div>
@@ -143,7 +138,7 @@ const HangerSpace = () => {
                       return (
                         <div
                           key={col}
-                          className={`slot ${status}`}
+                          className={`slot ${status}${highlightRange && highlightRange.block === block && col >= letterToCol(highlightRange.fromCol) && col <= letterToCol(highlightRange.toCol) ? ' in-range' : ''}`}
                           onClick={() => handleSlotClick(block, row, col)}
                           title={`${block}${row}${col} - ${status}`}
                         />
@@ -186,28 +181,22 @@ const HangerSpace = () => {
               <option value="A">Block A</option>
               <option value="B">Block B</option>
             </select>
-            <input 
-              type="number" 
-              min="1" 
-              max="10" 
-              value={bulkRange.fromCol} 
-              onChange={e => {
-                const validated = validateNumberInput(e.target.value, 1, 10);
-                setBulkRange({...bulkRange, fromCol: validated === '' ? 1 : parseInt(validated)});
-              }}
-              placeholder="From"
-            />
-            <input 
-              type="number" 
-              min="1" 
-              max="10" 
-              value={bulkRange.toCol} 
-              onChange={e => {
-                const validated = validateNumberInput(e.target.value, 1, 10);
-                setBulkRange({...bulkRange, toCol: validated === '' ? 10 : parseInt(validated)});
-              }}
-              placeholder="To"
-            />
+            <select
+              value={bulkRange.fromCol}
+              onChange={e => setBulkRange({...bulkRange, fromCol: e.target.value})}
+            >
+              {COLUMN_LETTERS.map(letter => (
+                <option key={letter} value={letter}>{letter}</option>
+              ))}
+            </select>
+            <select
+              value={bulkRange.toCol}
+              onChange={e => setBulkRange({...bulkRange, toCol: e.target.value})}
+            >
+              {COLUMN_LETTERS.map(letter => (
+                <option key={letter} value={letter}>{letter}</option>
+              ))}
+            </select>
             <select value={bulkRange.status} onChange={e => setBulkRange({...bulkRange, status: e.target.value})}>
               <option value="vacant">Vacant</option>
               <option value="occupied">Occupied</option>
@@ -215,6 +204,26 @@ const HangerSpace = () => {
               <option value="complete_bill">Complete Bill</option>
             </select>
             <button onClick={applyRange}>Apply Range</button>
+            {highlightRange && (
+              <div style={{ marginTop: '10px', fontSize: '12px', color: '#cbd5e1' }}>
+                Highlighting {highlightRange.block} columns {highlightRange.fromCol}–{highlightRange.toCol}
+                <button
+                  style={{
+                    marginLeft: '10px',
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    borderRadius: '6px',
+                    border: '1px solid #64748b',
+                    background: 'transparent',
+                    color: '#cbd5e1',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => setHighlightRange(null)}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

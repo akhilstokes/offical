@@ -330,6 +330,13 @@ const LabCheckIn = () => {
       
       setHistory(existingCheckins);
       
+      // Inform dashboard to refresh incoming counts
+      try {
+        localStorage.setItem('labCheckInUpdated', 'true');
+      } catch (e) {
+        // ignore storage errors
+      }
+
       setTimeout(() => {
         navigate(`/lab/dashboard`);
       }, 1500);
@@ -346,7 +353,19 @@ const LabCheckIn = () => {
     return Object.keys(v).length === 0;
   }, [loading, form, measurements]);
 
-  const generateReport = (item) => {
+  const loadImageAsDataUrl = async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to load image');
+    const blob = await response.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const generateReport = async (item) => {
     const reportDate = item.receivedAt ? new Date(item.receivedAt) : new Date(item.createdAt);
     const doc = new jsPDF();
     
@@ -358,10 +377,22 @@ const LabCheckIn = () => {
     // Header
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, 210, 35, 'F');
+
+    // Logo (optional)
+    try {
+      const logoData = await loadImageAsDataUrl('/images/logo.png');
+      if (logoData) {
+        doc.addImage(logoData, 'PNG', 12, 7, 28, 20);
+      }
+    } catch (e) {
+      // Logo is optional; ignore failures
+      console.warn('Could not load logo for report', e);
+    }
+
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('LAB CHECK-IN REPORT', 105, 20, { align: 'center' });
+    doc.text('LAB TESTING REPORT', 105, 20, { align: 'center' });
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -401,37 +432,43 @@ const LabCheckIn = () => {
     
     yPos += 18;
     
-    // Barrel Data
-    if (item.barrels && item.barrels.length > 0) {
-      item.barrels.forEach((barrel, idx) => {
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`BARREL ${barrel.barrelNumber || idx + 1}`, 20, yPos);
-        doc.line(20, yPos + 2, 190, yPos + 2);
-        
-        yPos += 10;
-        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-        doc.setFontSize(10);
-        
-        doc.setFont('helvetica', 'bold');
-        doc.text('DRC:', 25, yPos);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${barrel.drc?.value?.toFixed(2) || 'N/A'}%`, 50, yPos);
-        
-        doc.setFont('helvetica', 'bold');
-        doc.text('TSC:', 90, yPos);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${barrel.tsc?.value?.toFixed(2) || 'N/A'}%`, 115, yPos);
-        
-        doc.setFont('helvetica', 'bold');
-        doc.text('pH:', 155, yPos);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${barrel.ph || 'N/A'}`, 170, yPos);
-        
-        yPos += 12;
-      });
-    }
+    // Barrel Summary
+    const barrelCount = item.barrels?.length || 0;
+    const firstBarrel = item.barrels?.[0] || {};
+    const sampleDrc = firstBarrel.drc?.value || firstBarrel.drc || 'N/A';
+    const sampleTsc = firstBarrel.tsc?.value || firstBarrel.tsc || 'N/A';
+    const samplePh = firstBarrel.ph || 'N/A';
+
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('BARREL SUMMARY', 20, yPos);
+    doc.line(20, yPos + 2, 190, yPos + 2);
+
+    yPos += 10;
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.setFontSize(10);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Number of Barrels:', 25, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${barrelCount}`, 70, yPos);
+
+    yPos += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text('DRC:', 25, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${sampleDrc !== 'N/A' ? Number(sampleDrc).toFixed(2) : 'N/A'}%`, 45, yPos);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('TSC:', 90, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${sampleTsc !== 'N/A' ? Number(sampleTsc).toFixed(2) : 'N/A'}%`, 115, yPos);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('pH:', 155, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${samplePh}`, 170, yPos);
     
     // Footer
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);

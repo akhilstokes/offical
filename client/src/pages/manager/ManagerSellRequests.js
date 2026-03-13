@@ -909,19 +909,12 @@ const ManagerSellRequests = () => {
       </div>
 
       {/* Requests Display */}
-      {loading ? (
-        <div className="loading-state">
-          <div className="loading-spinner">
-            <i className="fas fa-spinner fa-spin" />
-          </div>
-          <div className="loading-text">Loading sell requests...</div>
-        </div>
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">
             <i className="fas fa-inbox" />
           </div>
-          <div className="empty-title">No sell requests found</div>
+          <div className="empty-title">{loading ? 'Loading sell requests...' : 'No sell requests found'}</div>
           {(filters.status || typeSeg !== 'ALL') && (
             <div className="empty-subtitle">Try adjusting your filters to see more results</div>
           )}

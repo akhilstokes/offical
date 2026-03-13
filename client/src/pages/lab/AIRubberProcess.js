@@ -27,6 +27,8 @@ const AIRubberProcess = () => {
   const [temperature, setTemperature] = useState(null);
   const [tempLoading, setTempLoading] = useState(true);
 
+  const [history, setHistory] = useState([]);
+
   const ML_SERVICE_URL = process.env.REACT_APP_ML_SERVICE_URL || 'http://localhost:5001';
 
   // Fetch real-time temperature
@@ -92,6 +94,15 @@ const AIRubberProcess = () => {
       }
     } catch (err) {
       console.error('Error loading sample data:', err);
+    }
+
+    // Load stored AI process history
+    try {
+      const storedHistory = JSON.parse(localStorage.getItem('ai_process_history') || '[]');
+      setHistory(Array.isArray(storedHistory) ? storedHistory : []);
+    } catch (err) {
+      console.error('Error loading AI history:', err);
+      setHistory([]);
     }
   }, []);
 
@@ -159,6 +170,21 @@ const AIRubberProcess = () => {
 
       const data = await response.json();
       setResult(data);
+
+      // Save to local history for review
+      const entry = {
+        timestamp: new Date().toISOString(),
+        inputs: { ...formData },
+        result: data
+      };
+      try {
+        const existing = JSON.parse(localStorage.getItem('ai_process_history') || '[]');
+        const updated = [entry, ...(Array.isArray(existing) ? existing : [])];
+        localStorage.setItem('ai_process_history', JSON.stringify(updated));
+        setHistory(updated);
+      } catch (err) {
+        console.error('Error saving AI history:', err);
+      }
     } catch (err) {
       setError(err.message || 'Failed to get prediction. Please ensure ML service is running.');
     } finally {
@@ -841,6 +867,34 @@ const AIRubberProcess = () => {
       )}
 
       <div className="ai-rubber-content">
+        <div style={{ marginBottom: '24px' }}>
+          <div className="history-panel">
+            <div className="history-header">
+              <h4>🕒 AI Prediction History</h4>
+            </div>
+            {history.length === 0 ? (
+              <div className="history-empty">No history yet. Run a prediction to save entries.</div>
+            ) : (
+              <ul className="history-list">
+                {history.map((entry, idx) => (
+                  <li key={`${entry.timestamp}-${idx}`} className="history-item">
+                    <div className="history-meta">
+                      <span className="history-time">{new Date(entry.timestamp).toLocaleString()}</span>
+                      <span className="history-process">{entry.result?.recommended_process || '—'}</span>
+                      <span className="history-confidence">{entry.result ? `${(entry.result.confidence * 100).toFixed(1)}%` : '—'}</span>
+                    </div>
+                    <div className="history-summary">
+                      <span>DRC: {entry.inputs?.DRC || '—'}%</span>
+                      <span>TSC: {entry.inputs?.TSC || '—'}%</span>
+                      <span>pH: {entry.inputs?.pH || '—'}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
         <form onSubmit={handlePredict} className="ai-rubber-form">
           <div className="form-grid">
             <div className="form-field">
@@ -1374,36 +1428,40 @@ const AIRubberProcess = () => {
               })()}
               
               {/* Download Report Button */}
-              <div style={{ marginTop: '20px', textAlign: 'center' }}>
-                <button
-                  onClick={downloadReport}
-                  style={{
-                    padding: '12px 32px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '10px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
-                    transition: 'all 0.3s'
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.4)';
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>📄</span>
-                  Download Report
-                </button>
+              <div style={{ marginTop: '20px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={downloadReport}
+                    style={{
+                      padding: '12px 32px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+                      transition: 'all 0.3s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.4)';
+                    }}
+                  >
+                    <span style={{ fontSize: '20px' }}>📄</span>
+                    Download Report
+                  </button>
+
+                </div>
+
               </div>
             </div>
           </div>

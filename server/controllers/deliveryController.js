@@ -708,6 +708,31 @@ exports.intakeBarrels = async (req, res) => {
       }
     }
 
+    // ✅ NOTIFY LAB STAFF ABOUT NEW INTAKE
+    try {
+      const labUsers = await User.find({ 
+        role: { $in: ['lab', 'lab_manager', 'lab_staff'] },
+        status: 'active'
+      }).select('_id');
+      
+      if (labUsers.length > 0) {
+        const notifications = labUsers.map(labUser => ({
+          userId: labUser._id,
+          role: 'lab_staff',
+          title: '📥 New Barrel Intake',
+          message: `${req.user.name} recorded an intake for ${customerName} (${count} barrels).`,
+          link: '/lab/dashboard',
+          read: false
+        }));
+        
+        await Notification.insertMany(notifications);
+        console.log(`✅ Sent intake notification to ${labUsers.length} lab staff member(s)`);
+      }
+    } catch (notifError) {
+      console.error('Error creating lab notifications:', notifError);
+      // Don't fail the request if notifications fail
+    }
+
     // Calculate remaining barrels only for new requests
     let remainingBarrels = 0;
     if (!requestId) {

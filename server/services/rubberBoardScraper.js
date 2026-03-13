@@ -21,7 +21,8 @@ async function fetchFromAPI() {
         const response = await axios.get(endpoint, {
           headers: {
             'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Referer': 'https://rubberboard.gov.in/'
           },
           timeout: 5000
         });
@@ -86,78 +87,114 @@ async function fetchFromAPI() {
 
 /**
  * Fetch daily latex rate from Rubber Board website (fallback scraping)
- * URL: https://rubberboard.gov.in/public
  */
 async function fetchFromWebsite() {
-  try {
-    console.log('🔍 Fetching latex rate from Rubber Board website...');
-    
-    const response = await axios.get('https://rubberboard.gov.in/public', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      timeout: 10000
-    });
+  const candidateUrls = [
+    'https://rubberboard.gov.in/public',
+    'https://rubberboard.org.in/public?lang=E',
+    'https://rubberboard.org.in/public',
+    'http://rubberboard.org.in/public'
+  ];
 
-    const $ = cheerio.load(response.data);
-    
-    // Find the Latex(60%) rate from the domestic market table
+  let html = null;
+  let fetchedUrl = null;
+
+  const requestWithRetries = async (url) => {
+    const attempts = [8000, 12000];
+    for (const timeout of attempts) {
+      try {
+        console.log(`🔍 Trying scraping URL: ${url} (timeout: ${timeout}ms)`);
+        const response = await axios.get(url, {
+          timeout,
+          maxRedirects: 5,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.google.com/',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          },
+          validateStatus: (s) => s >= 200 && s < 400
+        });
+
+        if (response.data && typeof response.data === 'string') {
+          return response.data;
+        }
+      } catch (err) {
+        console.log(`⚠️ Failed to fetch ${url}: ${err.message}`);
+      }
+    }
+    return null;
+  };
+
+  for (const url of candidateUrls) {
+    const data = await requestWithRetries(url);
+    if (data) {
+      html = data;
+      fetchedUrl = url;
+      break;
+    }
+  }
+
+  if (!html) {
+    console.log('❌ All candidate URLs failed for scraping');
+    return { success: false, error: 'All URLs failed', rate: null };
+  }
+
+  try {
+    const $ = cheerio.load(html);
     let latexRate = null;
     let rateDate = null;
 
-    // Look for the table with domestic market rates
-    $('table').each((i, table) => {
-      $(table).find('tr').each((j, row) => {
-        const cells = $(row).find('td');
-        if (cells.length >= 2) {
-          const category = $(cells[0]).text().trim();
-          
-          // Check if this row contains Latex(60%)
-          if (category.includes('Latex') && category.includes('60')) {
-            const rateText = $(cells[1]).text().trim();
-            // Extract number from rate (e.g., "▲ 13210.0" -> 13210.0)
-            const match = rateText.match(/[\d.]+/);
-            if (match) {
-              latexRate = parseFloat(match[0]);
-            }
-          }
-        }
-      });
+    // More robust row finding
+    let latexRow = null;
+    $('tr').each((_, el) => {
+      const text = $(el).text().trim();
+      if (/latex\s*\(60\%?\)/i.test(text)) {
+        latexRow = $(el);
+        return false;
+      }
     });
 
+    if (latexRow) {
+      const cells = latexRow.find('td,th').map((i, td) => $(td).text().trim()).get();
+      const numeric = cells
+        .map((t) => {
+          const cleaned = t.replace(/[₹,]/g, '').trim();
+          const match = cleaned.match(/-?\d+(?:\.\d+)?/);
+          return match ? parseFloat(match[0]) : null;
+        })
+        .filter((v) => v !== null && v > 1000); // Usually > 1000 per 100kg
+
+      if (numeric.length > 0) {
+        latexRate = Math.max(...numeric);
+      }
+    }
+
     // Try to find the date
-    const dateText = $('body').text();
-    const dateMatch = dateText.match(/(\d{2}-\d{2}-\d{4})/);
+    const pageText = $('body').text();
+    const dateMatch = pageText.match(/(\d{1,2}-\d{1,2}-\d{4})/);
     if (dateMatch) {
       rateDate = dateMatch[1];
     }
 
     if (latexRate) {
-      console.log(`✅ Latex rate fetched: ₹${latexRate}/100kg (Date: ${rateDate || 'Unknown'})`);
+      console.log(`✅ Latex rate fetched via scraping: ₹${latexRate}/100kg (${rateDate || 'today'})`);
       return {
         success: true,
         rate: latexRate,
         date: rateDate,
         source: 'Rubber Board India',
-        url: 'https://rubberboard.gov.in/public',
+        url: fetchedUrl,
         method: 'scraping'
       };
-    } else {
-      console.log('⚠️ Could not find latex rate in the page');
-      return {
-        success: false,
-        error: 'Latex rate not found in page',
-        rate: null
-      };
     }
-
+    
+    return { success: false, error: 'Latex rate not found in page structure', rate: null };
   } catch (error) {
-    console.error('❌ Error fetching latex rate:', error.message);
-    return {
-      success: false,
-      error: error.message,
-      rate: null
-    };
+    console.error('❌ Error parsing scraped data:', error.message);
+    return { success: false, error: error.message, rate: null };
   }
 }
 
@@ -165,19 +202,98 @@ async function fetchFromWebsite() {
  * Fetch latex rate - tries API first, then falls back to scraping
  */
 async function fetchLatexRate() {
-  console.log('🔍 Starting latex rate fetch...');
-  
-  // Try API first
-  const apiResult = await fetchFromAPI();
-  if (apiResult && apiResult.success) {
-    return apiResult;
+  console.log('🔍 Starting latex rate fetch (CanaraPost only)...');
+
+  // Always fetch from CanaraPost (rubber board sources are unreliable/expired)
+  const canaraResult = await fetchFromCanaraPost();
+  if (canaraResult && canaraResult.success) {
+    return canaraResult;
   }
 
-  console.log('⚠️ API fetch failed, falling back to website scraping...');
-  
-  // Fallback to scraping
-  const scrapingResult = await fetchFromWebsite();
-  return scrapingResult;
+  console.log('⚠️ CanaraPost fetch failed; no source available');
+  return {
+    success: false,
+    error: 'Unable to fetch latex rate from CanaraPost',
+    rate: null
+  };
+}
+
+/**
+ * Fetch latex rate from CanaraPost rubber price listing.
+ * This is a fallback when Rubber Board sources are unavailable.
+ */
+async function fetchFromCanaraPost() {
+  const url = 'https://thecanarapost.com/todays-rubber-prices-kottayam-and-international-market/';
+
+  try {
+    const response = await axios.get(url, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Referer': 'https://www.google.com/'
+      }
+    });
+
+    if (!response.data || typeof response.data !== 'string') {
+      return { success: false, error: 'CanaraPost response was not HTML', rate: null };
+    }
+
+    const $ = cheerio.load(response.data);
+
+    // Find table row containing Latex 60% or Latex (60%)
+    let latexRow = null;
+    $('tr').each((_, el) => {
+      const text = $(el).text().trim();
+      if (/latex\s*\(?60%?\)?/i.test(text)) {
+        latexRow = $(el);
+        return false; // break
+      }
+    });
+
+    if (!latexRow || latexRow.length === 0) {
+      return { success: false, error: 'Latex row not found on CanaraPost page', rate: null };
+    }
+
+    const cells = latexRow.find('td,th').map((i, td) => $(td).text().trim()).get();
+
+    const numeric = cells
+      .map((t) => {
+        const cleaned = t.replace(/[₹,]/g, '');
+        const m = cleaned.match(/-?\d+(?:\.\d+)?/);
+        return m ? parseFloat(m[0]) : null;
+      })
+      .filter((v) => v !== null && v > 1000);
+
+    if (!numeric.length) {
+      return { success: false, error: 'No numeric latex rate found on CanaraPost page', rate: null };
+    }
+
+    const rate = numeric[0];
+
+    // Try to detect the date from page heading or text.
+    let rateDate = null;
+    const dateText = $('h1, h2, h3, p, span, div')
+      .filter((_, el) => /\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/i.test($(el).text()))
+      .first()
+      .text();
+    const dateMatch = dateText.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}/i);
+    if (dateMatch) {
+      rateDate = dateMatch[0];
+    }
+
+    return {
+      success: true,
+      rate,
+      date: rateDate || null,
+      source: 'CanaraPost',
+      url,
+      method: 'scraping'
+    };
+  } catch (error) {
+    console.error('❌ Error fetching from CanaraPost:', error.message);
+    return { success: false, error: error.message, rate: null };
+  }
 }
 
 /**

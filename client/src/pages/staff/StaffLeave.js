@@ -127,7 +127,10 @@ const StaffLeave = () => {
             padding: '8px 16px',
             fontSize: '14px',
             whiteSpace: 'nowrap',
-            minWidth: 'auto'
+            minWidth: 'auto',
+            maxWidth: '200px',
+            width: 'auto',
+            flex: '0 0 auto'
           }}
         >
           📋 History
@@ -198,7 +201,14 @@ const StaffLeave = () => {
           <label>Reason</label>
           <textarea className="form-control" value={form.reason} onChange={(e)=>setForm({ ...form, reason: e.target.value })} />
         </div>
-        <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Submitting...' : 'Apply'}</button>
+        <button
+          className="btn btn-primary"
+          type="submit"
+          disabled={saving}
+          style={{ padding: '8px 16px', fontSize: '14px', width: 'auto', minWidth: '140px' }}
+        >
+          {saving ? 'Submitting...' : 'Apply'}
+        </button>
       </form>
 
       <div style={{ marginTop: 24 }}>

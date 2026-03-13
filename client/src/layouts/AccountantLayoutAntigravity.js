@@ -194,7 +194,7 @@ const AccountantLayoutAntigravity = ({ children }) => {
                                     className={`accountant-notification-btn ${isNotificationOpen ? 'active' : ''}`}
                                     onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                                 >
-                                    <FiBell />
+                                    <i className="fas fa-bell"></i>
                                     {notifications.length > 0 && (
                                         <div className="accountant-notification-badge">{notifications.length}</div>
                                     )}

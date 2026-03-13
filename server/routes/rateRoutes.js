@@ -20,14 +20,11 @@ router.put("/company", protect, adminOrManager, rateController.updateCompanyRate
 // Latest published rate (visible to end users/staff)
 router.get("/published/latest", rateController.getPublishedLatest);
 
-// Combined (Admin latest + Rubber Board live)
-router.get("/latex/today", rateController.getLatexToday);
-
 // Live Latex(60%) rate scraped from Rubber Board (public)
 router.get("/live/latex", rateController.fetchLatexRateRubberBoard);
 
-// Admin can view full history
-router.get("/history", protect, admin, rateController.getAllRates);
+// All roles can view rate history (admin, manager, accountant)
+router.get("/history", protect, rateController.getAllRates);
 
 // User/Admin: date-range history (auth required for users)
 router.get("/history-range", protect, rateController.getRatesByDateRange);

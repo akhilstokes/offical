@@ -195,10 +195,19 @@ const LabReports = () => {
         </div>
         <button
           className="btn-secondary"
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            fontSize: '14px',
+            flex: '0 0 auto',
+            width: 'auto',
+            minWidth: 'auto'
+          }}
           onClick={() => setShowCreateModal(true)}
         >
-          <i className="fas fa-plus"></i> Add
+          <i className="fas fa-plus" style={{ fontSize: '14px' }}></i> Add
         </button>
       </div>
 

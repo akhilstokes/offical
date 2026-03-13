@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
-import { LanguageContext } from '../contexts/LanguageContext';
 import './NewLandingPage.css';
 
 const NewLandingPage = () => {
-    const { t } = useContext(LanguageContext);
     const [isVisible, setIsVisible] = useState({});
 
     useEffect(() => {

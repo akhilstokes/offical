@@ -301,12 +301,7 @@ const ManagerBillVerification = () => {
 
             {/* Bills Table */}
             <div className="bills-table-container">
-                {loading ? (
-                    <div className="bills-loading">
-                        <div className="loading-spinner"></div>
-                        <p>Loading bills...</p>
-                    </div>
-                ) : bills.length > 0 ? (
+                {bills.length > 0 ? (
                     <table className="bills-table">
                         <thead>
                             <tr>
@@ -374,7 +369,7 @@ const ManagerBillVerification = () => {
                 ) : (
                     <div className="empty-state">
                         <FiFileText className="empty-icon" />
-                        <p>No pending bills for verification</p>
+                        <p>{loading ? 'Loading bills...' : 'No pending bills for verification'}</p>
                     </div>
                 )}
             </div>

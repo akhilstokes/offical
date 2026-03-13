@@ -349,136 +349,43 @@ exports.fetchLatexRateRubberBoard = async (req, res) => {
 exports.getLatexToday = async (req, res) => {
   try {
     const product = req.query.product || 'latex60';
+    const scraper = require('../services/rubberBoardScraper');
 
-    // 1) Fetch Rubber Board live
-    const candidateUrls = [
-      'https://rubberboard.gov.in',
-      'https://rubberboard.org.in/public?lang=E',
-      'https://rubberboard.org.in/public'
-    ];
+    // 1) Fetch Rubber Board live rate from centralized scraper
+    const scraperResult = await scraper.getLatexRate();
+    let marketData = null;
 
-    let html = null;
-    let fetchedUrl = null;
-
-    for (const url of candidateUrls) {
-      try {
-        const response = await axios.get(url, { timeout: 10000 });
-        if (response.status === 200 && typeof response.data === 'string') {
-          html = response.data;
-          fetchedUrl = url;
-          break;
-        }
-      } catch (_) {}
+    if (scraperResult.success) {
+      marketData = {
+        productLabel: 'Latex(60%)',
+        source: scraperResult.url,
+        asOnDate: scraperResult.date,
+        rate: scraperResult.rate,
+        markets: { Kottayam: scraperResult.rate }
+      };
     }
 
-    if (!html) {
-      return res.status(502).json({ message: 'Unable to fetch Rubber Board page' });
-    }
-
-    const $ = cheerio.load(html);
-
-    let latexRow = null;
-    $('tr').each((_, el) => {
-      const text = $(el).text().trim();
-      if (/latex\s*\(60\%?\)/i.test(text)) {
-        latexRow = $(el);
-        return false;
-      }
-    });
-
-    if (!latexRow || latexRow.length === 0) {
-      return res.status(404).json({ message: 'Latex(60%) row not found on source page', source: fetchedUrl });
-    }
-
-    const table = latexRow.closest('table');
-    let headers = [];
-    if (table.length) {
-      const headerRow = table.find('thead tr').first().length ? table.find('thead tr').first() : table.find('tr').first();
-      headers = headerRow.find('th,td').map((i, th) => $(th).text().trim().replace(/\s+/g, ' ')).get();
-    }
-
-    const cells = latexRow.find('td,th').map((i, td) => $(td).text().trim()).get();
-    const numeric = cells
-      .map((t) => {
-        const cleaned = t.replace(/[₹,]/g, '');
-        const m = cleaned.match(/-?\d+(?:\.\d+)?/);
-        return m ? parseFloat(m[0]) : null;
-      })
-      .filter((v) => v !== null);
-
-    // Only use Kottayam market (first column, INR only)
-    const markets = {};
-    if (numeric[0] != null && numeric[0] > 1000) { // Kottayam is first column, validate it's INR
-      markets.Kottayam = numeric[0];
-    }
-
-    const pageText = $('body').text();
-    const dateMatch = pageText.match(/on\s+(\d{1,2}-\d{1,2}-\d{4})/i);
-    const asOnDate = dateMatch ? dateMatch[1] : null;
-
-    // 2) Fetch Admin latest rate with 24-hour validity check
-    // Rubber Board publishes rates daily at 4:00 PM
-    // Rate is valid from 4:00 PM on effectiveDate to 4:00 PM next day
-    const now = new Date();
-    
-    // Find the most recent published rate
-    const latest = await Rate.findOne({ 
-      product, 
-      status: 'published' 
+    // 2) Always return the latest published rate (no time-based restriction)
+    const latest = await Rate.findOne({
+      product,
+      status: 'published'
     }).sort({ effectiveDate: -1, createdAt: -1 });
 
-    let validAdminRate = null;
-    
-    if (latest) {
-      // Check if rate is still valid (within 24-hour window from 4 PM to 4 PM)
-      const effectiveDate = new Date(latest.effectiveDate);
-      
-      // Rate becomes valid at 4:00 PM on effectiveDate
-      const validFrom = new Date(effectiveDate);
-      validFrom.setHours(16, 0, 0, 0); // 4:00 PM
-      
-      // Rate expires at 4:00 PM next day
-      const validUntil = new Date(validFrom);
-      validUntil.setDate(validUntil.getDate() + 1); // Next day 4:00 PM
-      
-      // Check if current time is within validity window
-      if (now >= validFrom && now < validUntil) {
-        validAdminRate = {
-          companyRate: latest.companyRate,
-          marketRate: latest.marketRate,
-          effectiveDate: latest.effectiveDate,
-          validFrom: validFrom,
-          validUntil: validUntil,
-          isValid: true
-        };
-      } else {
-        // Rate exists but is expired or not yet valid
-        validAdminRate = {
-          companyRate: null,
-          marketRate: null,
-          effectiveDate: latest.effectiveDate,
-          validFrom: validFrom,
-          validUntil: validUntil,
-          isValid: false,
-          reason: now < validFrom ? 'Rate not yet valid (before 4 PM)' : 'Rate expired (after 4 PM next day)'
-        };
-      }
-    }
+    const adminRate = latest ? {
+      companyRate: latest.companyRate,
+      marketRate: latest.marketRate,
+      effectiveDate: latest.effectiveDate,
+      isValid: true
+    } : null;
 
     return res.json({
       product,
       unit: 'per 100 Kg',
-      admin: validAdminRate,
-      market: {
-        productLabel: 'Latex(60%)',
-        source: fetchedUrl,
-        asOnDate,
-        headers,
-        numeric,
-        markets
-      }
+      admin: adminRate,
+      market: marketData   // null when scraper fails — frontend handles gracefully
     });
   } catch (error) {
+    console.error('Error in getLatexToday:', error);
     return res.status(500).json({ message: 'Failed to fetch combined latex data', error: error.message });
   }
 };

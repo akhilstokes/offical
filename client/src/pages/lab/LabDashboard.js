@@ -11,12 +11,54 @@ const LabDashboard = () => {
   const [testNotes, setTestNotes] = useState('');
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [checkinHistory, setCheckinHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+  const getRemovedIncomingIds = () => {
+    try {
+      return JSON.parse(localStorage.getItem('labIncomingRemoved') || '[]') || [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const addRemovedIncomingId = (id) => {
+    try {
+      const existing = getRemovedIncomingIds();
+      if (!existing.includes(id)) {
+        localStorage.setItem('labIncomingRemoved', JSON.stringify([...existing, id]));
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const loadCheckinHistory = () => {
+    setLoadingHistory(true);
+    try {
+      const history = JSON.parse(localStorage.getItem('lab_checkins') || '[]');
+      setCheckinHistory(Array.isArray(history) ? history : []);
+    } catch (e) {
+      console.error('Failed to load check-in history:', e);
+      setCheckinHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   // Fetch incoming barrel intake requests from delivery staff
   useEffect(() => {
+    // If a check-in just happened, refresh data
+    if (localStorage.getItem('labCheckInUpdated') === 'true') {
+      localStorage.removeItem('labCheckInUpdated');
+      fetchIncomingRequests();
+      loadCheckinHistory();
+    }
+
     fetchIncomingRequests();
+    loadCheckinHistory();
     
     // Auto-refresh every 30 seconds to update the count
     const interval = setInterval(() => {
@@ -65,16 +107,20 @@ const LabDashboard = () => {
       
       const pendingItems = Array.isArray(items) 
         ? items.filter(item => {
-            console.log('Checking item:', item._id, 'status:', item.status);
-            
-            // Only filter by status - don't use localStorage filtering
-            // Lab staff should see all pending requests from the database
-            return item.status === 'pending' || !item.status;
+            // Include 'pending', 'assigned', and 'approved' statuses for lab visibility
+            return ['pending', 'assigned', 'approved'].includes(item.status) || !item.status;
           })
         : [];
+
+      // Filter out any requests that were already started within this session
+      const removedIds = getRemovedIncomingIds();
+      const filteredItems = pendingItems.filter(item => {
+        const id = item._id || item.requestId || item.id;
+        return !removedIds.includes(id);
+      });
       
-      console.log('Filtered pending items:', pendingItems.length, pendingItems);
-      setIncomingRequests(pendingItems);
+      console.log('Filtered pending items:', filteredItems.length, filteredItems);
+      setIncomingRequests(filteredItems);
     } catch (error) {
       console.error('Error fetching incoming requests:', error);
       setIncomingRequests([]);
@@ -129,7 +175,11 @@ const LabDashboard = () => {
       <nav className="dashboard-nav">
         <button 
           className={activeTab === 'incoming' ? 'active' : ''}
-          onClick={() => setActiveTab('incoming')}
+          onClick={() => {
+            setActiveTab('incoming');
+            // Automatically refresh when user switches back to incoming tab
+            fetchIncomingRequests();
+          }}
         >
           📥 Incoming Requests ({incomingRequests.length})
         </button>
@@ -196,8 +246,16 @@ const LabDashboard = () => {
 
                       return (
                         <tr 
-                          key={request._id}
-                          onClick={() => navigate(checkInUrl)}
+                          key={request._id || request.requestId}
+                          onClick={() => {
+                            const requestId = request._id || request.requestId || request.id;
+
+                            // Optimistically remove from count, as staff is taking action on it
+                            setIncomingRequests(prev => prev.filter(r => (r._id || r.requestId || r.id) !== requestId));
+                            addRemovedIncomingId(requestId);
+
+                            navigate(checkInUrl);
+                          }}
                           style={{ 
                             cursor: 'pointer',
                             transition: 'background-color 0.2s'
@@ -275,6 +333,43 @@ const LabDashboard = () => {
                 </table>
               </div>
             )}
+
+            {/* Recent Sample Check-In History */}
+            <div style={{ marginTop: 32 }}>
+              <h3 style={{ marginBottom: 12, color: '#1e293b' }}>Recent Sample Check-Ins</h3>
+              {loadingHistory ? (
+                <div style={{ textAlign: 'center', padding: 20, color: '#64748b' }}>
+                  <i className="fas fa-spinner fa-spin"></i> Loading history...
+                </div>
+              ) : checkinHistory.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 20, color: '#64748b' }}>
+                  No check-in history available
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="dashboard-table" style={{ minWidth: 720 }}>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Sample ID</th>
+                        <th>Customer</th>
+                        <th>Barrels</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {checkinHistory.slice(0, 10).map((item, idx) => (
+                        <tr key={idx}>
+                          <td>{item.receivedAt ? new Date(item.receivedAt).toLocaleString('en-IN') : '-'}</td>
+                          <td>{item.sampleId || '-'}</td>
+                          <td>{item.customerName || '-'}</td>
+                          <td>{item.barrels?.length || 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

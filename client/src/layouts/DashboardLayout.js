@@ -9,12 +9,37 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
-  const [notificationCount] = useState(1);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [showSupportModal, setShowSupportModal] = useState(false);
-  const menuRef = useRef(null);
+    const [notificationCount, setNotificationCount] = useState(0);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [showSupportModal, setShowSupportModal] = useState(false);
+    const menuRef = useRef(null);
 
-  const contactNumbers = [
+    // Fetch real notifications for the user
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (!user?._id) return;
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications?userId=${user._id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const unread = data.notifications?.filter(n => !n.read).length || 0;
+                    setNotificationCount(unread);
+                }
+            } catch (err) {
+                console.warn('Silent error fetching notifications:', err);
+            }
+        };
+
+        fetchNotifications();
+        // Refresh notifications every 2 minutes
+        const interval = setInterval(fetchNotifications, 120000);
+        return () => clearInterval(interval);
+    }, [user?._id]);
+
+    const contactNumbers = [
     { name: 'Customer Care', number: '+91 98765 43210' },
     { name: 'Technical Support', number: '+91 98765 43211' }
   ];
@@ -91,10 +116,10 @@ const DashboardLayout = ({ children }) => {
             <span className="support-text">Support</span>
           </button>
 
-          <button className="notification-btn" onClick={() => navigate('/user/notifications')}>
-            <i className="fas fa-bell"></i>
+          <button className="notification-btn" onClick={() => navigate('/user/notifications')} title="View Notifications">
+            <i className="fas fa-bell" style={{ fontSize: '20px' }}></i>
             {notificationCount > 0 && (
-              <div className="notification-badge">{notificationCount}</div>
+              <div className="notification-badge" style={{ pointerEvents: 'none' }}>{notificationCount}</div>
             )}
           </button>
 
@@ -110,7 +135,7 @@ const DashboardLayout = ({ children }) => {
         <div className="nav-sections">
           {/* Dashboard Section */}
           <div className="nav-section">
-            <h4 className="section-title">DASHBOARD</h4>
+            <h4 className="sidebar-section-title">DASHBOARD</h4>
             <div className="nav-items">
               <NavLink to="/user" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <span className="nav-label">Overview</span>
@@ -123,7 +148,7 @@ const DashboardLayout = ({ children }) => {
           </div>
 
           <div className="nav-section">
-            <h4 className="section-title">ACTIONS</h4>
+            <h4 className="sidebar-section-title">ACTIONS</h4>
             <div className="nav-items">
               <NavLink to="/user/buy-products" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <span className="nav-label">Buy Products</span>

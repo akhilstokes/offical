@@ -96,10 +96,6 @@ const ManagerDashboardLayout = ({ children }) => {
     if (path.includes('/shifts')) return { title: 'Shift Planning', subtitle: 'Plan staff shifts', icon: 'fa-clock' };
     if (path.includes('/shift-management')) return { title: 'Shift Management', subtitle: 'Manage staff shifts and assignments', icon: 'fa-calendar-alt' };
     if (path.includes('/sell-requests')) return { title: 'Sell Requests', subtitle: 'Manage sell requests', icon: 'fa-handshake' };
-    if (path.includes('/barrel-allocation')) return { title: 'Barrel Allocation', subtitle: 'Allocate barrels to users', icon: 'fa-boxes' };
-    if (path.includes('/barrel-requests')) return { title: 'Barrel Requests', subtitle: 'Manage user barrel requests', icon: 'fa-clipboard-list' };
-    if (path.includes('/returned-barrels')) return { title: 'Returned Barrels', subtitle: 'Track barrels returned by staff', icon: 'fa-undo' };
-    if (path.includes('/faulty-barrels')) return { title: 'Faulty Barrels', subtitle: 'Manage damaged or faulty barrels', icon: 'fa-exclamation-triangle' };
     if (path.includes('/bill-verification')) return { title: 'Bill Verification', subtitle: 'Verify pending bills', icon: 'fa-file-invoice-dollar' };
     if (path.includes('/wages')) return { title: 'Wages', subtitle: 'Manage staff wages', icon: 'fa-money-bill-wave' };
     if (path.includes('/staff-salary')) return { title: 'Staff Salary', subtitle: 'Handle staff salaries', icon: 'fa-coins' };
@@ -123,15 +119,7 @@ const ManagerDashboardLayout = ({ children }) => {
         { to: '/manager/completed', icon: 'fa-exclamation-triangle', label: 'Complaints & Actions' },
       ]
     },
-    {
-      section: 'Barrel Management',
-      items: [
-        { to: '/manager/barrel-requests', icon: 'fa-clipboard-list', label: 'Barrel Requests' },
-        { to: '/manager/barrel-allocation', icon: 'fa-boxes', label: 'Barrel Allocation' },
-        { to: '/manager/returned-barrels', icon: 'fa-undo', label: 'Returned Barrels' },
-        { to: '/manager/faulty-barrels', icon: 'fa-exclamation-triangle', label: 'Faulty Barrels' },
-      ]
-    },
+
     {
       section: 'Inventory & Space',
       items: [
@@ -274,8 +262,8 @@ const ManagerDashboardLayout = ({ children }) => {
             {/* Profile Icon */}
             <button
               className="manager-profile-icon-btn"
-              onClick={() => navigate('/manager/home')}
-              aria-label="Dashboard"
+              onClick={() => navigate('/manager/profile')}
+              aria-label="Profile"
             >
               <i className="fas fa-user-circle"></i>
             </button>

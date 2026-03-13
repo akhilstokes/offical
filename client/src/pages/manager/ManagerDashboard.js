@@ -8,7 +8,7 @@ import '../user_dashboard/userDashboardTheme.css';
 
 
 const ManagerDashboard = () => {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [dashboardData, setDashboardData] = useState({
     attendance: {
@@ -191,14 +191,6 @@ const ManagerDashboard = () => {
     return '📋';
   };
 
-  if (loading) {
-    return (
-      <div style={{ padding: 16, textAlign: 'center' }}>
-        <h2>Manager Dashboard</h2>
-        <div>Loading dashboard data...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="user-dashboard">

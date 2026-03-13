@@ -1,9 +1,16 @@
 // Lightweight fetch wrapper with retry/backoff and no-store cache
 export async function httpFetch(path, options = {}, retries = 2) {
+  const rawBase = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000';
 
-  const base = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5001';
-
-  const base = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000';
+  // Normalize base URL: allow values like ':5000' or 'localhost:5000'
+  let base = rawBase;
+  if (/^:\d+/.test(rawBase)) {
+    base = `http://localhost${rawBase}`;
+  } else if (/^[0-9]+$/.test(rawBase)) {
+    base = `http://localhost:${rawBase}`;
+  } else if (!/^https?:\/\//i.test(rawBase)) {
+    base = `http://${rawBase}`;
+  }
 
   const url = `${base}${path}`;
   try {

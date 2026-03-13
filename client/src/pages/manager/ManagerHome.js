@@ -13,7 +13,7 @@ const ManagerHome = () => {
   });
 
   const [recentActivity, setRecentActivity] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   const token = localStorage.getItem('token');
@@ -122,16 +122,6 @@ const ManagerHome = () => {
     return colors[priority] || 'priority-default';
   };
 
-  if (loading) {
-    return (
-      <div className="manager-home">
-        <div className="loading-spinner">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading manager dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="manager-home">

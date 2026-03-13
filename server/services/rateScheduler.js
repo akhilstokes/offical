@@ -21,26 +21,13 @@ class RateScheduler {
     this.isRunning = true;
     console.log('Starting rate scheduler...');
 
-    // Schedule daily rate fetch at 9:00 AM IST
-    cron.schedule('0 9 * * *', async () => {
-      console.log('Running scheduled rate fetch...');
+    // Schedule daily rate fetch at 4:00 PM IST (Kottayam market updates at 4 PM)
+    cron.schedule('0 16 * * *', async () => {
+      console.log('Running scheduled daily rate fetch (4 PM IST)...');
       await this.fetchAndStoreRates();
     }, {
       timezone: 'Asia/Kolkata'
     });
-
-    // Schedule hourly rate fetch during business hours (8 AM to 6 PM IST)
-    cron.schedule('0 8-18 * * *', async () => {
-      console.log('Running hourly rate fetch...');
-      await this.fetchAndStoreRates();
-    }, {
-      timezone: 'Asia/Kolkata'
-    });
-
-    // Initial fetch on startup
-    setTimeout(() => {
-      this.fetchAndStoreRates();
-    }, 5000); // Wait 5 seconds after startup
 
     console.log('Rate scheduler started successfully');
   }
@@ -86,109 +73,20 @@ class RateScheduler {
 
   // Fetch rates from rubber board website
   async fetchRubberBoardRates() {
-    const candidateUrls = [
-      'https://rubberboard.gov.in',
-      'https://rubberboard.org.in/public?lang=E',
-      'https://rubberboard.org.in/public',
-      'http://rubberboard.org.in/public'
-    ];
-
-    let html = null;
-    let fetchedUrl = null;
-
-    const requestWithRetries = async (url) => {
-      const attempts = [10000, 15000]; // Reduce timeouts to fail faster
-      for (let i = 0; i < attempts.length; i++) {
-        try {
-          const response = await axios.get(url, {
-            timeout: attempts[i],
-            maxRedirects: 2,
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'Accept-Language': 'en-US,en;q=0.9'
-            },
-            validateStatus: (s) => s >= 200 && s < 400
-          });
-          if (typeof response.data === 'string') {
-            return response.data;
-          }
-        } catch (e) {
-          // Silently catch error to prevent log spam when site blocks bots
-        }
-      }
-      return null;
-    };
-
-    // Try multiple possible URLs with retries
-    for (const url of candidateUrls) {
-      const data = await requestWithRetries(url);
-      if (data) {
-        html = data;
-        fetchedUrl = url;
-        break;
-      }
+    const scraper = require('./rubberBoardScraper');
+    const result = await scraper.getLatexRate(true); // force refresh for scheduler
+    
+    if (result.success) {
+      return [{
+        product: 'latex60',
+        rate: result.rate,
+        source: 'rubber_board',
+        effectiveDate: new Date(),
+        fetchedFrom: result.url
+      }];
     }
-
-    if (!html) {
-      // Provide a clean generic message without spamming all candidate failures
-      console.log('Unable to reach Rubber Board (WAF/Timeout). Falling back to last-known rates.');
-      return [];
-    }
-
-    const $ = cheerio.load(html);
-    const rates = [];
-
-    // Look for latex rates in tables
-    $('tr').each((_, el) => {
-      const text = $(el).text().trim();
-
-      // Check for latex 60% rate
-      if (/latex\s*\(60\%?\)/i.test(text)) {
-        const cells = $(el).find('td,th').map((i, td) => $(td).text().trim()).get();
-        const numeric = cells
-          .map((t) => {
-            const cleaned = t.replace(/[₹,]/g, '');
-            const match = cleaned.match(/-?\d+(?:\.\d+)?/);
-            return match ? parseFloat(match[0]) : null;
-          })
-          .filter((v) => v !== null && v > 0);
-
-        if (numeric.length > 0) {
-          rates.push({
-            product: 'latex60',
-            rate: Math.max(...numeric), // Take the highest rate found
-            source: 'rubber_board',
-            effectiveDate: new Date(),
-            fetchedFrom: fetchedUrl
-          });
-        }
-      }
-
-      // Check for other rubber products
-      if (/rubber\s*sheet/i.test(text)) {
-        const cells = $(el).find('td,th').map((i, td) => $(td).text().trim()).get();
-        const numeric = cells
-          .map((t) => {
-            const cleaned = t.replace(/[₹,]/g, '');
-            const match = cleaned.match(/-?\d+(?:\.\d+)?/);
-            return match ? parseFloat(match[0]) : null;
-          })
-          .filter((v) => v !== null && v > 0);
-
-        if (numeric.length > 0) {
-          rates.push({
-            product: 'rubber_sheet',
-            rate: Math.max(...numeric),
-            source: 'rubber_board',
-            effectiveDate: new Date(),
-            fetchedFrom: fetchedUrl
-          });
-        }
-      }
-    });
-
-    return rates;
+    
+    return [];
   }
 
   // Fallback: get last known rates and mark as cached for today

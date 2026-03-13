@@ -107,6 +107,70 @@ router.post('/broadcast', async (req, res) => {
   }
 });
 
+// POST /api/notifications/staff-trip-event - Send notification to all users of a role (staff events)
+router.post('/staff-trip-event', async (req, res) => {
+  try {
+    const { targetRole, title, message, link, meta } = req.body;
+    
+    if (!title || !message || !targetRole) {
+      return res.status(400).json({ message: 'Title, message and targetRole are required' });
+    }
+    
+    // Get all users of the target role
+    const User = require('../models/userModel');
+    let users = [];
+    
+    try {
+      if (targetRole === 'all') {
+        users = await User.find({ status: 'active' }, '_id role');
+      } else {
+        users = await User.find({ role: targetRole, status: 'active' }, '_id role');
+      }
+    } catch (dbError) {
+      console.error('Database query error:', dbError);
+      return res.status(500).json({ message: 'Database error while fetching users' });
+    }
+    
+    if (users.length === 0) {
+      return res.status(200).json({ 
+        success: true,
+        message: `No active users found with role: ${targetRole}`,
+        count: 0
+      });
+    }
+    
+    // Create notifications for all users
+    const notifications = users.map(user => ({
+      userId: user._id,
+      role: targetRole === 'all' ? (user.role || 'user') : targetRole,
+      title,
+      message,
+      link: link || '/lab/dashboard',
+      meta: { ...meta, event: 'staff_trip' }
+    }));
+    
+    try {
+      await Notification.insertMany(notifications);
+      console.log(`Successfully created ${notifications.length} staff event notifications for ${targetRole}`);
+    } catch (insertError) {
+      console.error('Error inserting notifications:', insertError);
+      return res.status(500).json({ message: 'Failed to create notifications' });
+    }
+    
+    res.status(201).json({ 
+      success: true, 
+      message: `Notification sent to ${users.length} ${targetRole}(s)`,
+      count: users.length
+    });
+  } catch (e) {
+    console.error('Error in staff-trip-event:', e);
+    res.status(500).json({ 
+      message: 'Failed to send event notification',
+      error: e.message 
+    });
+  }
+});
+
 // GET /api/notifications?limit=20
 router.get('/', async (req, res) => {
   try {
